@@ -118,6 +118,9 @@ CREATE TABLE platform_connections (
 
     status                   TEXT NOT NULL DEFAULT 'active'
                              CHECK (status IN ('active', 'expired', 'revoked', 'error')),
+    -- Same concept as devices.actions_paused, generalized to a platform account
+    -- — spec's "human only" band and this kill switch are independent controls.
+    actions_paused           BOOLEAN NOT NULL DEFAULT false,
     connected_by             UUID REFERENCES users(id),
     connected_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_used_at             TIMESTAMPTZ,

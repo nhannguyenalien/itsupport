@@ -1,5 +1,6 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
+import { ZodError } from "zod";
 import "dotenv/config";
 import { pool } from "./db/pool.js";
 import { enrollmentRoutes } from "./enrollment/routes.js";
@@ -16,6 +17,26 @@ const app = Fastify({ logger: true });
 // v0.1 local dev — allow any origin rather than hardcoding the frontend's dev
 // port. Revisit once there's a real session/auth story to scope this to.
 await app.register(cors, { origin: true });
+
+// Every route validates request bodies/params with zod .parse() — without
+// this, a validation failure (bad UUID, missing field, our own .refine()
+// checks like "exactly one of deviceId/platformConnectionId") surfaces as an
+// uncaught exception -> Fastify's default 500 handler, not a 400. Discovered
+// via real testing (POST /tickets with both device and platform set), not
+// theoretical.
+app.setErrorHandler((err: FastifyError | ZodError, _req, reply) => {
+  if (err instanceof ZodError) {
+    return reply.code(400).send({ error: "validation failed", details: err.issues });
+  }
+  // Fastify itself throws typed errors with a correct statusCode (e.g. empty
+  // JSON body, payload too large) — respect that instead of blanket-500ing,
+  // which would turn a client mistake into a misleading "internal server error".
+  if (typeof err.statusCode === "number" && err.statusCode < 500) {
+    return reply.code(err.statusCode).send({ error: err.message });
+  }
+  app.log.error(err);
+  reply.code(500).send({ error: "internal server error" });
+});
 
 app.get("/health", async () => {
   await pool.query("SELECT 1");

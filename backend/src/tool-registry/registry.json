@@ -54,9 +54,9 @@
     { "tool": "ads.campaign.enable",    "risk": "medium", "domain": "marketing", "platform": "any", "params": ["campaign_id"],
       "verification": ["ads.campaigns.list"],
       "_note": "Not in spec's explicit auto-list (only pause and small budget decreases are) — resuming spend is treated as more consequential than stopping it, so this requires approval rather than auto-executing." },
-    { "tool": "ads.budget.update",      "risk": "medium", "domain": "marketing", "platform": "any", "params": ["campaign_id", "new_budget_cents"],
+    { "tool": "ads.budget.update",      "risk": "medium", "domain": "marketing", "platform": "any", "params": ["campaign_id", "current_budget_cents", "new_budget_cents"],
       "verification": ["ads.campaigns.list"],
-      "_note": "Base risk here is a FALLBACK ONLY — real risk is computed dynamically by policy-engine/index.ts from the requested change vs. current budget and the tenant's percentage limits (spec section 12: decrease/increase<=10% auto if enabled, 10-25% approval, >25% rejected outright, never offered as auto or approval)." },
+      "_note": "Base risk here is a FALLBACK ONLY — real risk is computed dynamically by policy-engine/index.ts from the requested change vs. current budget and the tenant's percentage limits (spec section 12: decrease/increase<=10% auto if enabled, 10-25% approval, >25% rejected outright, never offered as auto or approval). current_budget_cents is caller-supplied (from a prior ads.campaigns.list/metrics.read call) rather than fetched live by the backend — there's no real platform API client yet to fetch it with (see docs/v0.2-marketing-ops-spec.md known gaps)." },
     { "tool": "ads.schedule.update",    "risk": "medium", "domain": "marketing", "platform": "any", "params": ["campaign_id", "schedule"],
       "verification": ["ads.schedule.read"] },
 

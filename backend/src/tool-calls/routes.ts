@@ -29,7 +29,12 @@ const resultBody = z.object({
  * dispatched to the agent like any other read call — nothing here assumes the
  * check happens locally in the backend, because the backend has no way to know
  * live device state except by asking the agent. */
-async function enqueueVerification(parentId: string, deviceId: string, ticketId: string, toolName: string) {
+async function enqueueVerification(
+  parentId: string,
+  target: { deviceId: string | null; platformConnectionId: string | null },
+  ticketId: string,
+  toolName: string,
+) {
   const tool = getTool(toolName);
   if (!tool || tool.verification.length === 0) {
     await pool.query(`UPDATE tool_calls SET verification_status = 'not_required' WHERE id = $1`, [parentId]);
@@ -39,9 +44,9 @@ async function enqueueVerification(parentId: string, deviceId: string, ticketId:
   for (const verifyTool of tool.verification) {
     const verifyDef = getTool(verifyTool);
     await pool.query(
-      `INSERT INTO tool_calls (ticket_id, device_id, tool, risk, params, parent_tool_call_id)
-       VALUES ($1, $2, $3, $4, '{}', $5)`,
-      [ticketId, deviceId, verifyTool, verifyDef?.risk ?? "read", parentId],
+      `INSERT INTO tool_calls (ticket_id, device_id, platform_connection_id, tool, risk, params, parent_tool_call_id)
+       VALUES ($1, $2, $3, $4, $5, '{}', $6)`,
+      [ticketId, target.deviceId, target.platformConnectionId, verifyTool, verifyDef?.risk ?? "read", parentId],
     );
   }
 }
@@ -90,7 +95,7 @@ export async function toolCallRoutes(app: FastifyInstance) {
     const { actorId } = z.object({ actorId: z.string().uuid().optional() }).parse(req.body ?? {});
 
     const approvalRow = await pool.query(
-      `SELECT a.*, t.tenant_id, t.device_id FROM approvals a
+      `SELECT a.*, t.tenant_id, t.device_id, t.platform_connection_id FROM approvals a
        JOIN tickets t ON t.id = a.ticket_id
        WHERE a.id = $1 AND a.status = 'pending'`,
       [approvalId],
@@ -105,9 +110,9 @@ export async function toolCallRoutes(app: FastifyInstance) {
     );
 
     const call = await pool.query(
-      `INSERT INTO tool_calls (ticket_id, device_id, tool, risk, params, approval_id)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [approval.ticket_id, approval.device_id, approval.tool, tool.risk, approval.params, approvalId],
+      `INSERT INTO tool_calls (ticket_id, device_id, platform_connection_id, tool, risk, params, approval_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [approval.ticket_id, approval.device_id, approval.platform_connection_id, approval.tool, tool.risk, approval.params, approvalId],
     );
 
     await recordAudit({
@@ -202,7 +207,12 @@ export async function toolCallRoutes(app: FastifyInstance) {
       await maybeFinalizeVerification(call.parent_tool_call_id);
     } else if (b.result === "success" && call.risk !== "read") {
       // This was a write action that just succeeded — kick off its verification.
-      await enqueueVerification(toolCallId, call.device_id, call.ticket_id, call.tool);
+      await enqueueVerification(
+        toolCallId,
+        { deviceId: call.device_id, platformConnectionId: call.platform_connection_id },
+        call.ticket_id,
+        call.tool,
+      );
     }
 
     reply.send({ ok: true });

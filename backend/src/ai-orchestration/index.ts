@@ -25,11 +25,12 @@ function getClient(): OpenAI {
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
-const SYSTEM_PROMPT = `You are an AI Windows support agent. You diagnose and fix real problems on a
-real Windows machine using ONLY the tools provided to you — you have no other way to observe or affect
-the device. Never claim something is fixed without verifying it: after any state-changing tool call
-succeeds, the platform automatically re-checks the result via that tool's verification chain — wait for
-that before telling the user it's resolved.
+const SYSTEM_PROMPT = `You are an AI operations agent — either an AI Windows support agent diagnosing a
+real Windows machine, or an AI marketing operations agent diagnosing an ads/tracking/analytics/CRM
+account — using ONLY the tools provided to you for this ticket's target (shown below). You have no other
+way to observe or affect it. Never claim something is fixed without verifying it: after any
+state-changing tool call succeeds, the platform automatically re-checks the result via that tool's
+verification chain — wait for that before telling the user it's resolved.
 
 Rules:
 - Prefer read tools first to understand the actual state before proposing a fix.
@@ -39,10 +40,19 @@ Rules:
   the same failed action.
 - Keep responses to the user concise and grounded in what the tools actually returned.`;
 
-interface DeviceRow {
-  id: string;
-  hostname: string;
-  os_version: string | null;
+// Either a Windows device or a v0.2 marketing platform connection — exactly
+// one, same as the tickets table's CHECK constraint. describeTarget() below is
+// the one place that turns whichever it is into prompt text, so the two
+// domains don't need their own parallel prompt-building code.
+interface TicketTarget {
+  device: { id: string; hostname: string; os_version: string | null } | null;
+  platform: { id: string; platform: string; external_account_id: string } | null;
+}
+
+function describeTarget(t: TicketTarget): string {
+  if (t.device) return `Device: ${t.device.hostname} (${t.device.os_version ?? "unknown OS"})`;
+  if (t.platform) return `Platform account: ${t.platform.platform} / ${t.platform.external_account_id}`;
+  throw new Error("ticket has neither a device nor a platform_connection target — should be impossible (see schema CHECK)");
 }
 
 interface TenantRow {
@@ -53,9 +63,13 @@ interface TenantRow {
 
 async function loadTicketForOrchestration(ticketId: string) {
   const ticketRes = await pool.query(
-    `SELECT t.*, d.id AS device_id, d.hostname, d.os_version, tn.id AS tenant_id, tn.ai_data_policy, tn.autonomous_low_risk_enabled
+    `SELECT t.*,
+            d.id AS device_id, d.hostname, d.os_version,
+            pc.id AS platform_connection_id, pc.platform, pc.external_account_id,
+            tn.id AS tenant_id, tn.ai_data_policy, tn.autonomous_low_risk_enabled
      FROM tickets t
-     JOIN devices d ON d.id = t.device_id
+     LEFT JOIN devices d ON d.id = t.device_id
+     LEFT JOIN platform_connections pc ON pc.id = t.platform_connection_id
      JOIN tenants tn ON tn.id = t.tenant_id
      WHERE t.id = $1`,
     [ticketId],
@@ -73,9 +87,16 @@ async function loadTicketForOrchestration(ticketId: string) {
     [ticketId],
   );
 
+  const target: TicketTarget = {
+    device: row.device_id ? { id: row.device_id, hostname: row.hostname, os_version: row.os_version } : null,
+    platform: row.platform_connection_id
+      ? { id: row.platform_connection_id, platform: row.platform, external_account_id: row.external_account_id }
+      : null,
+  };
+
   return {
-    ticket: row as { id: string; title: string; status: string; tenant_id: string; device_id: string; ai_data_policy: AiDataPolicy },
-    device: { id: row.device_id, hostname: row.hostname, os_version: row.os_version } as DeviceRow,
+    ticket: row as { id: string; title: string; status: string; tenant_id: string; ai_data_policy: AiDataPolicy },
+    target,
     tenant: { id: row.tenant_id, ai_data_policy: row.ai_data_policy, autonomous_low_risk_enabled: row.autonomous_low_risk_enabled } as TenantRow,
     messages: messages.rows as { author_type: string; body: string }[],
     toolCalls: toolCalls.rows as {
@@ -113,7 +134,7 @@ function buildMessages(ctx: NonNullable<Awaited<ReturnType<typeof loadTicketForO
       role: "user",
       content:
         `Ticket: "${ctx.ticket.title}" (status: ${ctx.ticket.status})\n` +
-        `Device: ${ctx.device.hostname} (${ctx.device.os_version ?? "unknown OS"})\n\n` +
+        `${describeTarget(ctx.target)}\n\n` +
         `Tool calls so far:\n${toolHistory || "(none yet)"}`,
     },
     ...chatHistory,
@@ -142,7 +163,20 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
   const response = await openai.chat.completions.create({
     model: MODEL,
     messages: buildMessages(ctx),
-    tools: allToolsAsOpenAiFunctions(allTools()),
+    // Scope the function-calling tool list to what's actually relevant to this
+    // ticket's target — a Windows ticket never sees marketing tools and vice
+    // versa, and a marketing ticket only sees tools for the platform it's
+    // actually connected to (or cross-platform "any" ones). Keeps the
+    // function-calling context tight regardless of how big registry.json
+    // grows, and stops the model from ever proposing a tool with no way to
+    // execute against this ticket's target.
+    tools: allToolsAsOpenAiFunctions(
+      allTools().filter((t) =>
+        ctx.target.device
+          ? t.domain !== "marketing"
+          : t.domain === "marketing" && (!t.platform || t.platform === "any" || t.platform === ctx.target.platform!.platform),
+      ),
+    ),
     tool_choice: "auto",
   });
 
@@ -155,7 +189,7 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
     eventType: "ai_step.completed",
     eventData: { model: MODEL, hasToolCall: Boolean(toolCall) },
     ticketId,
-    deviceId: ctx.device.id,
+    deviceId: ctx.target.device?.id ?? null,
   });
 
   if (toolCall && toolCall.type === "function") {

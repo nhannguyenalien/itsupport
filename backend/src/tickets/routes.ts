@@ -3,13 +3,20 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 
-const createTicketBody = z.object({
-  tenantId: z.string().uuid(),
-  deviceId: z.string().uuid(),
-  title: z.string().min(1),
-  createdBy: z.string().uuid().optional(),
-  scenario: z.enum(["A_printer", "B_dns", "C_hung_app", "D_disk_full"]).optional(),
-});
+const createTicketBody = z
+  .object({
+    tenantId: z.string().uuid(),
+    deviceId: z.string().uuid().optional(),
+    platformConnectionId: z.string().uuid().optional(),
+    title: z.string().min(1),
+    createdBy: z.string().uuid().optional(),
+    scenario: z.enum(["A_printer", "B_dns", "C_hung_app", "D_disk_full"]).optional(),
+  })
+  // Mirrors the tickets table's CHECK constraint — enforced here too so a bad
+  // request gets a clear 400 instead of a raw Postgres constraint error.
+  .refine((b) => Boolean(b.deviceId) !== Boolean(b.platformConnectionId), {
+    message: "exactly one of deviceId or platformConnectionId is required",
+  });
 
 const addMessageBody = z.object({
   authorType: z.enum(["user", "ai", "system", "technician"]),
@@ -24,9 +31,9 @@ export async function ticketRoutes(app: FastifyInstance) {
   app.post("/tickets", async (req, reply) => {
     const b = createTicketBody.parse(req.body);
     const result = await pool.query(
-      `INSERT INTO tickets (tenant_id, device_id, title, created_by, scenario)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [b.tenantId, b.deviceId, b.title, b.createdBy ?? null, b.scenario ?? null],
+      `INSERT INTO tickets (tenant_id, device_id, platform_connection_id, title, created_by, scenario)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [b.tenantId, b.deviceId ?? null, b.platformConnectionId ?? null, b.title, b.createdBy ?? null, b.scenario ?? null],
     );
     const ticket = result.rows[0];
 
@@ -37,7 +44,7 @@ export async function ticketRoutes(app: FastifyInstance) {
       eventType: "ticket.created",
       eventData: { title: b.title },
       ticketId: ticket.id,
-      deviceId: b.deviceId,
+      deviceId: b.deviceId ?? null,
     });
 
     reply.code(201).send(ticket);
