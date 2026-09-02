@@ -25,4 +25,10 @@ var KnownTools = map[string]Risk{
 	"network.flush_dns":   RiskLow,
 	"temp.clean":          RiskLow,
 	"printer.clear_queue": RiskLow,
+
+	// v0.2 marketing-ops — opens the default browser at a backend-constructed
+	// /oauth/*/connect link so a human on this machine can complete OAuth
+	// consent themselves (see browser_windows.go for why this doesn't
+	// automate the consent click).
+	"browser.open_url": RiskLow,
 }

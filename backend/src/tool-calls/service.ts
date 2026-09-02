@@ -2,6 +2,7 @@ import { pool } from "../db/pool.js";
 import { getTool, isKnownTool } from "../tool-registry/index.js";
 import { evaluate } from "../policy-engine/index.js";
 import { recordAudit } from "../audit/index.js";
+import { isOAuthPlatform } from "../oauth/providers.js";
 
 export interface RequestToolCallInput {
   ticketId: string;
@@ -87,6 +88,35 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   if (!ctx) return { outcome: "not_found" };
   if (ctx.target_blocked) {
     return { outcome: "rejected", reason: ctx.target_device_id ? "device is revoked" : "platform connection is not active" };
+  }
+
+  // browser.open_url (v0.2 OAuth-assist): the url the agent will open is
+  // ALWAYS computed here, never taken from the caller — a compromised or
+  // careless caller must not be able to make an enrolled device's browser
+  // open an arbitrary link. Requires a device target (the tool has no
+  // meaning against a platform_connection — there's no Windows agent polling
+  // for platform-targeted calls to run it).
+  if (input.tool === "browser.open_url") {
+    if (!ctx.target_device_id) {
+      return { outcome: "rejected", reason: "browser.open_url requires a device-targeted ticket" };
+    }
+    const platform = input.params.platform;
+    const externalAccountId = input.params.external_account_id;
+    if (typeof platform !== "string" || !isOAuthPlatform(platform)) {
+      return { outcome: "rejected", reason: `browser.open_url requires a known platform, got ${JSON.stringify(platform)}` };
+    }
+    if (typeof externalAccountId !== "string" || !externalAccountId) {
+      return { outcome: "rejected", reason: "browser.open_url requires a non-empty external_account_id" };
+    }
+    const base = process.env.OAUTH_REDIRECT_BASE_URL;
+    if (!base) {
+      return { outcome: "rejected", reason: "OAUTH_REDIRECT_BASE_URL is not configured on the backend" };
+    }
+    input.params = {
+      platform,
+      external_account_id: externalAccountId,
+      url: `${base.replace(/\/$/, "")}/oauth/${platform}/connect?tenantId=${ctx.tenant_id}&externalAccountId=${encodeURIComponent(externalAccountId)}`,
+    };
   }
 
   let budgetChange: { currentCents: number; requestedCents: number; absoluteLimitCents: number | null } | undefined;

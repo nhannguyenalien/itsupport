@@ -41,4 +41,6 @@ var Allowlist = map[string]Definition{
 	"network.flush_dns":   {Fn: notImplemented("network.flush_dns"), Risk: RiskLow},
 	"temp.clean":          {Fn: notImplemented("temp.clean"), Risk: RiskLow},
 	"printer.clear_queue": {Fn: notImplemented("printer.clear_queue"), Risk: RiskLow},
+
+	"browser.open_url": {Fn: OpenURL, Risk: RiskLow},
 }

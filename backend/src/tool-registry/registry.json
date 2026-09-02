@@ -31,6 +31,10 @@
       "verification": ["printer.queue"],
       "_note": "Inferred low risk — narrow blast radius (one queue), not cited in spec's pilot numbers example." },
 
+    { "tool": "browser.open_url", "risk": "low", "domain": "windows", "params": ["platform", "external_account_id"],
+      "verification": [],
+      "_note": "v0.2 OAuth-assist: opens the enrolled device's default browser at a backend-constructed /oauth/:platform/connect link so a human sitting at THAT machine can complete platform consent using whatever session their own browser already has. tool-calls/service.ts overwrites/computes the `url` param server-side from platform+external_account_id before dispatch — a caller-supplied url is never trusted or forwarded. Deliberately does not automate the consent click itself (see docs/v0.2-marketing-ops-spec.md known gaps — that would violate Google/Meta OAuth app policy). No verification chain: whether the human actually clicks Allow is out of band, nothing server-side to re-check." },
+
     { "tool": "ads.accounts.list",     "risk": "read", "domain": "marketing", "platform": "any", "params": [], "verification": [] },
     { "tool": "ads.campaigns.list",     "risk": "read", "domain": "marketing", "platform": "any", "params": ["account_id"], "verification": [] },
     { "tool": "ads.adsets.list",        "risk": "read", "domain": "marketing", "platform": "any", "params": ["campaign_id"], "verification": [] },
