@@ -54,4 +54,18 @@ export async function tenantRoutes(app: FastifyInstance) {
     await recordAudit({ tenantId, actorType: "user", actorId: actorId ?? null, eventType: "tenant.ai_enabled" });
     reply.send({ ok: true });
   });
+
+  // v0.2 marketing-ops. Ciphertext columns are never selected here or
+  // anywhere outside oauth/routes.ts and the (not-yet-built) platform API
+  // client layer — this is the one place a dashboard needs to render "which
+  // accounts are connected," not "what the token is."
+  app.get("/tenants/:tenantId/platform-connections", async (req, reply) => {
+    const { tenantId } = tenantParams.parse(req.params);
+    const result = await pool.query(
+      `SELECT id, platform, external_account_id, status, scopes, connected_at, last_used_at, last_error, actions_paused
+       FROM platform_connections WHERE tenant_id = $1 ORDER BY connected_at DESC`,
+      [tenantId],
+    );
+    reply.send(result.rows);
+  });
 }

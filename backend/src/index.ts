@@ -9,6 +9,7 @@ import { tenantRoutes } from "./tenants/routes.js";
 import { ticketRoutes } from "./tickets/routes.js";
 import { toolCallRoutes } from "./tool-calls/routes.js";
 import { aiOrchestrationRoutes } from "./ai-orchestration/routes.js";
+import { oauthRoutes } from "./oauth/routes.js";
 import { registryVersion, registryHash, allTools } from "./tool-registry/index.js";
 
 const app = Fastify({ logger: true });
@@ -54,6 +55,7 @@ await app.register(tenantRoutes);
 await app.register(ticketRoutes);
 await app.register(toolCallRoutes);
 await app.register(aiOrchestrationRoutes);
+await app.register(oauthRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the

@@ -110,10 +110,11 @@ export default function TicketDetailPage() {
         <div>
           <h1>{ticket.title}</h1>
           <p className="muted">
-            status: <strong>{ticket.status}</strong> · device {ticket.device_id}
+            status: <strong>{ticket.status}</strong> ·{" "}
+            {ticket.device_id ? `device ${ticket.device_id}` : `platform connection ${ticket.platform_connection_id}`}
           </p>
         </div>
-        <button onClick={requestTakeover}>Remote takeover (MeshCentral)</button>
+        {ticket.device_id && <button onClick={requestTakeover}>Remote takeover (MeshCentral)</button>}
       </div>
       {error && <div className="card" style={{ color: "#b91c1c" }}>{error}</div>}
 

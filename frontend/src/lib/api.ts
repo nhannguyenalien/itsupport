@@ -32,7 +32,8 @@ export interface Device {
 export interface Ticket {
   id: string;
   tenant_id: string;
-  device_id: string;
+  device_id: string | null;
+  platform_connection_id: string | null;
   title: string;
   status: string;
   scenario: string | null;
@@ -86,6 +87,18 @@ export interface Tenant {
   autonomous_low_risk_enabled: boolean;
 }
 
+export interface PlatformConnection {
+  id: string;
+  platform: "google_ads" | "meta_ads" | "ga4" | "gtm" | "crm_generic";
+  external_account_id: string;
+  status: "active" | "expired" | "revoked" | "error";
+  scopes: string[];
+  connected_at: string;
+  last_used_at: string | null;
+  last_error: string | null;
+  actions_paused: boolean;
+}
+
 export interface ToolDefinition {
   tool: string;
   risk: "read" | "low" | "medium" | "high";
@@ -108,7 +121,7 @@ export const api = {
 
   listTickets: (tenantId: string) => request<Ticket[]>(`/tickets?tenantId=${tenantId}`),
   getTicket: (ticketId: string) => request<TicketDetail>(`/tickets/${ticketId}`),
-  createTicket: (body: { tenantId: string; deviceId: string; title: string; scenario?: string }) =>
+  createTicket: (body: { tenantId: string; deviceId?: string; platformConnectionId?: string; title: string; scenario?: string }) =>
     request<Ticket>(`/tickets`, { method: "POST", body: JSON.stringify(body) }),
   addMessage: (ticketId: string, body: { authorType: string; body: string }) =>
     request<TicketMessage>(`/tickets/${ticketId}/messages`, { method: "POST", body: JSON.stringify(body) }),
@@ -120,4 +133,10 @@ export const api = {
     request(`/tickets/${ticketId}/tool-calls`, { method: "POST", body: JSON.stringify(body) }),
 
   getTakeoverLink: (ticketId: string) => request<{ url: string }>(`/tickets/${ticketId}/takeover-link`),
+
+  listPlatformConnections: (tenantId: string) => request<PlatformConnection[]>(`/tenants/${tenantId}/platform-connections`),
+  // Not a fetch() — this navigates the browser to the backend, which redirects
+  // it again to the platform's real consent page. See oauth/routes.ts.
+  connectPlatformUrl: (platform: string, tenantId: string, externalAccountId: string) =>
+    `${API_URL}/oauth/${platform}/connect?tenantId=${tenantId}&externalAccountId=${encodeURIComponent(externalAccountId)}`,
 };
