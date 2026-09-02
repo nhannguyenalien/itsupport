@@ -8,6 +8,20 @@ const deviceParams = z.object({ deviceId: z.string().uuid() });
 const actorBody = z.object({ actorId: z.string().uuid().optional() });
 
 export async function deviceRoutes(app: FastifyInstance) {
+  // Agent-facing: telemetry process calls this periodically. This is what
+  // "Dashboard shows online/offline" (Definition of Done #3) is actually built
+  // on — status flips to 'online' here; a separate sweep (not built yet, see
+  // TODO) should flip devices to 'offline' after N missed heartbeats.
+  app.post("/devices/:deviceId/heartbeat", async (req, reply) => {
+    const { deviceId } = deviceParams.parse(req.params);
+    const result = await pool.query(
+      `UPDATE devices SET last_seen_at = now(), status = 'online' WHERE id = $1 RETURNING id`,
+      [deviceId],
+    );
+    if (result.rowCount === 0) return reply.code(404).send({ error: "device not found" });
+    reply.send({ ok: true });
+  });
+
   app.get("/devices", async (req, reply) => {
     const { tenantId } = listQuery.parse(req.query);
     const result = await pool.query(
