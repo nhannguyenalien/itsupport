@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
-import { getTool, isKnownTool } from "../tool-registry/index.js";
-import { evaluate } from "../policy-engine/index.js";
+import { getTool } from "../tool-registry/index.js";
+import { requestToolCall } from "./service.js";
 import { recordAudit } from "../audit/index.js";
 
 const requestBody = z.object({
@@ -23,30 +23,6 @@ const resultBody = z.object({
   resultData: z.record(z.unknown()).optional(),
   errorMessage: z.string().optional(),
 });
-
-async function loadTicketContext(ticketId: string) {
-  const row = await pool.query(
-    `SELECT t.id AS ticket_id, t.tenant_id, t.device_id,
-            d.actions_paused, d.cert_revoked_at IS NOT NULL AS device_revoked,
-            tn.ai_enabled, tn.autonomous_low_risk_enabled
-     FROM tickets t
-     JOIN devices d ON d.id = t.device_id
-     JOIN tenants tn ON tn.id = t.tenant_id
-     WHERE t.id = $1`,
-    [ticketId],
-  );
-  return row.rows[0] as
-    | {
-        ticket_id: string;
-        tenant_id: string;
-        device_id: string;
-        actions_paused: boolean;
-        device_revoked: boolean;
-        ai_enabled: boolean;
-        autonomous_low_risk_enabled: boolean;
-      }
-    | undefined;
-}
 
 /** Creates the tool_calls rows for a write action's verification chain, right
  * after that write action reports success. Verification steps are themselves
@@ -101,69 +77,12 @@ export async function toolCallRoutes(app: FastifyInstance) {
     const { ticketId } = ticketParams.parse(req.params);
     const b = requestBody.parse(req.body);
 
-    if (!isKnownTool(b.tool)) {
-      return reply.code(400).send({ error: `unknown tool "${b.tool}"` });
-    }
-    const tool = getTool(b.tool)!;
+    const result = await requestToolCall({ ticketId, ...b });
 
-    const ctx = await loadTicketContext(ticketId);
-    if (!ctx) return reply.code(404).send({ error: "ticket not found" });
-    if (ctx.device_revoked) return reply.code(403).send({ error: "device is revoked" });
-
-    const decision = evaluate(b.tool, {
-      initiatedBy: b.initiatedBy,
-      tenantAiEnabled: ctx.ai_enabled,
-      tenantAutonomousLowRiskEnabled: ctx.autonomous_low_risk_enabled,
-      deviceActionsPaused: ctx.actions_paused,
-    });
-
-    if (decision.outcome === "rejected") {
-      await recordAudit({
-        tenantId: ctx.tenant_id,
-        actorType: b.initiatedBy === "ai" ? "ai" : "user",
-        actorId: b.actorId ?? null,
-        eventType: "tool_call.rejected",
-        eventData: { tool: b.tool, reason: decision.reason },
-        ticketId,
-        deviceId: ctx.device_id,
-      });
-      return reply.code(403).send({ error: decision.reason });
-    }
-
-    if (decision.outcome === "requires_approval") {
-      const approval = await pool.query(
-        `INSERT INTO approvals (ticket_id, tool, params, proposed_by_ai, reasoning)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [ticketId, b.tool, JSON.stringify(b.params), b.initiatedBy === "ai", b.reasoning ?? null],
-      );
-      await recordAudit({
-        tenantId: ctx.tenant_id,
-        actorType: b.initiatedBy === "ai" ? "ai" : "user",
-        actorId: b.actorId ?? null,
-        eventType: "approval.requested",
-        eventData: { tool: b.tool, risk: tool.risk },
-        ticketId,
-        deviceId: ctx.device_id,
-      });
-      return reply.code(202).send({ outcome: "requires_approval", approval: approval.rows[0] });
-    }
-
-    // auto_execute
-    const call = await pool.query(
-      `INSERT INTO tool_calls (ticket_id, device_id, tool, risk, params)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [ticketId, ctx.device_id, b.tool, tool.risk, JSON.stringify(b.params)],
-    );
-    await recordAudit({
-      tenantId: ctx.tenant_id,
-      actorType: b.initiatedBy === "ai" ? "ai" : "user",
-      actorId: b.actorId ?? null,
-      eventType: "tool_call.queued",
-      eventData: { tool: b.tool },
-      ticketId,
-      deviceId: ctx.device_id,
-    });
-    reply.code(201).send({ outcome: "auto_execute", toolCall: call.rows[0] });
+    if (result.outcome === "not_found") return reply.code(404).send({ error: "ticket not found" });
+    if (result.outcome === "rejected") return reply.code(403).send({ error: result.reason });
+    if (result.outcome === "requires_approval") return reply.code(202).send(result);
+    reply.code(201).send(result);
   });
 
   app.post("/approvals/:approvalId/approve", async (req, reply) => {
