@@ -90,14 +90,31 @@ export default function TicketDetailPage() {
     }
   }
 
+  async function requestTakeover() {
+    setError(null);
+    try {
+      const { url } = await api.getTakeoverLink(ticketId);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      // Honest failure from the backend (no MeshCentral agent on this device
+      // yet, or MESHCENTRAL_URL not configured) — surfaced as-is, not hidden.
+      setError(String(e));
+    }
+  }
+
   const pendingApprovals = ticket.approvals.filter((a) => a.status === "pending");
 
   return (
     <div>
-      <h1>{ticket.title}</h1>
-      <p className="muted">
-        status: <strong>{ticket.status}</strong> · device {ticket.device_id}
-      </p>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1>{ticket.title}</h1>
+          <p className="muted">
+            status: <strong>{ticket.status}</strong> · device {ticket.device_id}
+          </p>
+        </div>
+        <button onClick={requestTakeover}>Remote takeover (MeshCentral)</button>
+      </div>
       {error && <div className="card" style={{ color: "#b91c1c" }}>{error}</div>}
 
       {pendingApprovals.length > 0 && (

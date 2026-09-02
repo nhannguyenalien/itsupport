@@ -70,6 +70,12 @@ CREATE TABLE devices (
     last_seen_at        TIMESTAMPTZ,
     status              TEXT NOT NULL DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'unknown')),
 
+    -- Set when the Windows install bundles MeshCentral's mesh agent alongside
+    -- ours (not yet wired into the installer — see agent/README.md). Once set,
+    -- GET /tickets/:id/takeover-link can build a real desktop-takeover URL;
+    -- until then that endpoint 404s honestly instead of returning a dead link.
+    meshcentral_device_id TEXT,
+
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

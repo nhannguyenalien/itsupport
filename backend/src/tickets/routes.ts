@@ -100,4 +100,34 @@ export async function ticketRoutes(app: FastifyInstance) {
 
     reply.code(201).send(result.rows[0]);
   });
+
+  // README: "Falls back to human takeover (MeshCentral) on failure." A technician
+  // clicks through to MeshCentral's own desktop-takeover page and drives the
+  // session themselves — we don't reimplement remote desktop, just point at it.
+  // Requires meshcentral_device_id to already be set on the device (populated
+  // when the Windows install bundles MeshCentral's mesh agent — not wired into
+  // the installer yet, see agent/README.md). 404s honestly rather than handing
+  // back a link that goes nowhere.
+  app.get("/tickets/:ticketId/takeover-link", async (req, reply) => {
+    const { ticketId } = ticketParams.parse(req.params);
+    const result = await pool.query(
+      `SELECT d.meshcentral_device_id
+       FROM tickets t JOIN devices d ON d.id = t.device_id
+       WHERE t.id = $1`,
+      [ticketId],
+    );
+    if (result.rowCount === 0) return reply.code(404).send({ error: "ticket not found" });
+
+    const meshId = result.rows[0].meshcentral_device_id;
+    if (!meshId) {
+      return reply.code(404).send({
+        error: "this device has no MeshCentral agent registered — takeover isn't available for it",
+      });
+    }
+    if (!process.env.MESHCENTRAL_URL) {
+      return reply.code(500).send({ error: "MESHCENTRAL_URL is not configured on the backend" });
+    }
+
+    reply.send({ url: `${process.env.MESHCENTRAL_URL}/desktop.html?id=${encodeURIComponent(meshId)}` });
+  });
 }

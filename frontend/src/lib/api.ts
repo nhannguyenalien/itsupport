@@ -118,4 +118,6 @@ export const api = {
 
   requestToolCall: (ticketId: string, body: { initiatedBy: "ai" | "human"; tool: string; params: Record<string, unknown>; reasoning?: string }) =>
     request(`/tickets/${ticketId}/tool-calls`, { method: "POST", body: JSON.stringify(body) }),
+
+  getTakeoverLink: (ticketId: string) => request<{ url: string }>(`/tickets/${ticketId}/takeover-link`),
 };
