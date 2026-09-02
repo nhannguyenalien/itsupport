@@ -1,0 +1,34 @@
+{
+  "_comment": "Executable source of truth for allowlisted tools. Both backend policy engine and agent executor must treat this file (or the agent's compiled equivalent, see agent/internal/tools) as authoritative. Only `service.restart` risk level came directly from the spec message (given as a literal example); every other risk assignment below is inferred and should be confirmed, not assumed correct. See docs/v0.1-spec.md for the 11-vs-12 read-only tool discrepancy still open.",
+  "version": 1,
+  "tools": [
+    { "tool": "service.status",        "risk": "read", "params": ["service_name"], "verification": [] },
+    { "tool": "process.list",          "risk": "read", "params": [], "verification": [] },
+    { "tool": "network.ping",          "risk": "read", "params": ["target"], "verification": [] },
+    { "tool": "network.dns_lookup",    "risk": "read", "params": ["hostname"], "verification": [] },
+    { "tool": "disk.usage",            "risk": "read", "params": ["drive"], "verification": [] },
+    { "tool": "temp.scan",             "risk": "read", "params": [], "verification": [] },
+    { "tool": "printer.status",        "risk": "read", "params": ["printer_name"], "verification": [] },
+    { "tool": "printer.queue",         "risk": "read", "params": ["printer_name"], "verification": [] },
+    { "tool": "printer.test",          "risk": "read", "params": ["printer_name"], "verification": [],
+      "_note": "State-changing in effect (prints a page) but no persistent config change; treated as read/auto per spec's own demo scenario A, which uses it as the terminal verification step. Confirm this framing before launch." },
+    { "tool": "system.info",           "risk": "read", "params": [], "verification": [] },
+    { "tool": "eventlog.read",         "risk": "read", "params": ["log_name", "max_events"], "verification": [] },
+
+    { "tool": "service.restart",       "risk": "medium", "params": ["service_name"],
+      "verification": ["service.status"],
+      "_note": "Risk level given verbatim in spec as the worked example." },
+    { "tool": "process.kill",          "risk": "high", "params": ["pid"],
+      "verification": ["process.list"],
+      "_note": "Highest blast radius of the 5 write tools — no scope limiter on which process, and killing the wrong one has no undo. Inferred risk, confirm." },
+    { "tool": "network.flush_dns",     "risk": "low", "params": [],
+      "verification": ["network.dns_lookup"],
+      "_note": "Inferred low risk — spec's own pilot-rollout example cites 99.9% safe for this tool, the highest of the three cited." },
+    { "tool": "temp.clean",            "risk": "low", "params": [],
+      "verification": ["disk.usage"],
+      "_note": "Inferred low risk — spec's pilot-rollout example cites 97.8% safe." },
+    { "tool": "printer.clear_queue",   "risk": "low", "params": ["printer_name"],
+      "verification": ["printer.queue"],
+      "_note": "Inferred low risk — narrow blast radius (one queue), not cited in spec's pilot numbers example." }
+  ]
+}
