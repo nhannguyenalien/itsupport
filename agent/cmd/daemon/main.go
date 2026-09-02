@@ -15,14 +15,24 @@ import (
 	"os"
 	"time"
 
+	"support-agent/agent/internal/config"
 	"support-agent/agent/internal/ipc"
 	"support-agent/agent/internal/transport"
 )
 
 func main() {
-	backendURL := requireEnv("AGENT_BACKEND_URL")
-	deviceID := requireEnv("AGENT_DEVICE_ID")
-	secret := requireEnv("AGENT_IPC_SECRET")
+	// Config file (written by cmd/enroll) is the primary source; env vars
+	// override individual fields on top of it — see internal/config.
+	cfg := config.LoadWithEnvOverride(config.DefaultPath())
+	if cfg.BackendURL == "" {
+		log.Fatal("no backend URL — run cmd/enroll first, or set AGENT_BACKEND_URL")
+	}
+	if cfg.DeviceID == "" {
+		log.Fatal("no device ID — run cmd/enroll first, or set AGENT_DEVICE_ID")
+	}
+	backendURL := cfg.BackendURL
+	deviceID := cfg.DeviceID
+	secret := requireEnv("AGENT_IPC_SECRET") // never persisted to the config file — shared secret only, not device identity
 
 	executorAddr := ipc.DefaultAddr
 	if v := os.Getenv("AGENT_IPC_ADDR"); v != "" {

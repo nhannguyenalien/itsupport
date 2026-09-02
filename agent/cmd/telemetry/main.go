@@ -12,11 +12,17 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"support-agent/agent/internal/config"
 )
 
 func main() {
-	backendURL := requireEnv("AGENT_BACKEND_URL")
-	deviceID := requireEnv("AGENT_DEVICE_ID")
+	cfg := config.LoadWithEnvOverride(config.DefaultPath())
+	if cfg.BackendURL == "" || cfg.DeviceID == "" {
+		log.Fatal("no backend URL / device ID — run cmd/enroll first, or set AGENT_BACKEND_URL / AGENT_DEVICE_ID")
+	}
+	backendURL := cfg.BackendURL
+	deviceID := cfg.DeviceID
 
 	interval := 30 * time.Second
 	if v := os.Getenv("AGENT_HEARTBEAT_INTERVAL_SECONDS"); v != "" {
@@ -41,12 +47,4 @@ func main() {
 		}
 		time.Sleep(interval)
 	}
-}
-
-func requireEnv(key string) string {
-	v := os.Getenv(key)
-	if v == "" {
-		log.Fatalf("%s is not set", key)
-	}
-	return v
 }
