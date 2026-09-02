@@ -23,7 +23,18 @@ CREATE TABLE tenants (
 
     -- Per-tenant autonomy opt-in, spec: "Allow low-risk autonomous remediation"
     -- Stays false until pilot data justifies enabling it (see tool_stats).
-    autonomous_low_risk_enabled BOOLEAN NOT NULL DEFAULT false
+    autonomous_low_risk_enabled BOOLEAN NOT NULL DEFAULT false,
+
+    -- v0.2 marketing-ops budget policy (docs/v0.2-marketing-ops-spec.md #12).
+    -- ads.budget.update's risk is computed from these at evaluation time, not
+    -- looked up statically from the tool registry — see policy-engine/index.ts.
+    -- A budget *increase* above budget_approval_pct_limit is never offered to
+    -- the AI at all (not requires_approval, rejected outright) — money-losing
+    -- actions get a harder ceiling than ordinary "high risk" IT actions do.
+    budget_auto_pct_limit      NUMERIC NOT NULL DEFAULT 10,  -- increase <= this %: auto (if autonomy on)
+    budget_approval_pct_limit  NUMERIC NOT NULL DEFAULT 25,  -- increase <= this %: approval; above: rejected
+    daily_spend_limit_cents    BIGINT,                        -- NULL = no cap enforced
+    absolute_budget_limit_cents BIGINT                        -- NULL = no cap enforced
 );
 
 CREATE TABLE users (
@@ -84,6 +95,38 @@ ALTER TABLE enrollment_tokens
     FOREIGN KEY (used_by_device) REFERENCES devices(id);
 
 -- ============================================================
+-- PLATFORM CONNECTIONS (v0.2 marketing-ops)
+-- OAuth token custody for ads/analytics/CRM platforms. The AI and tools never
+-- see raw tokens — they call an internal platform-client layer that decrypts
+-- and injects the tenant's stored token (docs/v0.2-marketing-ops-spec.md).
+-- ============================================================
+CREATE TABLE platform_connections (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id               UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    platform                TEXT NOT NULL CHECK (platform IN
+                             ('google_ads', 'meta_ads', 'ga4', 'gtm', 'crm_generic')),
+    external_account_id     TEXT NOT NULL, -- platform's own account/property ID
+
+    -- AES-256-GCM ciphertext, never plaintext — see oauth/crypto.ts. iv+authTag
+    -- are prefixed into the stored value, not split into separate columns, so
+    -- there's one blob to rotate/delete per token rather than three fields that
+    -- could drift out of sync.
+    access_token_ciphertext  TEXT NOT NULL,
+    refresh_token_ciphertext TEXT,
+    token_expires_at         TIMESTAMPTZ,
+    scopes                   TEXT[] NOT NULL DEFAULT '{}',
+
+    status                   TEXT NOT NULL DEFAULT 'active'
+                             CHECK (status IN ('active', 'expired', 'revoked', 'error')),
+    connected_by             UUID REFERENCES users(id),
+    connected_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_used_at             TIMESTAMPTZ,
+    last_error               TEXT,
+
+    UNIQUE (tenant_id, platform, external_account_id)
+);
+
+-- ============================================================
 -- TOOL REGISTRY
 -- Canonical definitions live in backend/src/tool-registry/registry.json (loaded
 -- at boot, versioned in git). This table records what the registry looked like
@@ -104,7 +147,15 @@ CREATE TABLE tool_registry_snapshots (
 CREATE TABLE tickets (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    device_id       UUID NOT NULL REFERENCES devices(id),
+
+    -- Exactly one target, same reasoning as tool_calls above.
+    device_id               UUID REFERENCES devices(id),
+    platform_connection_id  UUID REFERENCES platform_connections(id),
+    CHECK (
+        (device_id IS NOT NULL AND platform_connection_id IS NULL) OR
+        (device_id IS NULL AND platform_connection_id IS NOT NULL)
+    ),
+
     created_by      UUID REFERENCES users(id),
 
     title           TEXT NOT NULL,
@@ -135,7 +186,16 @@ CREATE TABLE ticket_messages (
 CREATE TABLE tool_calls (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ticket_id           UUID REFERENCES tickets(id) ON DELETE CASCADE,
-    device_id           UUID NOT NULL REFERENCES devices(id),
+
+    -- Exactly one target: a Windows device (v0.1 tools) or a platform
+    -- connection (v0.2 marketing tools) — never both, never neither.
+    device_id               UUID REFERENCES devices(id),
+    platform_connection_id  UUID REFERENCES platform_connections(id),
+    CHECK (
+        (device_id IS NOT NULL AND platform_connection_id IS NULL) OR
+        (device_id IS NULL AND platform_connection_id IS NOT NULL)
+    ),
+
     tool                TEXT NOT NULL,
     risk                TEXT NOT NULL CHECK (risk IN ('read', 'low', 'medium', 'high')),
     params              JSONB NOT NULL DEFAULT '{}',
