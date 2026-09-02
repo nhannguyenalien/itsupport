@@ -10,6 +10,12 @@ export interface ToolDefinition {
   risk: ToolRisk;
   params: string[];
   verification: string[];
+  // v0.2 marketing-ops fields — absent (undefined) on v0.1 Windows tools.
+  domain?: "windows" | "marketing";
+  // Which platform_connections.platform this tool needs, "any" for
+  // cross-platform tools (ads.*, marketing.* KPIs), absent for tools that
+  // don't touch a stored platform connection at all (web.*, report.*, alert.*).
+  platform?: "google_ads" | "meta_ads" | "ga4" | "gtm" | "crm_generic" | "any";
 }
 
 interface RegistryFile {
