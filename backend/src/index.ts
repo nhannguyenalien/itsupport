@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import "dotenv/config";
 import { pool } from "./db/pool.js";
 import { enrollmentRoutes } from "./enrollment/routes.js";
@@ -6,14 +7,24 @@ import { deviceRoutes } from "./devices/routes.js";
 import { tenantRoutes } from "./tenants/routes.js";
 import { ticketRoutes } from "./tickets/routes.js";
 import { toolCallRoutes } from "./tool-calls/routes.js";
-import { registryVersion, registryHash } from "./tool-registry/index.js";
+import { registryVersion, registryHash, allTools } from "./tool-registry/index.js";
 
 const app = Fastify({ logger: true });
+
+// No auth layer yet (see README gaps) so this is deliberately permissive for
+// v0.1 local dev — allow any origin rather than hardcoding the frontend's dev
+// port. Revisit once there's a real session/auth story to scope this to.
+await app.register(cors, { origin: true });
 
 app.get("/health", async () => {
   await pool.query("SELECT 1");
   return { ok: true, registryVersion, registryHash };
 });
+
+// Read-only mirror of registry.json for the frontend (e.g. populating a "which
+// tool" dropdown) — keeps the tool list itself single-sourced instead of
+// duplicated into frontend code.
+app.get("/tool-registry", async () => ({ version: registryVersion, tools: allTools() }));
 
 await app.register(enrollmentRoutes);
 await app.register(deviceRoutes);

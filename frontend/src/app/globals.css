@@ -1,0 +1,69 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1a1a1a;
+  background: #f7f7f8;
+}
+.topnav {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: #111827;
+  color: white;
+}
+.topnav a { color: white; text-decoration: none; font-weight: 500; }
+.topnav a:hover { text-decoration: underline; }
+.main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-online { background: #dcfce7; color: #166534; }
+.badge-offline { background: #f3f4f6; color: #6b7280; }
+.badge-risk-read { background: #e0f2fe; color: #075985; }
+.badge-risk-low { background: #ecfccb; color: #3f6212; }
+.badge-risk-medium { background: #fef3c7; color: #92400e; }
+.badge-risk-high { background: #fee2e2; color: #991b1b; }
+
+button {
+  cursor: pointer;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+button:hover { background: #f3f4f6; }
+button.danger { color: #b91c1c; border-color: #fecaca; }
+button.danger:hover { background: #fef2f2; }
+button.primary { background: #111827; color: white; border-color: #111827; }
+button.primary:hover { background: #1f2937; }
+
+input, select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.msg { padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; max-width: 80%; }
+.msg-user { background: #e0e7ff; margin-left: auto; }
+.msg-ai { background: #f0fdf4; }
+.msg-system { background: #f3f4f6; font-style: italic; font-size: 0.85rem; }
+.msg-technician { background: #fef9c3; }
+
+.muted { color: #6b7280; font-size: 0.85rem; }

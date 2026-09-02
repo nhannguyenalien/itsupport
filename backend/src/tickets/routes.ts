@@ -65,8 +65,15 @@ export async function ticketRoutes(app: FastifyInstance) {
       `SELECT * FROM tool_calls WHERE ticket_id = $1 ORDER BY requested_at ASC`,
       [ticketId],
     );
+    // Pending write actions have an approvals row but NO tool_calls row yet
+    // (that's only created once approved, see tool-calls/routes.ts) — without
+    // this, the frontend has no way to render "awaiting your approval" at all.
+    const approvals = await pool.query(
+      `SELECT * FROM approvals WHERE ticket_id = $1 ORDER BY created_at ASC`,
+      [ticketId],
+    );
 
-    reply.send({ ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows });
+    reply.send({ ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows, approvals: approvals.rows });
   });
 
   app.post("/tickets/:ticketId/messages", async (req, reply) => {
