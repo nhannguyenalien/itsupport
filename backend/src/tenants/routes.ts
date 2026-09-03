@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
+import { requestToolCall } from "../tool-calls/service.js";
 
 const tenantParams = z.object({ tenantId: z.string().uuid() });
 const actorBody = z.object({ actorId: z.string().uuid().optional() });
@@ -67,5 +68,41 @@ export async function tenantRoutes(app: FastifyInstance) {
       [tenantId],
     );
     reply.send(result.rows);
+  });
+
+  // "Send connect link to device" button (frontend/src/app/connections). Bundles
+  // ticket creation + the browser.open_url tool call into one request so the
+  // UI doesn't need to know about tickets at all — it just asks "open the
+  // consent page for this platform on that device" and gets back whatever the
+  // policy engine decided (auto_execute / requires_approval / rejected), same
+  // outcomes as any other tool call, nothing special-cased at this layer.
+  const sendLinkBody = z.object({
+    deviceId: z.string().uuid(),
+    platform: z.enum(["google_ads", "meta_ads", "ga4"]),
+    externalAccountId: z.string().min(1),
+    actorId: z.string().uuid().optional(),
+  });
+  app.post("/tenants/:tenantId/platform-connections/send-link", async (req, reply) => {
+    const { tenantId } = tenantParams.parse(req.params);
+    const b = sendLinkBody.parse(req.body);
+
+    const device = await pool.query(`SELECT id FROM devices WHERE id = $1 AND tenant_id = $2`, [b.deviceId, tenantId]);
+    if (device.rowCount === 0) return reply.code(404).send({ error: "device not found for this tenant" });
+
+    const ticket = await pool.query(
+      `INSERT INTO tickets (tenant_id, device_id, title) VALUES ($1, $2, $3) RETURNING id`,
+      [tenantId, b.deviceId, `Connect ${b.platform} account (${b.externalAccountId})`],
+    );
+    const ticketId = ticket.rows[0].id;
+
+    const result = await requestToolCall({
+      ticketId,
+      initiatedBy: "human",
+      tool: "browser.open_url",
+      params: { platform: b.platform, external_account_id: b.externalAccountId },
+      actorId: b.actorId,
+    });
+
+    reply.send({ ticketId, ...result });
   });
 }

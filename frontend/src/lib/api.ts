@@ -135,6 +135,14 @@ export const api = {
   getTakeoverLink: (ticketId: string) => request<{ url: string }>(`/tickets/${ticketId}/takeover-link`),
 
   listPlatformConnections: (tenantId: string) => request<PlatformConnection[]>(`/tenants/${tenantId}/platform-connections`),
+  sendConnectLinkToDevice: (
+    tenantId: string,
+    body: { deviceId: string; platform: "google_ads" | "meta_ads" | "ga4"; externalAccountId: string },
+  ) =>
+    request<{ ticketId: string; outcome: string; reason?: string }>(`/tenants/${tenantId}/platform-connections/send-link`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   // Not a fetch() — this navigates the browser to the backend, which redirects
   // it again to the platform's real consent page. See oauth/routes.ts.
   connectPlatformUrl: (platform: string, tenantId: string, externalAccountId: string) =>
