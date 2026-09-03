@@ -18,9 +18,19 @@ import (
 	"support-agent/agent/internal/config"
 	"support-agent/agent/internal/ipc"
 	"support-agent/agent/internal/transport"
+	"support-agent/agent/internal/winsvc"
 )
 
 func main() {
+	if err := winsvc.RunAsService("SupportAgentDaemon", run); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// run is the actual poll loop, extracted out of main() so it can be driven
+// either by the Windows Service Control Manager (winsvc.RunAsService) or
+// directly when running interactively for dev/testing.
+func run(stopCh <-chan struct{}) {
 	// Config file (written by cmd/enroll) is the primary source; env vars
 	// override individual fields on top of it — see internal/config.
 	cfg := config.LoadWithEnvOverride(config.DefaultPath())
@@ -51,11 +61,28 @@ func main() {
 
 	log.Printf("daemon polling %s every %s for device %s", backendURL, pollInterval, deviceID)
 
+	// sleep is time.Sleep but interruptible by stopCh, so a Stop/Shutdown
+	// request from the SCM doesn't have to wait out a full poll interval —
+	// same reasoning as telemetry's ticker-based loop, just written as a
+	// helper since this loop's two sleep points (error backoff, normal poll)
+	// share the same needs.
+	sleep := func(d time.Duration) (stopped bool) {
+		select {
+		case <-stopCh:
+			return true
+		case <-time.After(d):
+			return false
+		}
+	}
+
 	for {
 		calls, err := client.PollPending()
 		if err != nil {
 			log.Printf("poll error: %v", err)
-			time.Sleep(pollInterval)
+			if sleep(pollInterval) {
+				log.Print("daemon stopping")
+				return
+			}
 			continue
 		}
 
@@ -75,7 +102,10 @@ func main() {
 			}
 		}
 
-		time.Sleep(pollInterval)
+		if sleep(pollInterval) {
+			log.Print("daemon stopping")
+			return
+		}
 	}
 }
 

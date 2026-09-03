@@ -8,17 +8,31 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"support-agent/agent/internal/executor"
 	"support-agent/agent/internal/ipc"
+	"support-agent/agent/internal/winsvc"
 )
 
 func main() {
+	if err := winsvc.RunAsService("SupportAgentExecutor", run); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// run starts the loopback HTTP server and blocks until stopCh is closed, at
+// which point it shuts the server down gracefully (existing in-flight
+// requests get to finish, no new ones are accepted) — extracted out of
+// main() so this can be driven either by the Windows Service Control Manager
+// (winsvc.RunAsService) or directly when running interactively for dev/testing.
+func run(stopCh <-chan struct{}) {
 	secret := os.Getenv("AGENT_IPC_SECRET")
 	if secret == "" {
 		log.Fatal("AGENT_IPC_SECRET is not set — refusing to start with no shared secret (would accept unsigned requests)")
@@ -73,10 +87,26 @@ func main() {
 		json.NewEncoder(w).Encode(resp)
 	})
 
-	log.Printf("executor listening on %s (loopback only)", addr)
 	// Loopback-only address is the primary control here — 127.0.0.1 doesn't
 	// accept connections from other hosts regardless of firewall state.
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatal(err)
+	srv := &http.Server{Addr: addr, Handler: mux}
+	serveErr := make(chan error, 1)
+	go func() {
+		log.Printf("executor listening on %s (loopback only)", addr)
+		serveErr <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serveErr:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	case <-stopCh:
+		log.Print("executor stopping")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+		}
 	}
 }

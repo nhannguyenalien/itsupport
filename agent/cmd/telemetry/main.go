@@ -14,9 +14,19 @@ import (
 	"time"
 
 	"support-agent/agent/internal/config"
+	"support-agent/agent/internal/winsvc"
 )
 
 func main() {
+	if err := winsvc.RunAsService("SupportAgentTelemetry", run); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// run is the actual heartbeat loop, extracted out of main() so it can be
+// driven either by the Windows Service Control Manager (winsvc.RunAsService)
+// or directly when running interactively for dev/testing.
+func run(stopCh <-chan struct{}) {
 	cfg := config.LoadWithEnvOverride(config.DefaultPath())
 	if cfg.BackendURL == "" || cfg.DeviceID == "" {
 		log.Fatal("no backend URL / device ID — run cmd/enroll first, or set AGENT_BACKEND_URL / AGENT_DEVICE_ID")
@@ -35,16 +45,29 @@ func main() {
 	url := fmt.Sprintf("%s/devices/%s/heartbeat", backendURL, deviceID)
 
 	log.Printf("telemetry heartbeating %s every %s", url, interval)
-	for {
+
+	heartbeat := func() {
 		resp, err := client.Post(url, "application/json", nil)
 		if err != nil {
 			log.Printf("heartbeat failed: %v", err)
-		} else {
-			resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				log.Printf("heartbeat rejected: status %d", resp.StatusCode)
-			}
+			return
 		}
-		time.Sleep(interval)
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("heartbeat rejected: status %d", resp.StatusCode)
+		}
+	}
+
+	heartbeat() // same behavior as before — first beat happens immediately, not after the first interval
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stopCh:
+			log.Print("telemetry stopping")
+			return
+		case <-ticker.C:
+			heartbeat()
+		}
 	}
 }
