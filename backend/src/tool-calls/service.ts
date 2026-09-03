@@ -3,6 +3,7 @@ import { getTool, isKnownTool } from "../tool-registry/index.js";
 import { evaluate } from "../policy-engine/index.js";
 import { recordAudit } from "../audit/index.js";
 import { isOAuthPlatform } from "../oauth/providers.js";
+import { executeMarketingTool } from "../platform-clients/executor.js";
 
 export interface RequestToolCallInput {
   ticketId: string;
@@ -186,5 +187,18 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
     ticketId: input.ticketId,
     deviceId: ctx.target_device_id,
   });
+
+  // Marketing tools have no separate device to poll for work — the backend
+  // has direct API access via the tenant's stored token, so it just runs the
+  // call right here. Windows tools stay async (the agent polls
+  // /devices/:id/tool-calls/pending and reports back), unaffected. Errors are
+  // caught inside executeMarketingTool and recorded on the row, never thrown
+  // here — this function's return value describes the ADMISSION decision,
+  // not execution outcome; check the tool_calls row (or re-fetch the ticket)
+  // for what actually happened.
+  if (ctx.target_platform_connection_id) {
+    await executeMarketingTool(call.rows[0].id, input.tool, input.params, ctx.target_platform_connection_id);
+  }
+
   return { outcome: "auto_execute", toolCall: call.rows[0] };
 }
