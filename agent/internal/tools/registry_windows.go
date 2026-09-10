@@ -16,31 +16,29 @@ func notImplemented(tool string) Func {
 // here just means "not implemented" rather than an unchecked new tool sneaking
 // past the name allowlist.
 //
-// Implemented for real: service.status/restart, process.list/kill, disk.usage,
-// system.info — enough to run demo scenarios A and D end-to-end. The rest are
-// wired to notImplemented() so the ARCHITECTURE is complete (executor correctly
-// recognizes the tool name, routes it, and gets a clean typed error back) even
-// before every Win32 call is written.
+// Every v0.1 tool now has a real implementation. notImplemented() is kept
+// around as the wiring for any tool added to KnownTools (registry.go) before
+// its Win32 code lands — a name known to the executor but not yet runnable,
+// rather than an unchecked new tool slipping past the allowlist.
 var Allowlist = map[string]Definition{
-	"service.status": {Fn: ServiceStatus, Risk: RiskRead},
-	"process.list":   {Fn: ProcessList, Risk: RiskRead},
-	"disk.usage":     {Fn: DiskUsage, Risk: RiskRead},
-	"system.info":    {Fn: SystemInfo, Risk: RiskRead},
-
-	"network.ping":       {Fn: notImplemented("network.ping"), Risk: RiskRead},
-	"network.dns_lookup": {Fn: notImplemented("network.dns_lookup"), Risk: RiskRead},
-	"temp.scan":          {Fn: notImplemented("temp.scan"), Risk: RiskRead},
-	"printer.status":     {Fn: notImplemented("printer.status"), Risk: RiskRead},
-	"printer.queue":      {Fn: notImplemented("printer.queue"), Risk: RiskRead},
-	"printer.test":       {Fn: notImplemented("printer.test"), Risk: RiskRead},
-	"eventlog.read":      {Fn: notImplemented("eventlog.read"), Risk: RiskRead},
+	"service.status":     {Fn: ServiceStatus, Risk: RiskRead},
+	"process.list":       {Fn: ProcessList, Risk: RiskRead},
+	"disk.usage":         {Fn: DiskUsage, Risk: RiskRead},
+	"system.info":        {Fn: SystemInfo, Risk: RiskRead},
+	"network.ping":       {Fn: Ping, Risk: RiskRead},
+	"network.dns_lookup": {Fn: DNSLookup, Risk: RiskRead},
+	"temp.scan":          {Fn: TempScan, Risk: RiskRead},
+	"printer.status":     {Fn: PrinterStatus, Risk: RiskRead},
+	"printer.queue":      {Fn: PrinterQueue, Risk: RiskRead},
+	"printer.test":       {Fn: PrinterTest, Risk: RiskRead},
+	"eventlog.read":      {Fn: EventLogRead, Risk: RiskRead},
 
 	"service.restart": {Fn: ServiceRestart, Risk: RiskMedium},
 	"process.kill":    {Fn: ProcessKill, Risk: RiskHigh},
 
-	"network.flush_dns":   {Fn: notImplemented("network.flush_dns"), Risk: RiskLow},
-	"temp.clean":          {Fn: notImplemented("temp.clean"), Risk: RiskLow},
-	"printer.clear_queue": {Fn: notImplemented("printer.clear_queue"), Risk: RiskLow},
+	"network.flush_dns":   {Fn: FlushDNS, Risk: RiskLow},
+	"temp.clean":          {Fn: TempClean, Risk: RiskLow},
+	"printer.clear_queue": {Fn: PrinterClearQueue, Risk: RiskLow},
 
 	"browser.open_url": {Fn: OpenURL, Risk: RiskLow},
 }

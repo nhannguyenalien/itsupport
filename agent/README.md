@@ -14,14 +14,32 @@ Three separate binaries, deliberately not one process — see
 - `cmd/telemetry` — low privilege. Periodic heartbeat only in v0.1 (backend's
   online/offline status is built on this).
 
-## Implemented for real (compiles + cross-compiles for Windows)
+## Implemented (compiles + cross-compiles for Windows)
 
-`service.status`, `service.restart`, `process.list`, `process.kill`,
-`disk.usage`, `system.info` — enough to run demo scenarios A and D end-to-end
-once wired to a real backend and a real Windows box. Everything else in the
-registry is wired to a typed `not implemented` error (see
-`registry_windows.go`) so the dispatch architecture is complete even before
-every Win32 call is written.
+All 16 v0.1 tools have real implementations, each a native Win32 / Go stdlib
+call — no shelling out to PowerShell or `ipconfig`/`ping`/`nslookup`:
+
+| Group   | Tools | API used |
+|---------|-------|----------|
+| service | `service.status`, `service.restart` | SCM via `x/sys/windows/svc/mgr` |
+| process | `process.list`, `process.kill` | `CreateToolhelp32Snapshot`, `OpenProcess`/`TerminateProcess` |
+| disk    | `disk.usage` | `GetDiskFreeSpaceEx` |
+| system  | `system.info` | `GlobalMemoryStatusEx` |
+| network | `network.ping`, `network.dns_lookup`, `network.flush_dns` | `IcmpSendEcho`, Go resolver, `DnsFlushResolverCache` |
+| temp    | `temp.scan`, `temp.clean` | filesystem walk of fixed temp dirs |
+| printer | `printer.status`, `printer.queue`, `printer.test`, `printer.clear_queue` | `winspool.drv` (`EnumPrinters`, `GetPrinter` L6, `EnumJobs`, `StartDocPrinter`, `SetPrinter` PURGE) |
+| eventlog| `eventlog.read` | `wevtapi` `EvtQuery`/`EvtNext`/`EvtRender` (XML) |
+| browser | `browser.open_url` (v0.2 OAuth-assist) | `cmd /c start` |
+
+`registry_windows_test.go` fails the build if the name allowlist
+(`registry.go`) and the implementation table (`registry_windows.go`) drift.
+
+Verified by `GOOS=windows go build ./...` + `GOOS=windows go vet ./...` from
+the (non-Windows) dev environment. The Win32 struct layouts and syscall
+argument order have **not** been exercised against a real Windows host yet — no
+Windows machine available here; flagged, not assumed correct from compilation
+alone. `notImplemented()` stays in `registry_windows.go` as the wiring for any
+future tool added to the name list before its Win32 code lands.
 
 ## Build
 
