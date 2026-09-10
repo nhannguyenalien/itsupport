@@ -8,6 +8,8 @@ before closing the ticket. Falls back to human takeover (MeshCentral) on failure
 Full scope contract: [`docs/v0.1-spec.md`](docs/v0.1-spec.md) — read that before
 adding anything. If it's not in the IN list there, it's not v0.1.
 
+**Run it locally:** [`DEVELOPMENT.md`](DEVELOPMENT.md) (`cd infra && docker compose up --build`).
+
 ## Stack (chosen now, flag if you want different)
 
 - **Backend**: Node.js + TypeScript, Fastify, PostgreSQL (via `pg` + hand-written
@@ -35,10 +37,22 @@ infra/       Local dev (docker-compose: postgres, backend, frontend)
 
 ## Status
 
-Scaffolding in progress. See task list / commit history for what's actually
-implemented vs. stubbed. Nothing here is production-hardened yet — this is v0.1
-under active construction, not a finished product.
+v0.1 under active construction — not production-hardened. See commit history for
+what's implemented vs. stubbed.
+
+Working end to end: the API (tickets / policy engine / approvals / audit /
+metrics), the Next.js dashboard, and all 16 Windows agent tools (compile +
+cross-compile verified; on-device runtime testing still pending — no Windows box
+in the dev environment). AI orchestration is wired and runs given an
+`OPENAI_API_KEY`.
+
+Known gaps, flagged not hidden: real mTLS cert issuance at enrollment (returns a
+placeholder serial today — see `backend/src/enrollment/routes.ts` and
+`infra/meshcentral-ca.md`); a persistent agent↔backend channel (polling for
+now); an autonomous multi-step AI loop (one step per `POST /tickets/:id/ai-step`
+today); the v0.2 marketing-ops platform clients (blocked on real Google/Meta/GA4
+API credentials — `docs/v0.2-marketing-ops-spec.md` known gaps).
 
 ## Git
 
-No remote configured yet — user will provide the repo to push to.
+Remote: `github.com/nhannguyenalien/itsupport` (`main`).

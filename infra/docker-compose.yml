@@ -1,0 +1,68 @@
+# Local dev stack for the AI Windows Support Agent platform.
+#
+#   cd infra && docker compose up --build
+#
+#   backend   -> http://localhost:3000   (health: /health)
+#   frontend  -> http://localhost:3001
+#   postgres  -> localhost:5432          (support / support / support_agent)
+#
+# The Windows agent (agent/) is NOT in here — it only runs on Windows. Point it
+# at http://<your-host-ip>:3000 from a real Windows box or VM.
+#
+# Optional secrets (OpenAI, OAuth) go in infra/.env — see infra/.env.example.
+# Without them the AI-step and OAuth endpoints fail with a clear error rather
+# than faking a result, which is the intended v0.1 behaviour.
+
+name: support-agent-platform
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: support
+      POSTGRES_PASSWORD: support
+      POSTGRES_DB: support_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Loaded once, on first boot only (when the data volume is empty).
+      # Drop the volume to re-run it: docker compose down -v
+      - ../backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U support -d support_agent"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ../backend
+    environment:
+      DATABASE_URL: postgresql://support:support@db:5432/support_agent
+      PORT: "3000"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      MESHCENTRAL_URL: ${MESHCENTRAL_URL:-}
+      OAUTH_TOKEN_ENC_KEY: ${OAUTH_TOKEN_ENC_KEY:-}
+      OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-}
+      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        # Baked into the client bundle — must be reachable from the browser.
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
