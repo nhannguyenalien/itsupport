@@ -106,6 +106,32 @@ export interface ToolDefinition {
   verification: string[];
 }
 
+export interface ToolMetric {
+  tool: string;
+  calls_total: number;
+  calls_succeeded: number;
+  verified_passed: number;
+  verified_failed: number;
+  remediation_success_rate: number | null;
+}
+
+export interface Metrics {
+  tenant_id: string;
+  tickets_total: number;
+  tickets_ai_resolved: number;
+  tickets_escalated: number;
+  avg_resolution_seconds: number | null;
+  approvals_total: number;
+  approvals_granted: number;
+  approval_rate: number | null;
+  tool_calls_per_ticket: number | null;
+  remediation_success_rate: number | null;
+  repeat_incident_rate: number | null;
+  ai_estimated_cost_usd: number;
+  ai_cost_per_ticket: number | null;
+  by_tool: ToolMetric[];
+}
+
 export const api = {
   listTools: () => request<{ version: number; tools: ToolDefinition[] }>(`/tool-registry`),
 
@@ -113,6 +139,8 @@ export const api = {
   createTenant: (name: string) => request<Tenant>(`/tenants`, { method: "POST", body: JSON.stringify({ name }) }),
   disableAi: (tenantId: string) => request(`/tenants/${tenantId}/disable-ai`, { method: "POST", body: "{}" }),
   enableAi: (tenantId: string) => request(`/tenants/${tenantId}/enable-ai`, { method: "POST", body: "{}" }),
+
+  getMetrics: (tenantId: string) => request<Metrics>(`/metrics?tenantId=${tenantId}`),
 
   listDevices: (tenantId: string) => request<Device[]>(`/devices?tenantId=${tenantId}`),
   revokeDevice: (deviceId: string) => request(`/devices/${deviceId}/revoke`, { method: "POST", body: "{}" }),

@@ -187,7 +187,15 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
     tenantId: ctx.tenant.id,
     actorType: "ai",
     eventType: "ai_step.completed",
-    eventData: { model: MODEL, hasToolCall: Boolean(toolCall) },
+    // Token counts feed GET /metrics' ai_cost_per_ticket estimate — capture
+    // them here where response.usage is in hand, since nothing persists the
+    // raw completion.
+    eventData: {
+      model: MODEL,
+      hasToolCall: Boolean(toolCall),
+      promptTokens: response.usage?.prompt_tokens ?? 0,
+      completionTokens: response.usage?.completion_tokens ?? 0,
+    },
     ticketId,
     deviceId: ctx.target.device?.id ?? null,
   });
