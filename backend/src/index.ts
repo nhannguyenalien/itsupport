@@ -1,24 +1,33 @@
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
 import "dotenv/config";
-import { pool } from "./db/pool.js";
+import { adminPool, pool } from "./db/pool.js";
 import { enrollmentRoutes } from "./enrollment/routes.js";
 import { deviceRoutes } from "./devices/routes.js";
 import { tenantRoutes } from "./tenants/routes.js";
 import { ticketRoutes } from "./tickets/routes.js";
 import { toolCallRoutes } from "./tool-calls/routes.js";
 import { aiOrchestrationRoutes } from "./ai-orchestration/routes.js";
+import { computerUseRoutes } from "./computer-use/routes.js";
 import { oauthRoutes } from "./oauth/routes.js";
 import { metricsRoutes } from "./metrics/routes.js";
 import { registryVersion, registryHash, allTools } from "./tool-registry/index.js";
+import { authRoutes } from "./auth/routes.js";
+import { registerAuth } from "./auth/plugin.js";
+import { ensureAuthSchema } from "./db/ensure-auth-schema.js";
 
 const app = Fastify({ logger: true });
 
-// No auth layer yet (see README gaps) so this is deliberately permissive for
-// v0.1 local dev — allow any origin rather than hardcoding the frontend's dev
-// port. Revisit once there's a real session/auth story to scope this to.
-await app.register(cors, { origin: true });
+const allowedOrigins = (process.env.CORS_ORIGINS ?? process.env.FRONTEND_URL ?? "http://localhost:3001")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+await app.register(cors, { origin: allowedOrigins, credentials: true });
+await app.register(rateLimit, { global: false });
+await ensureAuthSchema();
+await registerAuth(app);
 
 // Every route validates request bodies/params with zod .parse() — without
 // this, a validation failure (bad UUID, missing field, our own .refine()
@@ -51,11 +60,13 @@ app.get("/health", async () => {
 app.get("/tool-registry", async () => ({ version: registryVersion, tools: allTools() }));
 
 await app.register(enrollmentRoutes);
+await app.register(authRoutes);
 await app.register(deviceRoutes);
 await app.register(tenantRoutes);
 await app.register(ticketRoutes);
 await app.register(toolCallRoutes);
 await app.register(aiOrchestrationRoutes);
+await app.register(computerUseRoutes);
 await app.register(oauthRoutes);
 await app.register(metricsRoutes);
 
@@ -64,7 +75,7 @@ await app.register(metricsRoutes);
 // dashboard's online/offline status (Definition of Done #3) meaningless.
 const OFFLINE_AFTER_SECONDS = 90; // 3 missed heartbeats at the daemon's default poll cadence
 setInterval(() => {
-  pool
+  adminPool
     .query(
       `UPDATE devices SET status = 'offline'
        WHERE status = 'online' AND last_seen_at < now() - interval '${OFFLINE_AFTER_SECONDS} seconds'`,

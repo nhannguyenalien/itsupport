@@ -1,0 +1,22 @@
+services:
+  backend:
+    environment:
+      # Node's Happy Eyeballs implementation times out on this IPv4-only host
+      # when Neon also publishes unreachable IPv6 records.
+      NODE_OPTIONS: --dns-result-order=ipv4first --no-network-family-autoselection
+    secrets:
+      - neon_database_url
+      - neon_database_admin_url
+    command:
+      - sh
+      - -c
+      - |
+        export DATABASE_URL="$$(cat /run/secrets/neon_database_url)"
+        export DATABASE_ADMIN_URL="$$(cat /run/secrets/neon_database_admin_url)"
+        exec node dist/index.js
+
+secrets:
+  neon_database_url:
+    file: ./secrets/neon_database_url
+  neon_database_admin_url:
+    file: ./secrets/neon_database_admin_url

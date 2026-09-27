@@ -1,13 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
-import { api, type Device } from "@/lib/api";
+import { api, type Device, type EnrollmentToken } from "@/lib/api";
+
+type Platform = "windows" | "mac";
+
+const PUBLIC_URL = "https://itsupport.schoolsai.work";
 
 export default function DevicesPage() {
   const { tenantId, ready } = useTenant();
   const [devices, setDevices] = useState<Device[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showInstaller, setShowInstaller] = useState(false);
+  const [platform, setPlatform] = useState<Platform>("windows");
+  const [enrollment, setEnrollment] = useState<EnrollmentToken | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const installCommand = useMemo(() => {
+    if (!enrollment) return "";
+    if (platform === "mac") {
+      return `curl -fsSL ${PUBLIC_URL}/downloads/agent/install-macos | /bin/zsh -s -- '${enrollment.token}'`;
+    }
+    return `$env:SUPPORT_ENROLL_TOKEN='${enrollment.token}'; irm '${PUBLIC_URL}/downloads/agent/install-windows' | iex`;
+  }, [enrollment, platform]);
 
   async function load() {
     if (!tenantId) return;
@@ -40,11 +57,65 @@ export default function DevicesPage() {
     }
   }
 
+  async function createInstaller() {
+    if (!tenantId) return;
+    setError(null);
+    setCopied(false);
+    setCreating(true);
+    try {
+      setEnrollment(await api.createEnrollmentToken(tenantId));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function copyCommand() {
+    await navigator.clipboard.writeText(installCommand);
+    setCopied(true);
+  }
+
   return (
     <div>
-      <h1>Devices</h1>
+      <div className="devices-heading">
+        <div><h1>Thiết bị</h1><p className="muted">Cài agent và quản lý các máy đang kết nối.</p></div>
+        <button className="primary" onClick={() => { setShowInstaller(true); setEnrollment(null); }}>+ Thêm máy</button>
+      </div>
       {error && <div className="card" style={{ color: "#b91c1c" }}>{error}</div>}
-      {devices.length === 0 && <p className="muted">No devices enrolled yet.</p>}
+      {showInstaller && (
+        <div className="card installer-card">
+          <div className="installer-title">
+            <div><strong>Cài agent trong 1 lần dán lệnh</strong><p className="muted">Chọn hệ điều hành của máy cần hỗ trợ.</p></div>
+            <button aria-label="Đóng" onClick={() => setShowInstaller(false)}>×</button>
+          </div>
+          <div className="platform-tabs">
+            <button className={platform === "windows" ? "active" : ""} onClick={() => { setPlatform("windows"); setEnrollment(null); }}>Windows</button>
+            <button className={platform === "mac" ? "active" : ""} onClick={() => { setPlatform("mac"); setEnrollment(null); }}>macOS</button>
+          </div>
+          {!enrollment ? (
+            <div className="installer-start">
+              <p>Nhấn nút dưới đây để tạo lệnh cài dùng một lần. Mã tự hết hạn sau 10 phút.</p>
+              <button className="primary" disabled={creating} onClick={createInstaller}>{creating ? "Đang tạo…" : "Tạo lệnh cài đặt"}</button>
+            </div>
+          ) : (
+            <div className="installer-command">
+              <ol>
+                <li>{platform === "windows" ? "Mở PowerShell bằng Run as administrator." : "Mở ứng dụng Terminal."}</li>
+                <li>Nhấn Sao chép, dán vào cửa sổ vừa mở rồi Enter.</li>
+                <li>Đợi báo hoàn tất. Thiết bị sẽ tự xuất hiện bên dưới.</li>
+              </ol>
+              <code>{installCommand}</code>
+              <div className="installer-actions">
+                <button className="primary" onClick={copyCommand}>{copied ? "✓ Đã sao chép" : "Sao chép lệnh"}</button>
+                <button onClick={createInstaller}>Tạo lệnh mới</button>
+              </div>
+              <p className="installer-warning">Không gửi lệnh này cho nhiều máy: mã chỉ dùng được một lần và hết hạn lúc {new Date(enrollment.expiresAt).toLocaleTimeString()}.</p>
+            </div>
+          )}
+        </div>
+      )}
+      {devices.length === 0 && <p className="muted">Chưa có thiết bị. Nhấn “Thêm máy” để bắt đầu.</p>}
       {devices.map((d) => (
         <div className="card" key={d.id}>
           <div className="row">
@@ -54,19 +125,19 @@ export default function DevicesPage() {
               {d.actions_paused && <span className="badge badge-risk-medium" style={{ marginLeft: 6 }}>paused</span>}
               {d.revoked && <span className="badge badge-risk-high" style={{ marginLeft: 6 }}>revoked</span>}
               <div className="muted">
-                {d.os_version ?? "unknown OS"} · agent {d.agent_version ?? "unknown"} · last seen{" "}
-                {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString() : "never"}
+                {d.os_version ?? "Không rõ hệ điều hành"} · agent {d.agent_version ?? "không rõ"} · hoạt động lần cuối{" "}
+                {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString() : "chưa có"}
               </div>
               <div className="muted">{d.id}</div>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               {!d.actions_paused ? (
-                <button onClick={() => act(() => api.pauseDevice(d.id))}>Pause Device Actions</button>
+                <button onClick={() => act(() => api.pauseDevice(d.id))}>Tạm dừng</button>
               ) : (
-                <button onClick={() => act(() => api.unpauseDevice(d.id))}>Unpause</button>
+                <button onClick={() => act(() => api.unpauseDevice(d.id))}>Tiếp tục</button>
               )}
               <button className="danger" disabled={d.revoked} onClick={() => act(() => api.revokeDevice(d.id))}>
-                Revoke Device
+                Thu hồi
               </button>
             </div>
           </div>

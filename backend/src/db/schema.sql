@@ -1,8 +1,6 @@
 -- AI Windows Support Agent — v0.1 schema
--- Multi-tenant via tenant_id on every tenant-scoped table. No shared-nothing DB
--- separation for v0.1 (pilot scale) — row-level scoping enforced in application
--- code (every query filters by tenant_id from the authenticated session/agent
--- cert). Revisit if a pilot tenant requires hard data isolation.
+-- Multi-tenant data is protected twice: route-level authorization and native
+-- PostgreSQL row-level security keyed by the transaction-local app.tenant_id.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid()
 
@@ -25,6 +23,19 @@ CREATE TABLE tenants (
     -- Stays false until pilot data justifies enabling it (see tool_stats).
     autonomous_low_risk_enabled BOOLEAN NOT NULL DEFAULT false,
 
+    -- Separate opt-in for computer-use write actions (domain:'windows_desktop',
+    -- risk:'high') — deliberately its own flag, not reusing
+    -- autonomous_low_risk_enabled above: that one only ever unlocks risk:'low'
+    -- tools per policy-engine/index.ts's existing rule, and computer-use
+    -- actions are risk:'high' by design (every click/type is real reach into
+    -- the machine). A tenant can turn general IT-tool autonomy and
+    -- computer-use autonomy on independently. See
+    -- docs/v0.1-computer-use-addendum.md's autonomous-mode section — even
+    -- with this on, a desktop.type carrying a Luhn-valid card number always
+    -- still requires approval (policy-engine/index.ts), and no UI toggle
+    -- exists yet (same as autonomous_low_risk_enabled) — set via SQL.
+    computer_use_autonomous_enabled BOOLEAN NOT NULL DEFAULT false,
+
     -- v0.2 marketing-ops budget policy (docs/v0.2-marketing-ops-spec.md #12).
     -- ads.budget.update's risk is computed from these at evaluation time, not
     -- looked up statically from the tool registry — see policy-engine/index.ts.
@@ -41,10 +52,29 @@ CREATE TABLE users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     email           TEXT NOT NULL,
+    firebase_uid    TEXT UNIQUE,
+    password_hash   TEXT,
     role            TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'technician', 'member')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (tenant_id, email)
 );
+
+-- Legacy password/session columns are retained for a non-destructive upgrade,
+-- but production authentication is performed by Firebase ID tokens.
+-- Session tokens are never
+-- stored raw: only a SHA-256 digest is persisted, so a database read cannot be
+-- turned directly into a logged-in browser session.
+CREATE UNIQUE INDEX users_email_unique ON users (lower(email));
+CREATE TABLE auth_sessions (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash      TEXT NOT NULL UNIQUE,
+    expires_at      TIMESTAMPTZ NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_auth_sessions_user ON auth_sessions(user_id);
+CREATE INDEX idx_auth_sessions_expiry ON auth_sessions(expires_at);
 
 -- ============================================================
 -- DEVICE ENROLLMENT
@@ -68,11 +98,20 @@ CREATE TABLE devices (
     hostname            TEXT NOT NULL,
     os_version          TEXT,
     agent_version       TEXT,
+    -- Multi-OS computer-use addendum (docs/v0.1-computer-use-addendum.md) —
+    -- which agent build enrolled (cmd/enroll derives this from runtime.GOOS).
+    -- Defaults 'windows' for back-compat with pre-multi-OS agent builds that
+    -- don't send this field at all. Drives the `environment` value passed to
+    -- OpenAI's computer_use_preview tool (backend/src/computer-use/index.ts)
+    -- — everything else about a device (registry.json, policy-engine) is
+    -- already platform-agnostic.
+    platform            TEXT NOT NULL DEFAULT 'windows' CHECK (platform IN ('windows', 'mac', 'linux')),
 
     public_key          TEXT NOT NULL,       -- device keypair public half, from enrollment
     cert_serial         TEXT UNIQUE,          -- issued device cert serial (mTLS identity)
     cert_issued_at      TIMESTAMPTZ,
     cert_revoked_at     TIMESTAMPTZ,          -- non-null => cert is dead, spec: "Revoke Device"
+    agent_token_hash    TEXT UNIQUE,           -- SHA-256 of the per-device API bearer token
 
     -- spec: "Pause Device Actions" — read tools still allowed, write tools blocked
     -- at the backend regardless of what the agent would otherwise accept.
@@ -268,6 +307,72 @@ CREATE TABLE audit_log (
 );
 
 -- ============================================================
+-- COMPUTER USE — docs/v0.1-computer-use-addendum.md. OpenAI Computer-Using-
+-- Agent (Responses API, computer_use_preview tool) sessions for AI-driven
+-- remote desktop support. Every actual action (click/type/etc.) is still an
+-- ordinary tool_calls/approvals row — domain:'windows_desktop' in
+-- registry.json, risk:'high' -> policy-engine/index.ts always requires_
+-- approval, never auto-execute. This table only tracks the OpenAI
+-- conversation state needed to resume that loop; it grants no authorization
+-- by itself.
+-- ============================================================
+CREATE TABLE computer_use_sessions (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id             UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    ticket_id             UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    device_id             UUID NOT NULL REFERENCES devices(id),
+
+    status                TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended')),
+    openai_response_id    TEXT, -- OpenAI Responses API response id, for previous_response_id chaining
+
+    -- Exactly one of these is set while a step is in flight: the tool_calls row
+    -- for an auto-executed read action (desktop.screenshot/move/wait) still
+    -- waiting on the agent to report a result, or the approvals row for a
+    -- risk:'high' write action still waiting on a human. advanceSession()
+    -- (computer-use/index.ts) polls whichever is set and only calls OpenAI
+    -- again once it's resolved — same "frontend polls every few seconds"
+    -- posture as the rest of this app, no new push/wait mechanism.
+    pending_tool_call_id  UUID REFERENCES tool_calls(id),
+    pending_approval_id   UUID REFERENCES approvals(id),
+
+    -- The current OpenAI computer-use API ("computer" tool, gpt-5.6-sol —
+    -- computer-use-preview is retired, confirmed via a real 404) returns a
+    -- BATCH of actions per computer_call (actions[], one shared call_id, one
+    -- pending_safety_checks for the whole batch), but this product's hard
+    -- requirement is per-action human approval. These 3 columns hold the
+    -- rest of an in-progress batch while pending_tool_call_id/
+    -- pending_approval_id above track whichever single action within it is
+    -- currently being approved/executed — see computer-use/index.ts. All
+    -- three are NULL when not mid-batch (including right after the last
+    -- action of a batch resolves, before the end-of-batch response is sent).
+    pending_batch_call_id       TEXT,
+    pending_batch_remaining     JSONB, -- array of not-yet-started ComputerAction objects
+    pending_batch_safety_checks JSONB, -- the batch's pending_safety_checks, echoed back once at the end
+
+    display_width         INTEGER NOT NULL DEFAULT 1280,
+    display_height        INTEGER NOT NULL DEFAULT 800,
+    environment            TEXT NOT NULL DEFAULT 'windows' CHECK (environment IN ('windows', 'mac', 'linux', 'ubuntu', 'browser')),
+
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Screenshot bytes live here, never inline in tool_calls.result_data or
+-- audit_log.event_data (both JSONB, no size cap enforced today) — keeps
+-- binary payloads out of rows/columns that get scanned constantly.
+-- tool_calls.result_data for a desktop.screenshot call instead carries just
+-- {"screenshot_id": "<this table's id>"}, see tool-calls/execution.ts.
+CREATE TABLE computer_use_screenshots (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id  UUID NOT NULL REFERENCES computer_use_sessions(id) ON DELETE CASCADE,
+    image_data  BYTEA NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_computer_use_sessions_ticket ON computer_use_sessions(ticket_id);
+CREATE INDEX idx_computer_use_screenshots_session ON computer_use_screenshots(session_id);
+
+-- ============================================================
 -- METRICS — spec explicitly wants these queryable from day one, not bolted on.
 -- Kept as views over the tables above rather than a separately-maintained
 -- aggregate table, so numbers can never drift from the source records.
@@ -314,6 +419,12 @@ FROM approvals a
 JOIN tickets t ON t.id = a.ticket_id
 GROUP BY t.tenant_id;
 
+-- Views must run as the caller so the underlying tenant RLS policies remain
+-- effective (PostgreSQL 15+ defaults to the view owner's privileges).
+ALTER VIEW metrics_tickets SET (security_invoker = true);
+ALTER VIEW metrics_tool_calls SET (security_invoker = true);
+ALTER VIEW metrics_approvals SET (security_invoker = true);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -328,3 +439,46 @@ CREATE INDEX idx_approvals_status ON approvals(status) WHERE status = 'pending';
 CREATE INDEX idx_audit_log_tenant ON audit_log(tenant_id);
 CREATE INDEX idx_audit_log_device ON audit_log(device_id);
 CREATE INDEX idx_enrollment_tokens_hash ON enrollment_tokens(token_hash);
+
+-- ============================================================
+-- ROW LEVEL SECURITY
+-- The application role must not own these tables and must not have BYPASSRLS.
+-- Missing app.tenant_id therefore means no tenant rows, never all rows.
+-- ============================================================
+CREATE OR REPLACE FUNCTION app_tenant_id() RETURNS uuid
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
+  SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid
+$$;
+
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollment_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ticket_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tool_calls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE approvals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE computer_use_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE computer_use_screenshots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON tenants USING (id = app_tenant_id()) WITH CHECK (id = app_tenant_id());
+CREATE POLICY tenant_isolation ON users USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON enrollment_tokens USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON devices USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON platform_connections USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON tickets USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON audit_log USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON computer_use_sessions USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON auth_sessions USING (EXISTS (SELECT 1 FROM users u WHERE u.id = user_id));
+CREATE POLICY tenant_isolation ON ticket_messages USING (EXISTS (SELECT 1 FROM tickets t WHERE t.id = ticket_id));
+CREATE POLICY tenant_isolation ON tool_calls USING (
+  EXISTS (SELECT 1 FROM devices d WHERE d.id = device_id)
+  OR EXISTS (SELECT 1 FROM platform_connections p WHERE p.id = platform_connection_id)
+);
+CREATE POLICY tenant_isolation ON approvals USING (EXISTS (SELECT 1 FROM tickets t WHERE t.id = ticket_id));
+CREATE POLICY tenant_isolation ON computer_use_screenshots USING (
+  EXISTS (SELECT 1 FROM computer_use_sessions s WHERE s.id = session_id)
+);

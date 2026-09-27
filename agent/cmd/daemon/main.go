@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"support-agent/agent/internal/config"
@@ -22,8 +23,20 @@ import (
 )
 
 func main() {
+	configureFileLogging("daemon.log")
 	if err := winsvc.RunAsService("SupportAgentDaemon", run); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func configureFileLogging(name string) {
+	dir := filepath.Dir(config.DefaultPath())
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(dir, name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err == nil {
+		log.SetOutput(f)
 	}
 }
 
@@ -56,7 +69,10 @@ func run(stopCh <-chan struct{}) {
 		}
 	}
 
-	client := transport.NewClient(backendURL, deviceID)
+	client, err := transport.NewClient(backendURL, deviceID, cfg.AgentToken, cfg.CertificatePEM, cfg.PrivateKeyPEM, cfg.CACertificatePEM)
+	if err != nil {
+		log.Fatalf("configure agent transport: %v", err)
+	}
 	httpClient := &http.Client{Timeout: 30 * time.Second} // generous — some tools (service restart) legitimately take a while
 
 	log.Printf("daemon polling %s every %s for device %s", backendURL, pollInterval, deviceID)

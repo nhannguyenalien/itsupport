@@ -7,19 +7,31 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"support-agent/agent/internal/config"
+	"support-agent/agent/internal/transport"
 	"support-agent/agent/internal/winsvc"
 )
 
 func main() {
+	configureFileLogging("telemetry.log")
 	if err := winsvc.RunAsService("SupportAgentTelemetry", run); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func configureFileLogging(name string) {
+	dir := filepath.Dir(config.DefaultPath())
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(dir, name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err == nil {
+		log.SetOutput(f)
 	}
 }
 
@@ -41,20 +53,16 @@ func run(stopCh <-chan struct{}) {
 		}
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	url := fmt.Sprintf("%s/devices/%s/heartbeat", backendURL, deviceID)
+	client, err := transport.NewClient(backendURL, deviceID, cfg.AgentToken, cfg.CertificatePEM, cfg.PrivateKeyPEM, cfg.CACertificatePEM)
+	if err != nil {
+		log.Fatalf("configure agent transport: %v", err)
+	}
 
-	log.Printf("telemetry heartbeating %s every %s", url, interval)
+	log.Printf("telemetry heartbeating %s every %s", backendURL, interval)
 
 	heartbeat := func() {
-		resp, err := client.Post(url, "application/json", nil)
-		if err != nil {
+		if err := client.Heartbeat(); err != nil {
 			log.Printf("heartbeat failed: %v", err)
-			return
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("heartbeat rejected: status %d", resp.StatusCode)
 		}
 	}
 

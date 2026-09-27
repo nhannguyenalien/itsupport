@@ -1,225 +1,123 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { api, type TicketDetail, type ToolDefinition } from "@/lib/api";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { api, type Approval, type TicketDetail } from "@/lib/api";
 
-function RiskBadge({ risk }: { risk: string }) {
-  return <span className={`badge badge-risk-${risk}`}>{risk}</span>;
+const statusText: Record<string, string> = {
+  open: "Sẵn sàng hỗ trợ", diagnosing: "Đang kiểm tra", awaiting_approval: "Cần bạn xác nhận",
+  remediating: "Đang xử lý", resolved: "Đã xử lý xong", remediation_failed: "Chưa xử lý được",
+  escalated: "Đã chuyển kỹ thuật viên", closed: "Đã đóng",
+};
+
+function approvalQuestion(approval: Approval): string {
+  const questions: Record<string, string> = {
+    "temp.clean": "Tôi đã kiểm tra xong và đề xuất dọn các tệp tạm để giải phóng dung lượng. Bạn có đồng ý không?",
+    "process.kill": "Tôi đề xuất đóng chương trình đang gây sự cố. Dữ liệu chưa lưu trong chương trình đó có thể bị mất. Bạn có đồng ý không?",
+    "service.restart": "Tôi đề xuất khởi động lại dịch vụ đang gặp lỗi. Máy có thể gián đoạn trong chốc lát. Bạn có đồng ý không?",
+    "network.flush_dns": "Tôi đề xuất làm mới kết nối tên miền trên máy. Bạn có đồng ý không?",
+    "printer.clear_queue": "Tôi đề xuất xóa các lệnh in đang bị kẹt. Bạn có đồng ý không?",
+  };
+  if (approval.tool.startsWith("desktop.")) return "Tôi cần thao tác trên màn hình máy để tiếp tục xử lý. Bạn có đồng ý không?";
+  return questions[approval.tool] ?? "Tôi đã tìm thấy một bước có thể thay đổi máy của bạn. Bạn có đồng ý để tôi tiếp tục không?";
+}
+
+function friendlyError(value: unknown): string {
+  const message = String(value);
+  if (message.includes("401") || message.includes("403")) return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+  if (message.includes("Failed to fetch")) return "Không thể kết nối tới dịch vụ hỗ trợ. Vui lòng thử lại sau ít phút.";
+  return "Có lỗi xảy ra khi xử lý yêu cầu. Vui lòng thử lại.";
 }
 
 export default function TicketDetailPage() {
-  const params = useParams<{ id: string }>();
-  const ticketId = params.id;
-
+  const { id: ticketId } = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
-  const [tools, setTools] = useState<ToolDefinition[]>([]);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [messageBody, setMessageBody] = useState("");
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const [selectedTool, setSelectedTool] = useState("");
-  const [initiatedBy, setInitiatedBy] = useState<"ai" | "human">("ai");
-  const [paramsJson, setParamsJson] = useState("{}");
-  const [reasoning, setReasoning] = useState("");
-
-  async function load() {
-    try {
-      setTicket(await api.getTicket(ticketId));
-    } catch (e) {
-      setError(String(e));
-    }
+  async function load(silent = false) {
+    try { setTicket(await api.getTicket(ticketId)); if (!silent) setError(null); }
+    catch (e) { if (!silent) setError(friendlyError(e)); }
   }
 
   useEffect(() => {
-    load();
-    api
-      .listTools()
-      .then((r) => {
-        setTools(r.tools);
-        if (r.tools[0]) setSelectedTool(r.tools[0].tool);
-      })
-      .catch((e) => setError(String(e)));
-    const interval = setInterval(load, 4000);
-    return () => clearInterval(interval);
+    void load();
+    const interval = window.setInterval(() => void load(true), 3000);
+    return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
-  if (!ticket) return <p className="muted">Loading…</p>;
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [ticket?.messages.length, ticket?.approvals.length, busy]);
 
-  async function sendMessage() {
-    if (!messageBody.trim()) return;
-    try {
-      await api.addMessage(ticketId, { authorType: "user", body: messageBody });
-      setMessageBody("");
-      await load();
-    } catch (e) {
-      setError(String(e));
-    }
-  }
+  async function askAi() { await api.runAiStep(ticketId); await load(true); }
 
-  async function requestToolCall() {
-    setError(null);
-    let parsedParams: Record<string, unknown> = {};
+  async function sendMessage(event: FormEvent) {
+    event.preventDefault();
+    const body = message.trim();
+    if (!body || busy) return;
+    setBusy(true); setError(null); setMessage("");
     try {
-      parsedParams = paramsJson.trim() ? JSON.parse(paramsJson) : {};
-    } catch {
-      setError("params must be valid JSON");
-      return;
-    }
-    try {
-      await api.requestToolCall(ticketId, {
-        initiatedBy,
-        tool: selectedTool,
-        params: parsedParams,
-        reasoning: reasoning || undefined,
-      });
-      setReasoning("");
-      await load();
-    } catch (e) {
-      setError(String(e));
-    }
+      await api.addMessage(ticketId, { authorType: "user", body });
+      await load(true);
+      await askAi();
+    } catch (e) { setMessage(body); setError(friendlyError(e)); }
+    finally { setBusy(false); }
   }
 
   async function decide(approvalId: string, approve: boolean) {
+    if (busy) return;
+    setBusy(true); setError(null);
     try {
-      if (approve) await api.approveApproval(approvalId);
-      else await api.rejectApproval(approvalId);
-      await load();
-    } catch (e) {
-      setError(String(e));
-    }
+      if (approve) await api.approveApproval(approvalId); else await api.rejectApproval(approvalId);
+      await load(true);
+      await askAi();
+    } catch (e) { setError(friendlyError(e)); }
+    finally { setBusy(false); }
   }
 
-  async function requestTakeover() {
-    setError(null);
-    try {
-      const { url } = await api.getTakeoverLink(ticketId);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      // Honest failure from the backend (no MeshCentral agent on this device
-      // yet, or MESHCENTRAL_URL not configured) — surfaced as-is, not hidden.
-      setError(String(e));
-    }
-  }
+  if (!ticket) return <div className="support-loading">Đang mở cuộc trò chuyện…</div>;
 
-  const pendingApprovals = ticket.approvals.filter((a) => a.status === "pending");
+  const messages = ticket.messages.filter((item) => item.author_type !== "system");
+  const approvals = ticket.approvals.filter((item) => item.status === "pending");
+  const isWorking = busy || ticket.toolCalls.some((item) => item.result === null);
 
   return (
-    <div>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+    <section className="support-chat-shell">
+      <header className="support-chat-header">
+        <Link href="/tickets" className="support-back" aria-label="Quay lại danh sách yêu cầu">←</Link>
         <div>
           <h1>{ticket.title}</h1>
-          <p className="muted">
-            status: <strong>{ticket.status}</strong> ·{" "}
-            {ticket.device_id ? `device ${ticket.device_id}` : `platform connection ${ticket.platform_connection_id}`}
-          </p>
+          <p><span className={`support-status-dot ${isWorking ? "working" : ""}`} />{isWorking ? "Đang xử lý yêu cầu…" : (statusText[ticket.status] ?? "Đang hỗ trợ")}</p>
         </div>
-        {ticket.device_id && <button onClick={requestTakeover}>Remote takeover (MeshCentral)</button>}
-      </div>
-      {error && <div className="card" style={{ color: "#b91c1c" }}>{error}</div>}
+      </header>
 
-      {pendingApprovals.length > 0 && (
-        <div className="card" style={{ borderColor: "#fbbf24", background: "#fffbeb" }}>
-          <h3>Pending approval{pendingApprovals.length > 1 ? "s" : ""}</h3>
-          {pendingApprovals.map((a) => (
-            <div key={a.id} style={{ marginBottom: "0.75rem" }}>
-              <div>
-                <strong>{a.tool}</strong> — <code>{JSON.stringify(a.params)}</code>
-              </div>
-              {a.reasoning && <div className="muted">&quot;{a.reasoning}&quot;</div>}
-              <div style={{ marginTop: "0.4rem", display: "flex", gap: "0.5rem" }}>
-                <button className="primary" onClick={() => decide(a.id, true)}>
-                  Approve
-                </button>
-                <button className="danger" onClick={() => decide(a.id, false)}>
-                  Reject
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="card">
-        <h3>Chat</h3>
-        {ticket.messages.length === 0 && <p className="muted">No messages yet.</p>}
-        {ticket.messages.map((m) => (
-          <div key={m.id} className={`msg msg-${m.author_type}`}>
-            <div className="muted" style={{ fontSize: "0.75rem" }}>
-              {m.author_type}
-            </div>
-            {m.body}
+      <main className="support-chat-messages" aria-live="polite">
+        {messages.length === 0 && <div className="support-welcome"><span>✦</span><h2>Xin chào, tôi có thể giúp gì cho bạn?</h2><p>Hãy mô tả vấn đề bằng lời bình thường. Tôi sẽ tự kiểm tra và chọn cách xử lý phù hợp.</p></div>}
+        {messages.map((item) => (
+          <div key={item.id} className={`support-message ${item.author_type === "user" ? "from-user" : "from-support"}`}>
+            {item.author_type !== "user" && <span className="support-avatar">✦</span>}
+            <div><p>{item.body}</p><time>{new Date(item.created_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time></div>
           </div>
         ))}
-        <div className="row" style={{ marginTop: "0.75rem" }}>
-          <input
-            placeholder="Type a message…"
-            value={messageBody}
-            onChange={(e) => setMessageBody(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            style={{ flex: 1 }}
-          />
-          <button className="primary" onClick={sendMessage}>
-            Send
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
-        <h3>Tool calls</h3>
-        {ticket.toolCalls.length === 0 && <p className="muted">None yet.</p>}
-        {ticket.toolCalls.map((tc) => (
-          <div key={tc.id} className="row" style={{ borderBottom: "1px solid #f3f4f6", padding: "0.4rem 0" }}>
-            <div>
-              <strong>{tc.tool}</strong> <RiskBadge risk={tc.risk} />
-              {tc.parent_tool_call_id && <span className="muted"> (verification step)</span>}
-              <div className="muted">{JSON.stringify(tc.params)}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div>{tc.result ?? "pending…"}</div>
-              {tc.verification_status !== "not_required" && (
-                <div className={`muted`}>verification: {tc.verification_status}</div>
-              )}
-            </div>
+        {approvals.map((approval) => (
+          <div key={approval.id} className="support-message from-support support-confirmation">
+            <span className="support-avatar">✦</span>
+            <div><p>{approvalQuestion(approval)}</p><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>Đồng ý, tiếp tục</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>Không đồng ý</button></div></div>
           </div>
         ))}
-      </div>
+        {isWorking && <div className="support-message from-support support-typing"><span className="support-avatar">✦</span><div><i /><i /><i /><span>Đang kiểm tra và xử lý…</span></div></div>}
+        <div ref={endRef} />
+      </main>
 
-      <div className="card">
-        <h3>Request a tool call</h3>
-        <p className="muted">
-          Manual form standing in for AI orchestration (not wired to an LLM yet — see docs/v0.1-spec.md status). Lets you
-          exercise the real policy engine end to end.
-        </p>
-        <div className="row" style={{ marginBottom: "0.5rem" }}>
-          <select value={initiatedBy} onChange={(e) => setInitiatedBy(e.target.value as "ai" | "human")}>
-            <option value="ai">initiated by: ai</option>
-            <option value="human">initiated by: human</option>
-          </select>
-          <select value={selectedTool} onChange={(e) => setSelectedTool(e.target.value)}>
-            {tools.map((t) => (
-              <option key={t.tool} value={t.tool}>
-                {t.tool} ({t.risk})
-              </option>
-            ))}
-          </select>
-        </div>
-        <input
-          placeholder="reasoning (optional, shown to approver)"
-          value={reasoning}
-          onChange={(e) => setReasoning(e.target.value)}
-          style={{ width: "100%", marginBottom: "0.5rem" }}
-        />
-        <textarea
-          value={paramsJson}
-          onChange={(e) => setParamsJson(e.target.value)}
-          rows={3}
-          style={{ width: "100%", fontFamily: "monospace", marginBottom: "0.5rem" }}
-        />
-        <button className="primary" onClick={requestToolCall}>
-          Request
-        </button>
-      </div>
-    </div>
+      {error && <div className="support-error">{error}</div>}
+      <form className="support-composer" onSubmit={sendMessage}>
+        <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder="Nhập vấn đề bạn đang gặp…" rows={1} disabled={busy || approvals.length > 0} aria-label="Tin nhắn hỗ trợ" />
+        <button className="primary" type="submit" disabled={busy || approvals.length > 0 || !message.trim()} aria-label="Gửi tin nhắn">Gửi</button>
+      </form>
+      <p className="support-hint">Nhấn Enter để gửi · Mọi thay đổi quan trọng đều cần bạn xác nhận</p>
+    </section>
   );
 }

@@ -10,6 +10,9 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+// requireStringParam moved to params.go (no build tag) — shared with the
+// desktop.* computer-use tools across all OS builds.
+
 func stateString(s svc.State) string {
 	switch s {
 	case svc.Stopped:
@@ -29,18 +32,6 @@ func stateString(s svc.State) string {
 	default:
 		return "UNKNOWN"
 	}
-}
-
-func requireStringParam(params map[string]any, key string) (string, error) {
-	v, ok := params[key]
-	if !ok {
-		return "", fmt.Errorf("missing required param %q", key)
-	}
-	s, ok := v.(string)
-	if !ok || s == "" {
-		return "", fmt.Errorf("param %q must be a non-empty string", key)
-	}
-	return s, nil
 }
 
 // ServiceStatus queries a Windows service's current state via the Service

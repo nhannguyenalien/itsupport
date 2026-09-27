@@ -12,6 +12,8 @@
 package winsvc
 
 import (
+	"os"
+
 	"golang.org/x/sys/windows/svc"
 )
 
@@ -58,16 +60,13 @@ func (h *handler) Execute(_ []string, r <-chan svc.ChangeRequest, s chan<- svc.S
 	}
 }
 
-// RunAsService runs `run` under the Service Control Manager if this process
-// was actually started as a service (svc.IsWindowsService()); otherwise it
-// just calls run() directly with a stop channel that's never closed — the
-// interactive/dev path, e.g. running the binary from a terminal for testing.
+// RunAsService runs `run` under the Service Control Manager when the installer
+// starts the binary with the explicit "service" argument. Avoiding automatic
+// service detection makes startup deterministic across Windows versions and
+// restricted service accounts. Without that argument, the binary runs in the
+// foreground for local diagnostics.
 func RunAsService(name string, run RunFunc) error {
-	isService, err := svc.IsWindowsService()
-	if err != nil {
-		return err
-	}
-	if !isService {
+	if len(os.Args) < 2 || os.Args[1] != "service" {
 		run(make(chan struct{})) // blocks; never signaled — Ctrl+C/process kill is how dev mode stops
 		return nil
 	}

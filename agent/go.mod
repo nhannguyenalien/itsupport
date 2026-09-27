@@ -3,3 +3,5 @@ module support-agent/agent
 go 1.23.4
 
 require golang.org/x/sys v0.26.0
+
+require github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { runAiStep } from "./index.js";
+import { runAiWorkflow } from "./index.js";
 
 const ticketParams = z.object({ ticketId: z.string().uuid() });
 
@@ -11,7 +11,7 @@ export async function aiOrchestrationRoutes(app: FastifyInstance) {
   app.post("/tickets/:ticketId/ai-step", async (req, reply) => {
     const { ticketId } = ticketParams.parse(req.params);
     try {
-      const result = await runAiStep(ticketId);
+      const result = await runAiWorkflow(ticketId);
       reply.send(result);
     } catch (err) {
       req.log.error({ err }, "ai-step failed");

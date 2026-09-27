@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { pool } from "../db/pool.js";
+import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 
 const listQuery = z.object({ tenantId: z.string().uuid() });
@@ -14,7 +14,8 @@ export async function deviceRoutes(app: FastifyInstance) {
   // devices back to 'offline' after ~3 missed heartbeats.
   app.post("/devices/:deviceId/heartbeat", async (req, reply) => {
     const { deviceId } = deviceParams.parse(req.params);
-    const result = await pool.query(
+    if (!req.agentTenantId) return reply.code(401).send({ error: "agent tenant context required" });
+    const result = await queryTenantScoped(req.agentTenantId,
       `UPDATE devices SET last_seen_at = now(), status = 'online' WHERE id = $1 RETURNING id`,
       [deviceId],
     );
@@ -24,8 +25,8 @@ export async function deviceRoutes(app: FastifyInstance) {
 
   app.get("/devices", async (req, reply) => {
     const { tenantId } = listQuery.parse(req.query);
-    const result = await pool.query(
-      `SELECT id, hostname, os_version, agent_version, status, last_seen_at,
+    const result = await queryTenantScoped(req.authUser!.tenantId,
+      `SELECT id, hostname, platform, os_version, agent_version, status, last_seen_at,
               actions_paused, cert_revoked_at IS NOT NULL AS revoked
        FROM devices WHERE tenant_id = $1 ORDER BY hostname`,
       [tenantId],
@@ -40,7 +41,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     const { deviceId } = deviceParams.parse(req.params);
     const { actorId } = actorBody.parse(req.body ?? {});
 
-    const result = await pool.query(
+    const result = await queryTenantScoped(req.authUser!.tenantId,
       `UPDATE devices SET cert_revoked_at = now() WHERE id = $1 RETURNING tenant_id`,
       [deviceId],
     );
@@ -63,7 +64,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     const { deviceId } = deviceParams.parse(req.params);
     const { actorId } = actorBody.parse(req.body ?? {});
 
-    const result = await pool.query(
+    const result = await queryTenantScoped(req.authUser!.tenantId,
       `UPDATE devices SET actions_paused = true WHERE id = $1 RETURNING tenant_id`,
       [deviceId],
     );
@@ -83,7 +84,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     const { deviceId } = deviceParams.parse(req.params);
     const { actorId } = actorBody.parse(req.body ?? {});
 
-    const result = await pool.query(
+    const result = await queryTenantScoped(req.authUser!.tenantId,
       `UPDATE devices SET actions_paused = false WHERE id = $1 RETURNING tenant_id`,
       [deviceId],
     );

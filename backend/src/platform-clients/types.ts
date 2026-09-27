@@ -13,7 +13,11 @@ export interface PlatformConnectionRow {
   token_expires_at: string | null;
 }
 
-export async function loadConnection(pool: import("pg").Pool, connectionId: string): Promise<PlatformConnectionRow> {
+type Queryable = {
+  query<T extends import("pg").QueryResultRow = import("pg").QueryResultRow>(text: string, params?: unknown[]): Promise<import("pg").QueryResult<T>>;
+};
+
+export async function loadConnection(pool: Queryable, connectionId: string): Promise<PlatformConnectionRow> {
   const row = await pool.query(
     `SELECT id, tenant_id, platform, external_account_id, access_token_ciphertext, refresh_token_ciphertext, token_expires_at
      FROM platform_connections WHERE id = $1`,

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { pool } from "../db/pool.js";
 import { allTools } from "../tool-registry/index.js";
-import { allToolsAsOpenAiFunctions } from "./schema.js";
+import { allToolsAsOpenAiFunctions, fromOpenAiToolName } from "./schema.js";
 import { applyDataPolicy, type AiDataPolicy } from "./redact.js";
 import { requestToolCall } from "../tool-calls/service.js";
 import { recordAudit } from "../audit/index.js";
@@ -33,24 +33,46 @@ state-changing tool call succeeds, the platform automatically re-checks the resu
 verification chain — wait for that before telling the user it's resolved.
 
 Rules:
+- Reply in the same language as the user's latest substantive message. If it is Vietnamese, every
+  user-facing sentence must be Vietnamese (tool identifiers may remain unchanged).
+- Never expose or repeat internal role labels such as [ai], [user], [system], or [technician] in
+  the user-facing response.
+- The current tool-call and approval state in the newest system context is the source of truth.
+  Never repeat an older assistant claim that an approval is pending after it has been approved,
+  rejected, executed, or verified.
 - Prefer read tools first to understand the actual state before proposing a fix.
 - When you call a state-changing tool, it may be held for human approval before it runs — that is
   expected and not an error; explain your reasoning so the approver has context.
 - If a tool call fails or verification fails, try a different diagnosis or escalate — do not repeat
   the same failed action.
+- A normal text response ENDS the workflow. Never use a text response to promise a later action
+  (for example "I will check next" or "please wait"). If any requested check or action can still be
+  performed with an available tool, call that tool now. Only return normal text when the request is
+  genuinely complete, blocked by a pending human approval, or impossible with the available tools.
 - Keep responses to the user concise and grounded in what the tools actually returned.`;
+
+const DARWIN_AGENT_TOOLS = new Set(["disk.usage", "process.list", "temp.scan"]);
+
+function deviceSupportsTool(platform: string, tool: string): boolean {
+  const normalizedPlatform = platform.toLowerCase();
+  if (normalizedPlatform === "mac" || normalizedPlatform === "darwin") return DARWIN_AGENT_TOOLS.has(tool);
+  // The production agent's full IT support toolset is implemented on Windows.
+  // Unknown/legacy Windows version strings are intentionally treated as Windows
+  // so an older enrolled device is not silently stripped of its capabilities.
+  return normalizedPlatform !== "linux";
+}
 
 // Either a Windows device or a v0.2 marketing platform connection — exactly
 // one, same as the tickets table's CHECK constraint. describeTarget() below is
 // the one place that turns whichever it is into prompt text, so the two
 // domains don't need their own parallel prompt-building code.
 interface TicketTarget {
-  device: { id: string; hostname: string; os_version: string | null } | null;
+  device: { id: string; hostname: string; platform: string; os_version: string | null } | null;
   platform: { id: string; platform: string; external_account_id: string } | null;
 }
 
 function describeTarget(t: TicketTarget): string {
-  if (t.device) return `Device: ${t.device.hostname} (${t.device.os_version ?? "unknown OS"})`;
+  if (t.device) return `Device: ${t.device.hostname} (${t.device.platform}; ${t.device.os_version ?? "version unknown"})`;
   if (t.platform) return `Platform account: ${t.platform.platform} / ${t.platform.external_account_id}`;
   throw new Error("ticket has neither a device nor a platform_connection target — should be impossible (see schema CHECK)");
 }
@@ -64,7 +86,7 @@ interface TenantRow {
 async function loadTicketForOrchestration(ticketId: string) {
   const ticketRes = await pool.query(
     `SELECT t.*,
-            d.id AS device_id, d.hostname, d.os_version,
+            d.id AS device_id, d.hostname, d.platform AS device_platform, d.os_version,
             pc.id AS platform_connection_id, pc.platform, pc.external_account_id,
             tn.id AS tenant_id, tn.ai_data_policy, tn.autonomous_low_risk_enabled
      FROM tickets t
@@ -86,9 +108,16 @@ async function loadTicketForOrchestration(ticketId: string) {
      FROM tool_calls WHERE ticket_id = $1 AND parent_tool_call_id IS NULL ORDER BY requested_at ASC LIMIT 20`,
     [ticketId],
   );
+  const approvals = await pool.query(
+    `SELECT tool, params, status, reasoning, decided_at
+     FROM approvals WHERE ticket_id = $1 ORDER BY created_at ASC LIMIT 20`,
+    [ticketId],
+  );
 
   const target: TicketTarget = {
-    device: row.device_id ? { id: row.device_id, hostname: row.hostname, os_version: row.os_version } : null,
+    device: row.device_id
+      ? { id: row.device_id, hostname: row.hostname, platform: row.device_platform, os_version: row.os_version }
+      : null,
     platform: row.platform_connection_id
       ? { id: row.platform_connection_id, platform: row.platform, external_account_id: row.external_account_id }
       : null,
@@ -106,6 +135,13 @@ async function loadTicketForOrchestration(ticketId: string) {
       result_data: unknown;
       error_message: string | null;
       verification_status: string;
+    }[],
+    approvals: approvals.rows as {
+      tool: string;
+      params: unknown;
+      status: "pending" | "approved" | "rejected";
+      reasoning: string | null;
+      decided_at: string | null;
     }[],
   };
 }
@@ -127,6 +163,9 @@ function buildMessages(ctx: NonNullable<Awaited<ReturnType<typeof loadTicketForO
     role: m.author_type === "ai" ? "assistant" : "user",
     content: `[${m.author_type}] ${m.body}`,
   }));
+  const approvalHistory = ctx.approvals
+    .map((a) => `- ${a.tool}(${JSON.stringify(a.params)}) -> ${a.status}${a.decided_at ? ` at ${a.decided_at}` : ""}`)
+    .join("\n");
 
   return [
     { role: "system", content: SYSTEM_PROMPT },
@@ -135,25 +174,31 @@ function buildMessages(ctx: NonNullable<Awaited<ReturnType<typeof loadTicketForO
       content:
         `Ticket: "${ctx.ticket.title}" (status: ${ctx.ticket.status})\n` +
         `${describeTarget(ctx.target)}\n\n` +
-        `Tool calls so far:\n${toolHistory || "(none yet)"}`,
+        `CURRENT AUTHORITATIVE STATE (newer than any chat message below):\n` +
+        `Tool calls:\n${toolHistory || "(none yet)"}\n\n` +
+        `Approvals:\n${approvalHistory || "(none)"}\n\n` +
+        `Use this state, not old assistant status messages, when deciding what remains to do.`,
     },
     ...chatHistory,
   ];
 }
 
 export interface AiStepResult {
-  action: "message" | "tool_call_requested" | "no_op";
+  action: "message" | "tool_call_requested" | "continue" | "no_op";
   detail: string;
 }
 
-/** Runs ONE step of the diagnostic loop: gathers context, asks the model for
+export interface AiWorkflowResult extends AiStepResult {
+  steps: number;
+  stoppedBecause: "completed" | "approval_required" | "execution_timeout" | "step_limit" | "rejected";
+}
+
+/** Runs one step of the diagnostic loop: gathers context, asks the model for
  * either a message or a tool call, and — critically — dispatches any tool call
  * through requestToolCall() (tool-calls/service.ts), the exact same
  * policy-engine/approval path a human clicking the manual form goes through.
- * There is no separate "AI fast path" that skips approval. Not a loop that
- * runs to completion on its own in v0.1 — one step per call, triggered by
- * POST /tickets/:id/ai-step; a real autonomous loop (poll new tickets, keep
- * stepping until resolved/escalated) is unbuilt, flagged in README not hidden. */
+ * There is no separate "AI fast path" that skips approval. runAiWorkflow()
+ * composes these safe single steps into a bounded one-click workflow. */
 export async function runAiStep(ticketId: string): Promise<AiStepResult> {
   const ctx = await loadTicketForOrchestration(ticketId);
   if (!ctx) throw new Error("ticket not found");
@@ -173,7 +218,13 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
     tools: allToolsAsOpenAiFunctions(
       allTools().filter((t) =>
         ctx.target.device
-          ? t.domain !== "marketing"
+          // windows_desktop (computer-use addendum) tools are excluded here on
+          // purpose: they're driven through the separate Responses API
+          // computer_use_preview loop in ../computer-use/index.ts, not Chat
+          // Completions function-calling — this model must never see them as
+          // callable functions, it has no way to act on a computer_call result.
+          ? t.domain !== "marketing" && t.domain !== "windows_desktop" &&
+            deviceSupportsTool(ctx.target.device.platform, t.tool)
           : t.domain === "marketing" && (!t.platform || t.platform === "any" || t.platform === ctx.target.platform!.platform),
       ),
     ),
@@ -201,6 +252,10 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
   });
 
   if (toolCall && toolCall.type === "function") {
+    // toolCall.function.name comes back through the OpenAI-safe alphabet
+    // (schema.ts's toOpenAiToolName) — convert back to our real "."-separated
+    // tool name before it touches anything that looks it up in the registry.
+    const toolName = fromOpenAiToolName(toolCall.function.name);
     let params: Record<string, unknown> = {};
     try {
       params = JSON.parse(toolCall.function.arguments || "{}");
@@ -209,33 +264,133 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
       // rather than silently dropping it or crashing the step.
       await pool.query(
         `INSERT INTO ticket_messages (ticket_id, author_type, body) VALUES ($1, 'ai', $2)`,
-        [ticketId, `Tried to call ${toolCall.function.name} but produced invalid arguments: ${toolCall.function.arguments}`],
+        [ticketId, `AI không thể tạo tham số hợp lệ cho ${toolName}; tác vụ chưa được thực hiện.`],
       );
-      return { action: "no_op", detail: "malformed tool arguments from model" };
+      return { action: "no_op", detail: "AI tạo tham số không hợp lệ." };
     }
 
     const result = await requestToolCall({
       ticketId,
       initiatedBy: "ai",
-      tool: toolCall.function.name,
+      tool: toolName,
       params,
       reasoning: choice.message.content ?? undefined,
     });
 
     const summary =
       result.outcome === "auto_execute"
-        ? `Ran ${toolCall.function.name} (${JSON.stringify(params)}).`
+        ? `Đã gửi tác vụ ${toolName} tới thiết bị và đang chờ kết quả.`
         : result.outcome === "requires_approval"
-          ? `Proposed ${toolCall.function.name} (${JSON.stringify(params)}) — awaiting approval.`
+          ? `Đã đề xuất tác vụ ${toolName}; cần bạn phê duyệt trước khi thực hiện.`
           : result.outcome === "rejected"
-            ? `Tried ${toolCall.function.name} but it was rejected: ${result.reason}`
-            : `Tried ${toolCall.function.name} but the ticket could not be found.`;
+            ? `Tác vụ ${toolName} đã bị chặn: ${result.reason}`
+            : `Không tìm thấy yêu cầu hỗ trợ để chạy ${toolName}.`;
 
     await pool.query(`INSERT INTO ticket_messages (ticket_id, author_type, body) VALUES ($1, 'ai', $2)`, [ticketId, summary]);
     return { action: "tool_call_requested", detail: summary };
   }
 
-  const text = choice.message.content ?? "(no response)";
+  const text = choice.message.content ?? "AI chưa trả về nội dung.";
+  // Models occasionally end a turn with a promise to perform another check
+  // instead of issuing the tool call. Do not persist that misleading text or
+  // stop the one-click workflow: immediately give the model another turn.
+  const deferredAction = /(?:tôi|mình|chúng tôi)\s+sẽ|hãy\s+chờ|chờ\s+(?:một|trong|tôi)|i(?:'|’)ll\s+(?:check|run|scan|do)|please\s+wait|next,?\s+i(?:'|’)ll/i;
+  if (deferredAction.test(text)) {
+    return { action: "continue", detail: "AI còn bước cần thực hiện; tiếp tục tự động." };
+  }
   await pool.query(`INSERT INTO ticket_messages (ticket_id, author_type, body) VALUES ($1, 'ai', $2)`, [ticketId, text]);
   return { action: "message", detail: text };
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForPendingExecutions(ticketId: string, timeoutMs: number): Promise<boolean> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const result = await pool.query(
+      `SELECT NOT EXISTS(
+         SELECT 1 FROM tool_calls
+         WHERE ticket_id = $1
+           AND parent_tool_call_id IS NULL
+           AND (result IS NULL OR verification_status = 'pending')
+       ) AS settled`,
+      [ticketId],
+    );
+    if (result.rows[0]?.settled) return true;
+    await delay(1000);
+  }
+  return false;
+}
+
+async function hasPendingExecution(ticketId: string): Promise<boolean> {
+  const result = await pool.query(
+    `SELECT EXISTS(
+       SELECT 1 FROM tool_calls
+       WHERE ticket_id = $1
+         AND parent_tool_call_id IS NULL
+         AND (result IS NULL OR verification_status = 'pending')
+     ) AS pending`,
+    [ticketId],
+  );
+  return Boolean(result.rows[0]?.pending);
+}
+
+/** Deterministically queue explicit, safe diagnostic requests before asking
+ * the model to summarize. This prevents a probabilistic model turn from
+ * silently skipping one of several checks the user named. */
+async function queueExplicitReadChecks(ticketId: string): Promise<void> {
+  const ctx = await loadTicketForOrchestration(ticketId);
+  if (!ctx?.target.device) return;
+  const latestUserMessage = [...ctx.messages].reverse().find((message) => message.author_type === "user")?.body ?? "";
+  const requested = [
+    { tool: "disk.usage", pattern: /dung\s*lượng\s*(?:ổ\s*đĩa|đĩa)|ổ\s*đĩa|disk\s*(?:space|usage)/i },
+    { tool: "process.list", pattern: /tiến\s*trình|process(?:es)?/i },
+    { tool: "temp.scan", pattern: /tệp\s*tạm|file\s*tạm|temporary\s*files?|temp(?:orary)?\s*(?:scan|files?)/i },
+  ];
+  const alreadyRequested = new Set(ctx.toolCalls.map((call) => call.tool));
+  for (const check of requested) {
+    if (!check.pattern.test(latestUserMessage) || alreadyRequested.has(check.tool)) continue;
+    if (!deviceSupportsTool(ctx.target.device.platform, check.tool)) continue;
+    await requestToolCall({
+      ticketId,
+      initiatedBy: "ai",
+      tool: check.tool,
+      params: {},
+      reasoning: "Người dùng đã yêu cầu rõ kiểm tra chỉ-đọc này.",
+    });
+  }
+}
+
+/** Run read/diagnostic steps continuously from one user click. The workflow
+ * deliberately stops at a human approval boundary; after approval the UI
+ * starts another bounded workflow automatically. */
+export async function runAiWorkflow(ticketId: string, maxSteps = 10): Promise<AiWorkflowResult> {
+  let last: AiStepResult = { action: "no_op", detail: "Không có bước nào được thực hiện." };
+  await queueExplicitReadChecks(ticketId);
+  for (let step = 1; step <= maxSteps; step += 1) {
+    // An approval creates the tool call before the UI resumes this workflow.
+    // Wait for that execution + verification first, so the model never sees a
+    // just-approved action as if it were still waiting for approval.
+    if (await hasPendingExecution(ticketId)) {
+      if (!(await waitForPendingExecutions(ticketId, 20_000))) {
+        return { ...last, steps: step - 1, stoppedBecause: "execution_timeout" };
+      }
+    }
+    last = await runAiStep(ticketId);
+    if (last.action === "message") return { ...last, steps: step, stoppedBecause: "completed" };
+    if (last.action === "no_op") return { ...last, steps: step, stoppedBecause: "rejected" };
+    if (last.action === "continue") continue;
+
+    const state = await pool.query(
+      `SELECT EXISTS(SELECT 1 FROM approvals WHERE ticket_id = $1 AND status = 'pending') AS pending_approval`,
+      [ticketId],
+    );
+    if (state.rows[0]?.pending_approval) {
+      return { ...last, steps: step, stoppedBecause: "approval_required" };
+    }
+    if (!(await waitForPendingExecutions(ticketId, 20_000))) {
+      return { ...last, steps: step, stoppedBecause: "execution_timeout" };
+    }
+  }
+  return { ...last, steps: maxSteps, stoppedBecause: "step_limit" };
 }

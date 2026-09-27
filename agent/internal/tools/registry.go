@@ -31,4 +31,24 @@ var KnownTools = map[string]Risk{
 	// consent themselves (see browser_windows.go for why this doesn't
 	// automate the consent click).
 	"browser.open_url": RiskLow,
+
+	// Computer-use addendum (docs/v0.1-computer-use-addendum.md) — see
+	// desktop_windows.go. screenshot/move/wait are read-risk (no device state
+	// change); every action that actually clicks/types/scrolls is risk:"high"
+	// so it NEVER auto-executes regardless of tenant autonomy opt-in
+	// (policy-engine/index.ts) — every one is held for human approval.
+	"desktop.screenshot":   RiskRead,
+	"desktop.move":         RiskRead,
+	"desktop.wait":         RiskRead,
+	"desktop.click":        RiskHigh,
+	"desktop.double_click": RiskHigh,
+	"desktop.drag":         RiskHigh,
+	"desktop.keypress":     RiskHigh,
+	"desktop.type":         RiskHigh,
+	"desktop.scroll":       RiskHigh,
+
+	// System-triggered only (backend/src/computer-use/index.ts's
+	// startSession()) — never something the AI decides to call itself. Opens
+	// the customer's own browser to a read-only-plus-chat status page.
+	"desktop.open_customer_view": RiskRead,
 }

@@ -1,8 +1,9 @@
 import { randomBytes, createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { pool } from "../db/pool.js";
+import { adminPool as pool } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
+import { issueDeviceCertificate } from "./pki.js";
 
 const TOKEN_TTL_MINUTES = 10;
 
@@ -21,6 +22,10 @@ const registerBody = z.object({
   publicKey: z.string().min(1),
   osVersion: z.string().optional(),
   agentVersion: z.string().optional(),
+  // Multi-OS computer-use addendum (docs/v0.1-computer-use-addendum.md) —
+  // absent from older agent builds, defaults to 'windows' in the INSERT below
+  // (matches devices.platform's own column default).
+  platform: z.enum(["windows", "mac", "linux"]).optional(),
 });
 
 export async function enrollmentRoutes(app: FastifyInstance) {
@@ -54,13 +59,9 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     });
   });
 
-  // Agent-initiated: exchange a valid enrollment token + locally-generated
-  // public key for a device record. Real mTLS cert issuance (a proper X.509 CA
-  // signing a device cert off this public key) is NOT implemented yet — this
-  // returns a placeholder cert_serial so the enrollment *flow* (token
-  // verification, one-time consumption, device creation) is real and testable
-  // end-to-end, while PKI issuance is built out separately. Do not treat the
-  // returned "cert" as a real credential yet.
+  // Agent-initiated: exchange a one-time token and locally generated public
+  // key for a CA-signed client certificate. The private key never leaves the
+  // device.
   app.post("/enrollment/register", async (req, reply) => {
     const body = registerBody.parse(req.body);
     const tokenHash = hashToken(body.token);
@@ -91,15 +92,21 @@ export async function enrollmentRoutes(app: FastifyInstance) {
         return reply.code(401).send({ error: "enrollment token expired" });
       }
 
-      const certSerial = `stub-${randomBytes(16).toString("hex")}`; // TODO: real CA issuance
-
       const deviceRow = await client.query(
-        `INSERT INTO devices (tenant_id, hostname, os_version, agent_version, public_key, cert_serial, cert_issued_at, status)
-         VALUES ($1, $2, $3, $4, $5, $6, now(), 'online')
+        `INSERT INTO devices (tenant_id, hostname, os_version, agent_version, platform, public_key, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'offline')
          RETURNING id`,
-        [t.tenant_id, body.hostname, body.osVersion ?? null, body.agentVersion ?? null, body.publicKey, certSerial],
+        [t.tenant_id, body.hostname, body.osVersion ?? null, body.agentVersion ?? null, body.platform ?? "windows", body.publicKey],
       );
       const deviceId = deviceRow.rows[0].id;
+      const certificate = await issueDeviceCertificate(deviceId, body.publicKey);
+      const agentToken = randomBytes(32).toString("base64url");
+      await client.query(
+        `UPDATE devices
+         SET cert_serial = $1, cert_issued_at = now(), agent_token_hash = $2
+         WHERE id = $3`,
+        [certificate.serial, hashToken(agentToken), deviceId],
+      );
 
       await client.query(
         `UPDATE enrollment_tokens SET used_at = now(), used_by_device = $1 WHERE id = $2`,
@@ -116,7 +123,14 @@ export async function enrollmentRoutes(app: FastifyInstance) {
         deviceId,
       });
 
-      reply.code(201).send({ deviceId, certSerial });
+      reply.code(201).send({
+        deviceId,
+        certSerial: certificate.serial,
+        certificatePem: certificate.certificatePem,
+        caCertificatePem: certificate.caCertificatePem,
+        agentToken,
+        agentUrl: process.env.AGENT_API_URL,
+      });
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;

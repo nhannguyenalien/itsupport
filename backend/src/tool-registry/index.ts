@@ -11,7 +11,12 @@ export interface ToolDefinition {
   params: string[];
   verification: string[];
   // v0.2 marketing-ops fields — absent (undefined) on v0.1 Windows tools.
-  domain?: "windows" | "marketing";
+  // "windows_desktop" (computer-use addendum, docs/v0.1-computer-use-addendum.md)
+  // is deliberately its own domain, not "windows" — these tools are exposed to
+  // OpenAI's Responses API `computer_use_preview` tool, not as Chat Completions
+  // functions, so ai-orchestration/index.ts must exclude them from the normal
+  // function-calling tool list (see the device-ticket filter there).
+  domain?: "windows" | "windows_desktop" | "marketing";
   // Which platform_connections.platform this tool needs, "any" for
   // cross-platform tools (ads.*, marketing.* KPIs), absent for tools that
   // don't touch a stored platform connection at all (web.*, report.*, alert.*).

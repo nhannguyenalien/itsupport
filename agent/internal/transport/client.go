@@ -1,13 +1,11 @@
-// Package transport is the agent's HTTP client for the backend. v0.1 talks
-// plain HTTPS with a bearer-style device token embedded in the request — real
-// mTLS (client cert issued at enrollment, see backend/src/enrollment/routes.ts
-// TODO) is not wired in yet. Swapping the transport.Client below to present a
-// client cert instead of a header is a contained change once the backend PKI
-// side exists; nothing above this package should need to change.
+// Package transport builds the mutually authenticated TLS client used for all
+// post-enrollment agent traffic.
 package transport
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,17 +14,46 @@ import (
 )
 
 type Client struct {
-	BaseURL  string
-	DeviceID string
-	http     *http.Client
+	BaseURL    string
+	DeviceID   string
+	AgentToken string
+	http       *http.Client
 }
 
-func NewClient(baseURL, deviceID string) *Client {
+func NewClient(baseURL, deviceID, agentToken, certificatePEM, privateKeyPEM, caCertificatePEM string) (*Client, error) {
+	if agentToken != "" {
+		return &Client{
+			BaseURL: baseURL, DeviceID: deviceID, AgentToken: agentToken,
+			http: &http.Client{Timeout: 15 * time.Second},
+		}, nil
+	}
+	certificate, err := tls.X509KeyPair([]byte(certificatePEM), []byte(privateKeyPEM))
+	if err != nil {
+		return nil, fmt.Errorf("load agent client certificate: %w", err)
+	}
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM([]byte(caCertificatePEM)) {
+		return nil, fmt.Errorf("load agent CA certificate")
+	}
 	return &Client{
 		BaseURL:  baseURL,
 		DeviceID: deviceID,
-		http:     &http.Client{Timeout: 15 * time.Second},
+		http: &http.Client{
+			Timeout: 15 * time.Second,
+			Transport: &http.Transport{TLSClientConfig: &tls.Config{
+				MinVersion:   tls.VersionTLS13,
+				Certificates: []tls.Certificate{certificate},
+				RootCAs:      roots,
+			}},
+		},
+	}, nil
+}
+
+func (c *Client) do(req *http.Request) (*http.Response, error) {
+	if c.AgentToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.AgentToken)
 	}
+	return c.http.Do(req)
 }
 
 type PendingCall struct {
@@ -36,9 +63,32 @@ type PendingCall struct {
 	Risk   string         `json:"risk"`
 }
 
+func (c *Client) Heartbeat() error {
+	// Fastify rejects an empty body when Content-Type is application/json.
+	// Send an explicit empty object so the heartbeat reaches the route handler.
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/devices/%s/heartbeat", c.BaseURL, c.DeviceID), bytes.NewReader([]byte("{}")))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("heartbeat: status %d: %s", resp.StatusCode, body)
+	}
+	return nil
+}
+
 func (c *Client) PollPending() ([]PendingCall, error) {
-	url := fmt.Sprintf("%s/devices/%s/tool-calls/pending", c.BaseURL, c.DeviceID)
-	resp, err := c.http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/devices/%s/tool-calls/pending", c.BaseURL, c.DeviceID), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +111,16 @@ type ResultPayload struct {
 }
 
 func (c *Client) ReportResult(toolCallID string, payload ResultPayload) error {
-	url := fmt.Sprintf("%s/tool-calls/%s/result", c.BaseURL, toolCallID)
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	resp, err := c.http.Post(url, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/tool-calls/%s/result", c.BaseURL, toolCallID), bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.do(req)
 	if err != nil {
 		return err
 	}

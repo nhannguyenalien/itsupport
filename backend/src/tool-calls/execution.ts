@@ -53,6 +53,32 @@ export interface ToolCallResultInput {
   errorMessage?: string;
 }
 
+/** Computer-use addendum (docs/v0.1-computer-use-addendum.md): a
+ * desktop.screenshot result carries a base64 PNG in resultData.image_base64.
+ * That never belongs in tool_calls.result_data or audit_log.event_data (both
+ * JSONB, no size cap, read constantly) — move the bytes into
+ * computer_use_screenshots and replace resultData with a small {screenshot_id}
+ * reference before the caller persists it. No-op (returns resultData
+ * unchanged) for every other tool, and for a desktop.screenshot call that
+ * somehow reports no image (error/timeout result) — nothing to extract. */
+async function extractScreenshotIfAny(ticketId: string, tool: string, resultData: unknown): Promise<unknown> {
+  if (tool !== "desktop.screenshot") return resultData;
+  const imageBase64 = (resultData as Record<string, unknown> | undefined)?.image_base64;
+  if (typeof imageBase64 !== "string" || !imageBase64) return resultData;
+
+  const session = await pool.query(
+    `SELECT id FROM computer_use_sessions WHERE ticket_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1`,
+    [ticketId],
+  );
+  if (session.rowCount === 0) return resultData; // no active session — nothing to attach it to, leave as-is
+
+  const stored = await pool.query(
+    `INSERT INTO computer_use_screenshots (session_id, image_data) VALUES ($1, $2) RETURNING id`,
+    [session.rows[0].id, Buffer.from(imageBase64, "base64")],
+  );
+  return { screenshot_id: stored.rows[0].id };
+}
+
 /** The single place a tool_calls row's outcome gets recorded, regardless of
  * WHO ran it — the Windows agent reporting back via POST
  * /tool-calls/:id/result (routes.ts), or a marketing tool executed
@@ -64,20 +90,22 @@ export interface ToolCallResultInput {
 export async function recordToolCallResult(
   toolCallId: string,
   input: ToolCallResultInput,
+  tenantId: string,
   actorType: "agent" | "system" = "agent",
 ): Promise<void> {
   const callRow = await pool.query(`SELECT * FROM tool_calls WHERE id = $1`, [toolCallId]);
   if (callRow.rowCount === 0) throw new Error(`tool call ${toolCallId} not found`);
   const call = callRow.rows[0];
 
+  const resultData = await extractScreenshotIfAny(call.ticket_id, call.tool, input.resultData);
+
   await pool.query(
     `UPDATE tool_calls SET executed_at = now(), result = $1, result_data = $2, error_message = $3 WHERE id = $4`,
-    [input.result, JSON.stringify(input.resultData ?? {}), input.errorMessage ?? null, toolCallId],
+    [input.result, JSON.stringify(resultData ?? {}), input.errorMessage ?? null, toolCallId],
   );
 
-  const ticketRow = await pool.query(`SELECT tenant_id FROM tickets WHERE id = $1`, [call.ticket_id]);
   await recordAudit({
-    tenantId: ticketRow.rows[0]?.tenant_id ?? "",
+    tenantId,
     actorType,
     eventType: "tool_call.executed",
     eventData: { tool: call.tool, result: input.result },

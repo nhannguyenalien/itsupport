@@ -9,22 +9,31 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 type Config struct {
-	BackendURL string `json:"backendUrl"`
-	DeviceID   string `json:"deviceId"`
-	// PrivateKeyPEM/PublicKeyPEM: the enrollment keypair (see docs/v0.1-spec.md
-	// enrollment flow). Not yet used for anything past enrollment itself — real
-	// mTLS client-cert presentation is unbuilt (see backend TODO on cert
-	// issuance), so these sit unused post-enrollment until that lands.
-	PrivateKeyPEM string `json:"privateKeyPem"`
-	PublicKeyPEM  string `json:"publicKeyPem"`
+	BackendURL       string `json:"backendUrl"`
+	DeviceID         string `json:"deviceId"`
+	PrivateKeyPEM    string `json:"privateKeyPem"`
+	PublicKeyPEM     string `json:"publicKeyPem"`
+	CertificatePEM   string `json:"certificatePem"`
+	CACertificatePEM string `json:"caCertificatePem"`
+	AgentToken       string `json:"agentToken"`
 }
 
 func DefaultPath() string {
 	if v := os.Getenv("AGENT_CONFIG_PATH"); v != "" {
 		return v
+	}
+	// Windows services run under accounts with different user profiles. Keep
+	// enrollment machine-wide so every service reads the same device identity.
+	if runtime.GOOS == "windows" {
+		programData := os.Getenv("ProgramData")
+		if programData == "" {
+			programData = `C:\ProgramData`
+		}
+		return filepath.Join(programData, "support-agent", "config.json")
 	}
 	dir, err := os.UserConfigDir()
 	if err != nil {

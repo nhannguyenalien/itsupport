@@ -61,17 +61,17 @@ const DISPATCH: Record<string, ToolFn> = {
  * runs; that response describes the ADMISSION decision (was this allowed to
  * run), not the execution outcome, which lands on the tool_calls row.
  */
-export async function executeMarketingTool(toolCallId: string, tool: string, params: Record<string, unknown>, platformConnectionId: string): Promise<void> {
+export async function executeMarketingTool(toolCallId: string, tool: string, params: Record<string, unknown>, platformConnectionId: string, tenantId: string): Promise<void> {
   const fn = DISPATCH[tool];
   if (!fn) {
-    await recordToolCallResult(toolCallId, { result: "error", errorMessage: `${tool} has no real platform-client implementation yet` }, "system");
+    await recordToolCallResult(toolCallId, { result: "error", errorMessage: `${tool} has no real platform-client implementation yet` }, tenantId, "system");
     return;
   }
   try {
     const connection = await loadConnection(pool, platformConnectionId);
     const data = await fn(connection, params);
-    await recordToolCallResult(toolCallId, { result: "success", resultData: data }, "system");
+    await recordToolCallResult(toolCallId, { result: "success", resultData: data }, tenantId, "system");
   } catch (err) {
-    await recordToolCallResult(toolCallId, { result: "error", errorMessage: err instanceof Error ? err.message : String(err) }, "system");
+    await recordToolCallResult(toolCallId, { result: "error", errorMessage: err instanceof Error ? err.message : String(err) }, tenantId, "system");
   }
 }

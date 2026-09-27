@@ -1,11 +1,12 @@
-//go:build !windows
+//go:build !windows && !darwin && !linux
 
 package executor
 
-// v0.1 is Windows-only per docs/v0.1-spec.md scope contract. This build exists
-// so the allowlist-rejection logic (executor.go) and everything above it in the
-// call chain can be built and unit tested on non-Windows dev machines — actual
-// execution is refused outright here rather than silently no-op'd.
+// Fallback for any OS other than the three with a real dispatch()
+// (executor_windows.go, executor_darwin.go, executor_linux.go) — keeps the
+// allowlist-rejection logic (executor.go) buildable/testable everywhere else
+// too. Actual execution is refused outright here rather than silently
+// no-op'd.
 func dispatch(req Request) Result {
-	return Result{ToolCallID: req.ToolCallID, Success: false, Error: "agent only executes tools on windows in v0.1"}
+	return Result{ToolCallID: req.ToolCallID, Success: false, Error: "agent has no tool implementations for this OS"}
 }

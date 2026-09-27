@@ -1,0 +1,24 @@
+#!/bin/zsh
+set -euo pipefail
+
+TOKEN="${1:-${SUPPORT_ENROLL_TOKEN:-}}"
+[[ -n "$TOKEN" ]] || { echo "Lệnh cài không hợp lệ hoặc đã thiếu mã. Hãy tạo lại trong trang Thiết bị." >&2; exit 1; }
+
+BASE_URL="https://itsupport.schoolsai.work/downloads/agent"
+case "$(uname -m)" in
+  arm64) PACKAGE="darwin-arm64" ;;
+  x86_64) PACKAGE="darwin-amd64" ;;
+  *) echo "Máy Mac này chưa được hỗ trợ: $(uname -m)" >&2; exit 1 ;;
+esac
+
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "$WORK_DIR"' EXIT
+echo "Đang tải IT Support Agent…"
+for file in enroll daemon telemetry executor; do
+  curl -fsSL "$BASE_URL/$PACKAGE/$file" -o "$WORK_DIR/$file"
+  chmod 700 "$WORK_DIR/$file"
+done
+curl -fsSL "$BASE_URL/install-macos-service" -o "$WORK_DIR/install-macos.sh"
+chmod 700 "$WORK_DIR/install-macos.sh"
+"$WORK_DIR/install-macos.sh" --backend "https://itsupport.schoolsai.work/api" --token "$TOKEN"
+echo "Hoàn tất. Bạn có thể đóng Terminal."

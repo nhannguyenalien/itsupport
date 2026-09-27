@@ -1,21 +1,22 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import "./globals.css";
+import { TopNav } from "./TopNav";
+import { AuthGate } from "./AuthGate";
 
-export const metadata = { title: "AI Windows Support Agent" };
+export const metadata: Metadata = {
+  title: "AI IT Support — Intelligent IT operations",
+  description: "AI-powered IT support that diagnoses, proposes, resolves, and verifies device issues with people in control.",
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body>
-        <nav className="topnav">
-          <Link href="/">Home</Link>
-          <Link href="/devices">Devices</Link>
-          <Link href="/connections">Connections</Link>
-          <Link href="/tickets">Tickets</Link>
-          <Link href="/metrics">Metrics</Link>
-        </nav>
-        <main className="main">{children}</main>
+        <AuthGate>
+          <TopNav />
+          <div className="main">{children}</div>
+        </AuthGate>
       </body>
     </html>
   );

@@ -1,0 +1,24 @@
+$ErrorActionPreference = "Stop"
+$token = $env:SUPPORT_ENROLL_TOKEN
+if ([string]::IsNullOrWhiteSpace($token)) { throw "Lenh cai khong hop le. Hay tao lai trong trang Thiet bi." }
+
+$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw "Hay mo PowerShell bang Run as administrator, sau do dan lai lenh."
+}
+
+$baseUrl = "https://itsupport.schoolsai.work/downloads/agent"
+$workDir = Join-Path $env:TEMP ("SupportAgent-" + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $workDir | Out-Null
+try {
+    Write-Host "Dang tai IT Support Agent..."
+    foreach ($file in @("enroll.exe", "daemon.exe", "telemetry.exe", "executor.exe")) {
+        Invoke-WebRequest "$baseUrl/windows-amd64/$file" -OutFile (Join-Path $workDir $file)
+    }
+    Invoke-WebRequest "$baseUrl/install-windows-service" -OutFile (Join-Path $workDir "install.ps1")
+    & (Join-Path $workDir "install.ps1") -BackendUrl "https://itsupport.schoolsai.work/api" -EnrollmentToken $token
+    Write-Host "Hoan tat. Ban co the dong PowerShell."
+} finally {
+    Remove-Item Env:SUPPORT_ENROLL_TOKEN -ErrorAction SilentlyContinue
+    Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
+}

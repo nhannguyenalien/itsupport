@@ -41,4 +41,16 @@ var Allowlist = map[string]Definition{
 	"printer.clear_queue": {Fn: PrinterClearQueue, Risk: RiskLow},
 
 	"browser.open_url": {Fn: OpenURL, Risk: RiskLow},
+
+	"desktop.screenshot":   {Fn: DesktopScreenshot, Risk: RiskRead},
+	"desktop.move":         {Fn: DesktopMove, Risk: RiskRead},
+	"desktop.wait":         {Fn: DesktopWait, Risk: RiskRead},
+	"desktop.click":        {Fn: DesktopClick, Risk: RiskHigh},
+	"desktop.double_click": {Fn: DesktopDoubleClick, Risk: RiskHigh},
+	"desktop.drag":         {Fn: DesktopDrag, Risk: RiskHigh},
+	"desktop.keypress":     {Fn: DesktopKeypress, Risk: RiskHigh},
+	"desktop.type":         {Fn: DesktopType, Risk: RiskHigh},
+	"desktop.scroll":       {Fn: DesktopScroll, Risk: RiskHigh},
+
+	"desktop.open_customer_view": {Fn: OpenCustomerView, Risk: RiskRead},
 }

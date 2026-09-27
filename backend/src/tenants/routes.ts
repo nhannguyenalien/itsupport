@@ -8,15 +8,6 @@ const tenantParams = z.object({ tenantId: z.string().uuid() });
 const actorBody = z.object({ actorId: z.string().uuid().optional() });
 
 export async function tenantRoutes(app: FastifyInstance) {
-  app.post("/tenants", async (req, reply) => {
-    const body = z.object({ name: z.string().min(1) }).parse(req.body);
-    const result = await pool.query(
-      `INSERT INTO tenants (name) VALUES ($1) RETURNING id, name, ai_enabled, ai_data_policy, autonomous_low_risk_enabled`,
-      [body.name],
-    );
-    reply.code(201).send(result.rows[0]);
-  });
-
   app.get("/tenants/:tenantId", async (req, reply) => {
     const { tenantId } = tenantParams.parse(req.params);
     const result = await pool.query(`SELECT * FROM tenants WHERE id = $1`, [tenantId]);
@@ -53,6 +44,40 @@ export async function tenantRoutes(app: FastifyInstance) {
     if (result.rowCount === 0) return reply.code(404).send({ error: "tenant not found" });
 
     await recordAudit({ tenantId, actorType: "user", actorId: actorId ?? null, eventType: "tenant.ai_enabled" });
+    reply.send({ ok: true });
+  });
+
+  // Autonomous computer-use mode (docs/v0.1-computer-use-addendum.md) —
+  // separate opt-in from the AI kill switch above and from
+  // autonomous_low_risk_enabled (which only ever unlocks risk:"low" IT
+  // tools). Same enable/disable pair shape as tenant AI above; policy-engine
+  // reads this column directly (via tool-calls/service.ts), nothing else to
+  // wire up here.
+  app.post("/tenants/:tenantId/enable-computer-use-autonomous", async (req, reply) => {
+    const { tenantId } = tenantParams.parse(req.params);
+    const { actorId } = actorBody.parse(req.body ?? {});
+
+    const result = await pool.query(
+      `UPDATE tenants SET computer_use_autonomous_enabled = true WHERE id = $1 RETURNING id`,
+      [tenantId],
+    );
+    if (result.rowCount === 0) return reply.code(404).send({ error: "tenant not found" });
+
+    await recordAudit({ tenantId, actorType: "user", actorId: actorId ?? null, eventType: "tenant.computer_use_autonomous_enabled" });
+    reply.send({ ok: true });
+  });
+
+  app.post("/tenants/:tenantId/disable-computer-use-autonomous", async (req, reply) => {
+    const { tenantId } = tenantParams.parse(req.params);
+    const { actorId } = actorBody.parse(req.body ?? {});
+
+    const result = await pool.query(
+      `UPDATE tenants SET computer_use_autonomous_enabled = false WHERE id = $1 RETURNING id`,
+      [tenantId],
+    );
+    if (result.rowCount === 0) return reply.code(404).send({ error: "tenant not found" });
+
+    await recordAudit({ tenantId, actorType: "user", actorId: actorId ?? null, eventType: "tenant.computer_use_autonomous_disabled" });
     reply.send({ ok: true });
   });
 

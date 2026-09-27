@@ -7,7 +7,7 @@
 #>
 param(
     [switch]$Full,
-    [string]$InstallDir = "$env:ProgramFiles\SupportAgent"
+    [string]$InstallDir = "$env:SystemDrive\SupportAgent"
 )
 
 $ErrorActionPreference = "Continue" # keep going even if one service is already gone — this should be safe to re-run

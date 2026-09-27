@@ -18,6 +18,20 @@ func TestExecute_RejectsUnknownTool(t *testing.T) {
 	}
 }
 
+// Computer-use addendum (docs/v0.1-computer-use-addendum.md): a plausible-
+// looking desktop.* name that was never registered must fail closed exactly
+// like any other unknown tool — no special-casing the new tool family lets
+// something slip past the allowlist.
+func TestExecute_RejectsUnknownDesktopTool(t *testing.T) {
+	result := Execute(Request{ToolCallID: "test-desktop-1", Tool: "desktop.exec", Params: map[string]any{"command": "calc.exe"}})
+	if result.Success {
+		t.Fatal("expected unknown desktop.* tool to be rejected, got Success=true")
+	}
+	if result.Error == "" {
+		t.Fatal("expected a non-empty rejection error")
+	}
+}
+
 func TestExecute_KnownToolReachesDispatch(t *testing.T) {
 	// On non-Windows this still exercises the full Execute() path up to
 	// dispatch(), which on this platform always returns a clean "windows only"

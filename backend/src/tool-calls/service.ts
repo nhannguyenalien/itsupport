@@ -4,6 +4,8 @@ import { evaluate } from "../policy-engine/index.js";
 import { recordAudit } from "../audit/index.js";
 import { isOAuthPlatform } from "../oauth/providers.js";
 import { executeMarketingTool } from "../platform-clients/executor.js";
+import type { AiDataPolicy } from "../ai-orchestration/redact.js";
+import { looksLikePaymentCardNumber } from "../policy-engine/luhn.js";
 
 export interface RequestToolCallInput {
   ticketId: string;
@@ -32,7 +34,9 @@ interface TicketContext {
   actions_paused: boolean; // devices.actions_paused OR platform_connections.actions_paused
   target_blocked: boolean; // device revoked, or platform connection not 'active'
   ai_enabled: boolean;
+  ai_data_policy: AiDataPolicy;
   autonomous_low_risk_enabled: boolean;
+  computer_use_autonomous_enabled: boolean;
   budget_auto_pct_limit: number;
   budget_approval_pct_limit: number;
   absolute_budget_limit_cents: number | null;
@@ -48,7 +52,7 @@ async function loadTicketContext(ticketId: string): Promise<TicketContext | unde
     `SELECT t.id AS ticket_id, t.tenant_id, t.device_id, t.platform_connection_id,
             COALESCE(d.actions_paused, pc.actions_paused, false) AS actions_paused,
             COALESCE(d.cert_revoked_at IS NOT NULL, pc.status IS DISTINCT FROM 'active', false) AS target_blocked,
-            tn.ai_enabled, tn.autonomous_low_risk_enabled,
+            tn.ai_enabled, tn.ai_data_policy, tn.autonomous_low_risk_enabled, tn.computer_use_autonomous_enabled,
             tn.budget_auto_pct_limit, tn.budget_approval_pct_limit, tn.absolute_budget_limit_cents
      FROM tickets t
      LEFT JOIN devices d ON d.id = t.device_id
@@ -67,7 +71,9 @@ async function loadTicketContext(ticketId: string): Promise<TicketContext | unde
     actions_paused: r.actions_paused,
     target_blocked: r.target_blocked,
     ai_enabled: r.ai_enabled,
+    ai_data_policy: r.ai_data_policy,
     autonomous_low_risk_enabled: r.autonomous_low_risk_enabled,
+    computer_use_autonomous_enabled: r.computer_use_autonomous_enabled,
     budget_auto_pct_limit: Number(r.budget_auto_pct_limit),
     budget_approval_pct_limit: Number(r.budget_approval_pct_limit),
     absolute_budget_limit_cents: r.absolute_budget_limit_cents === null ? null : Number(r.absolute_budget_limit_cents),
@@ -89,6 +95,35 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   if (!ctx) return { outcome: "not_found" };
   if (ctx.target_blocked) {
     return { outcome: "rejected", reason: ctx.target_device_id ? "device is revoked" : "platform connection is not active" };
+  }
+
+  // A human approval must never be enough to terminate a critical Windows
+  // process. Resolve the requested PID from the latest process.list result
+  // and reject it before an approval/tool-call row can be created. The agent
+  // independently enforces the same denylist as a second line of defence.
+  if (input.tool === "process.kill") {
+    const pid = Number(input.params.pid);
+    if (!Number.isInteger(pid) || pid <= 0) {
+      return { outcome: "rejected", reason: "process.kill yêu cầu PID là một số nguyên dương" };
+    }
+    const latestProcesses = await pool.query(
+      `SELECT result_data FROM tool_calls
+       WHERE ticket_id = $1 AND tool = 'process.list' AND result = 'success'
+       ORDER BY executed_at DESC NULLS LAST LIMIT 1`,
+      [input.ticketId],
+    );
+    const processes = latestProcesses.rows[0]?.result_data?.processes;
+    const process = Array.isArray(processes)
+      ? processes.find((item: Record<string, unknown>) => Number(item.pid) === pid)
+      : undefined;
+    const name = typeof process?.name === "string" ? process.name.toLowerCase() : "";
+    const protectedProcesses = new Set([
+      "system", "registry", "smss.exe", "csrss.exe", "wininit.exe", "services.exe",
+      "lsass.exe", "winlogon.exe", "svchost.exe", "dwm.exe", "fontdrvhost.exe",
+    ]);
+    if (pid <= 4 || protectedProcesses.has(name)) {
+      return { outcome: "rejected", reason: `Không thể dừng tiến trình Windows được bảo vệ${name ? `: ${name}` : ""}` };
+    }
   }
 
   // browser.open_url (v0.2 OAuth-assist): the url the agent will open is
@@ -120,6 +155,30 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
     };
   }
 
+  // desktop.open_customer_view — same never-trust-the-caller principle as
+  // browser.open_url above: the url is always computed here from the
+  // frontend's own base URL + this ticket's id, never taken from the caller.
+  // System-triggered only (computer-use/index.ts's startSession()), never
+  // something the AI model itself decides to call.
+  if (input.tool === "desktop.open_customer_view") {
+    if (!ctx.target_device_id) {
+      return { outcome: "rejected", reason: "desktop.open_customer_view requires a device-targeted ticket" };
+    }
+    const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
+    input.params = { url: `${frontendUrl.replace(/\/$/, "")}/tickets/${input.ticketId}/customer` };
+  }
+
+  // Autonomous computer-use mode (docs/v0.1-computer-use-addendum.md) — the
+  // Luhn check runs here, not inside policy-engine/index.ts, following the
+  // same "compute special-case context in service.ts" shape as
+  // ads.budget.update below. Unconditional hard block: even a tenant with
+  // computer_use_autonomous_enabled still needs a human to approve typing
+  // something that looks like a real card number.
+  let typedTextLooksLikeCardNumber = false;
+  if (input.tool === "desktop.type" && typeof input.params.text === "string") {
+    typedTextLooksLikeCardNumber = looksLikePaymentCardNumber(input.params.text);
+  }
+
   let budgetChange: { currentCents: number; requestedCents: number; absoluteLimitCents: number | null } | undefined;
   if (input.tool === "ads.budget.update") {
     const current = input.params.current_budget_cents;
@@ -133,7 +192,10 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   const decision = evaluate(input.tool, {
     initiatedBy: input.initiatedBy,
     tenantAiEnabled: ctx.ai_enabled,
+    tenantAiDataPolicy: ctx.ai_data_policy,
     tenantAutonomousLowRiskEnabled: ctx.autonomous_low_risk_enabled,
+    computerUseAutonomousEnabled: ctx.computer_use_autonomous_enabled,
+    looksLikePaymentCardNumber: typedTextLooksLikeCardNumber,
     deviceActionsPaused: ctx.actions_paused,
     budgetChange,
     tenantBudgetPolicy: budgetChange
@@ -197,7 +259,7 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   // not execution outcome; check the tool_calls row (or re-fetch the ticket)
   // for what actually happened.
   if (ctx.target_platform_connection_id) {
-    await executeMarketingTool(call.rows[0].id, input.tool, input.params, ctx.target_platform_connection_id);
+    await executeMarketingTool(call.rows[0].id, input.tool, input.params, ctx.target_platform_connection_id, ctx.tenant_id);
   }
 
   return { outcome: "auto_execute", toolCall: call.rows[0] };

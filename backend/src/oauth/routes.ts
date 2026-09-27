@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { pool } from "../db/pool.js";
+import { pool, setTenantContext } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 import { OAUTH_PROVIDERS, isOAuthPlatform } from "./providers.js";
 import { createState, verifyState } from "./state.js";
@@ -103,6 +103,7 @@ export async function oauthRoutes(app: FastifyInstance) {
     if (!statePayload) {
       return reply.code(400).send({ error: "invalid, expired, or mismatched OAuth state — possible CSRF, connection rejected" });
     }
+    setTenantContext(statePayload.tenantId);
 
     const provider = OAUTH_PROVIDERS[platform];
     const clientId = process.env[provider.clientIdEnv];

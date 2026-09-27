@@ -33,14 +33,14 @@ export async function ticketRoutes(app: FastifyInstance) {
     const result = await pool.query(
       `INSERT INTO tickets (tenant_id, device_id, platform_connection_id, title, created_by, scenario)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [b.tenantId, b.deviceId ?? null, b.platformConnectionId ?? null, b.title, b.createdBy ?? null, b.scenario ?? null],
+      [b.tenantId, b.deviceId ?? null, b.platformConnectionId ?? null, b.title, req.authUser!.id, b.scenario ?? null],
     );
     const ticket = result.rows[0];
 
     await recordAudit({
       tenantId: b.tenantId,
       actorType: "user",
-      actorId: b.createdBy ?? null,
+      actorId: req.authUser!.id,
       eventType: "ticket.created",
       eventData: { title: b.title },
       ticketId: ticket.id,

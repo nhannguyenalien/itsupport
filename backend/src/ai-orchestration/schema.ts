@@ -23,11 +23,28 @@ function paramsToJsonSchema(paramNames: string[]): Record<string, unknown> {
   };
 }
 
+/** OpenAI function names must match ^[a-zA-Z0-9_-]+$ — our tool names use "."
+ * as a namespace separator (e.g. "service.status", "google_ads.pmax.assets"),
+ * which the real API rejects outright ("does not match pattern") the moment
+ * more than one tool is offered. Discovered by testing against the real
+ * OpenAI API for the first time (prior testing only ever used a mock or
+ * typechecked, never actually round-tripped a tool list through the real
+ * endpoint). "-" is never used inside a tool name (confirmed against the full
+ * registry) so it's a safe, reversible substitute for "." — toOpenAiToolName/
+ * fromOpenAiToolName are exact inverses of each other. */
+export function toOpenAiToolName(tool: string): string {
+  return tool.replace(/\./g, "-");
+}
+
+export function fromOpenAiToolName(openAiName: string): string {
+  return openAiName.replace(/-/g, ".");
+}
+
 export function toolToOpenAiFunction(tool: ToolDefinition): OpenAI.Chat.Completions.ChatCompletionTool {
   return {
     type: "function",
     function: {
-      name: tool.tool,
+      name: toOpenAiToolName(tool.tool),
       description: `Risk level: ${tool.risk}. ${
         tool.risk === "read"
           ? "Read-only, executes immediately."

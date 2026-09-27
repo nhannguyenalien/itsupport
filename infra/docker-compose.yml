@@ -1,68 +1,123 @@
-# Local dev stack for the AI Windows Support Agent platform.
-#
-#   cd infra && docker compose up --build
-#
-#   backend   -> http://localhost:3000   (health: /health)
-#   frontend  -> http://localhost:3001
-#   postgres  -> localhost:5432          (support / support / support_agent)
-#
-# The Windows agent (agent/) is NOT in here — it only runs on Windows. Point it
-# at http://<your-host-ip>:3000 from a real Windows box or VM.
-#
-# Optional secrets (OpenAI, OAuth) go in infra/.env — see infra/.env.example.
-# Without them the AI-step and OAuth endpoints fail with a clear error rather
-# than faking a result, which is the intended v0.1 behaviour.
-
 name: support-agent-platform
+
+x-security: &security
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
 
 services:
   db:
     image: postgres:16-alpine
+    <<: *security
     environment:
       POSTGRES_USER: support
-      POSTGRES_PASSWORD: support
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
       POSTGRES_DB: support_agent
-    ports:
-      - "5432:5432"
+    secrets: [db_password, db_app_password]
     volumes:
       - db-data:/var/lib/postgresql/data
-      # Loaded once, on first boot only (when the data volume is empty).
-      # Drop the volume to re-run it: docker compose down -v
       - ../backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./postgres-init/02-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U support -d support_agent"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits: { memory: 1G, cpus: "1.0" }
 
   backend:
     build: ../backend
+    <<: *security
+    cap_drop: ["ALL"]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
     environment:
-      DATABASE_URL: postgresql://support:support@db:5432/support_agent
+      DATABASE_URL: postgresql://support_app@db:5432/support_agent
+      DATABASE_ADMIN_URL: postgresql://support@db:5432/support_agent
+      PGAPP_PASSWORD_FILE: /run/secrets/db_app_password
+      PGADMIN_PASSWORD_FILE: /run/secrets/db_password
       PORT: "3000"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase_admin
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://127.0.0.1:18080}
+      FRONTEND_URL: ${APP_PUBLIC_URL:-http://127.0.0.1:18080}
+      AGENT_API_URL: ${AGENT_PUBLIC_URL:-https://agent.invalid}
+      AGENT_CA_CERT_PATH: /run/secrets/agent_ca_cert
+      AGENT_CA_KEY_PATH: /run/secrets/agent_ca_key
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
-      MESHCENTRAL_URL: ${MESHCENTRAL_URL:-}
       OAUTH_TOKEN_ENC_KEY: ${OAUTH_TOKEN_ENC_KEY:-}
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-}
-      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-http://localhost:3000}
-    ports:
-      - "3000:3000"
+      OAUTH_REDIRECT_BASE_URL: ${APP_PUBLIC_URL:-http://127.0.0.1:18080}/api
+    secrets: [db_password, db_app_password, agent_ca_cert, agent_ca_key, firebase_admin]
+    command: ["sh", "-c", "export DATABASE_URL=postgresql://support_app:$(cat $$PGAPP_PASSWORD_FILE)@db:5432/support_agent DATABASE_ADMIN_URL=postgresql://support:$(cat $$PGADMIN_PASSWORD_FILE)@db:5432/support_agent; exec node dist/index.js"]
     depends_on:
-      db:
-        condition: service_healthy
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    deploy:
+      resources:
+        limits: { memory: 1G, cpus: "1.0" }
 
   frontend:
     build:
       context: ../frontend
       args:
-        # Baked into the client bundle — must be reachable from the browser.
-        NEXT_PUBLIC_API_URL: http://localhost:3000
-    ports:
-      - "3001:3000"
+        NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${FIREBASE_PROJECT_ID}.firebaseapp.com
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+    <<: *security
+    cap_drop: ["ALL"]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m", "/app/.next/cache:rw,noexec,nosuid,size=64m"]
     depends_on:
-      - backend
+      backend: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 512M, cpus: "0.5" }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    ports:
+      - "127.0.0.1:${WEB_PORT:-18080}:8080"
+      - "127.0.0.1:${AGENT_MTLS_PORT:-18443}:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./secrets/agent-ca.crt:/etc/caddy/agent-ca.crt:ro
+      - ./secrets/agent-server.crt:/etc/caddy/agent-server.crt:ro
+      - ./secrets/agent-server.key:/etc/caddy/agent-server.key:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [frontend, backend]
+
+  backup:
+    image: postgres:16-alpine
+    <<: *security
+    environment: { PGHOST: db, PGUSER: support, PGDATABASE: support_agent }
+    secrets: [db_password]
+    volumes:
+      - ./backup.sh:/usr/local/bin/backup:ro
+      - db-backups:/backups
+    command: ["sh", "-c", "while true; do /usr/local/bin/backup; sleep 86400; done"]
+    depends_on:
+      db: { condition: service_healthy }
+
+secrets:
+  db_password: { file: ./secrets/db_password }
+  db_app_password: { file: ./secrets/db_app_password }
+  agent_ca_cert: { file: ./secrets/agent-ca.crt }
+  agent_ca_key: { file: ./secrets/agent-ca.key }
+  firebase_admin: { file: ./secrets/firebase-admin.json }
 
 volumes:
   db-data:
+  db-backups:
+  caddy-data:
+  caddy-config:

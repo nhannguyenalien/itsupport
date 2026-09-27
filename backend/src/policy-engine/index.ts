@@ -1,4 +1,5 @@
 import { getTool, type ToolRisk } from "../tool-registry/index.js";
+import type { AiDataPolicy } from "../ai-orchestration/redact.js";
 
 export type PolicyDecision =
   | { outcome: "auto_execute" }
@@ -10,6 +11,22 @@ export interface PolicyContext {
   tenantAiEnabled: boolean;
   tenantAutonomousLowRiskEnabled: boolean;
   deviceActionsPaused: boolean;
+  // Computer-use addendum (docs/v0.1-computer-use-addendum.md) — needed to
+  // gate domain:"windows_desktop" tools off entirely for a tenant that opted
+  // out of screenshots, since pixel data can't be redacted the way text
+  // results are (see ai-orchestration/redact.ts).
+  tenantAiDataPolicy: AiDataPolicy;
+  // Autonomous computer-use mode (docs/v0.1-computer-use-addendum.md) —
+  // separate opt-in from tenantAutonomousLowRiskEnabled below (that one only
+  // ever unlocks risk:"low" tools; computer-use writes are risk:"high" by
+  // design). Only meaningful for domain:"windows_desktop" write tools.
+  computerUseAutonomousEnabled: boolean;
+  // Set true only for desktop.type calls whose text contains a Luhn-valid
+  // card-number-length digit run (tool-calls/service.ts computes this via
+  // luhn.ts before calling evaluate() — the same "compute special-case
+  // context in service.ts, consume it here" pattern as budgetChange below).
+  // Unconditional hard block regardless of computerUseAutonomousEnabled.
+  looksLikePaymentCardNumber?: boolean;
   // v0.2 marketing-ops — only relevant (and only required) for ads.budget.update.
   // Absent for every v0.1 Windows tool call, and for every other marketing tool.
   budgetChange?: {
@@ -36,7 +53,13 @@ export interface PolicyContext {
  *                      otherwise requires human approval UNLESS risk === 'low'
  *                      AND the tenant has explicitly opted into autonomous
  *                      low-risk remediation. medium/high NEVER auto-execute in
- *                      v0.1, even with that opt-in — only low does.
+ *                      v0.1, even with that opt-in — only low does. Exception:
+ *                      domain:"windows_desktop" (computer-use) risk:"high"
+ *                      tools auto-execute if the tenant separately opted into
+ *                      computerUseAutonomousEnabled — UNLESS the action looks
+ *                      like it's typing a real card number (Luhn check), which
+ *                      always requires approval regardless of that opt-in. See
+ *                      docs/v0.1-computer-use-addendum.md.
  *  - AI-initiated calls are rejected outright if the tenant has disabled AI
  *    (kill switch). Human-initiated calls (e.g. a technician manually running a
  *    read tool from the dashboard) are unaffected by that switch.
@@ -54,6 +77,12 @@ export function evaluate(toolName: string, ctx: PolicyContext): PolicyDecision {
     return { outcome: "rejected", reason: "tenant AI is disabled" };
   }
 
+  if (tool.domain === "windows_desktop" && ctx.tenantAiDataPolicy === "no_screenshots") {
+    // Checked before the "read always auto-executes" shortcut below —
+    // desktop.screenshot is itself risk:"read" and must not slip past this.
+    return { outcome: "rejected", reason: "tenant's AI data policy (no_screenshots) blocks computer-use tools" };
+  }
+
   if (tool.risk === "read") {
     return { outcome: "auto_execute" };
   }
@@ -61,6 +90,20 @@ export function evaluate(toolName: string, ctx: PolicyContext): PolicyDecision {
   // From here on, tool.risk is low/medium/high — a write action.
   if (ctx.deviceActionsPaused) {
     return { outcome: "rejected", reason: "device actions are paused" };
+  }
+
+  // Autonomous computer-use mode (docs/v0.1-computer-use-addendum.md) — a
+  // separate opt-in from the general risk==="low" autonomy check below, since
+  // every computer-use write action is risk:"high" by design. The payment
+  // hard-block is unconditional: even an autonomous tenant still needs a
+  // human to approve a desktop.type that looks like a real card number.
+  if (tool.domain === "windows_desktop" && tool.risk === "high") {
+    if (ctx.looksLikePaymentCardNumber) {
+      return { outcome: "requires_approval" };
+    }
+    if (ctx.computerUseAutonomousEnabled) {
+      return { outcome: "auto_execute" };
+    }
   }
 
   if (toolName === "ads.budget.update") {

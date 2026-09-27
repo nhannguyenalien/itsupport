@@ -4,6 +4,7 @@ package tools
 
 import (
 	"fmt"
+	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -43,18 +44,44 @@ func ProcessList(params map[string]any) (map[string]any, error) {
 	return map[string]any{"processes": processes, "count": len(processes)}, nil
 }
 
-// ProcessKill terminates a process by PID. Write action, risk "high" in
-// registry.json — no scope limiter on which PID beyond what already passed
-// approval upstream. The agent does not maintain a "protected process" denylist
-// in v0.1; that's a real gap worth closing before broader rollout (killing
-// something like a critical system PID has no undo), tracked here rather than
-// silently assumed safe.
+var protectedProcessNames = map[string]struct{}{
+	"system": {}, "registry": {}, "smss.exe": {}, "csrss.exe": {},
+	"wininit.exe": {}, "services.exe": {}, "lsass.exe": {}, "winlogon.exe": {},
+	"svchost.exe": {}, "dwm.exe": {}, "fontdrvhost.exe": {},
+}
+
+func processNameByPID(pid uint32) (string, error) {
+	result, err := ProcessList(nil)
+	if err != nil {
+		return "", err
+	}
+	processes, _ := result["processes"].([]map[string]any)
+	for _, process := range processes {
+		if process["pid"] == pid {
+			return strings.ToLower(fmt.Sprint(process["name"])), nil
+		}
+	}
+	return "", fmt.Errorf("process %d was not found", pid)
+}
+
+// ProcessKill enforces a local critical-process denylist in addition to the
+// backend check. Approval or a compromised backend can never override it.
 func ProcessKill(params map[string]any) (map[string]any, error) {
 	pidFloat, ok := params["pid"].(float64) // JSON numbers decode as float64
 	if !ok || pidFloat <= 0 {
 		return nil, fmt.Errorf("param %q must be a positive integer", "pid")
 	}
 	pid := uint32(pidFloat)
+	if pid <= 4 {
+		return nil, fmt.Errorf("refusing to terminate protected Windows process PID %d", pid)
+	}
+	name, err := processNameByPID(pid)
+	if err != nil {
+		return nil, err
+	}
+	if _, protected := protectedProcessNames[name]; protected {
+		return nil, fmt.Errorf("refusing to terminate protected Windows process %s (PID %d)", name, pid)
+	}
 
 	handle, err := windows.OpenProcess(windows.PROCESS_TERMINATE, false, pid)
 	if err != nil {

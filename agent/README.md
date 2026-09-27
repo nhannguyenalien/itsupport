@@ -6,8 +6,8 @@ Three separate binaries, deliberately not one process — see
 - `cmd/executor` — the ONLY privileged process. Listens on `127.0.0.1:47800`
   (loopback only), verifies an HMAC signature on every request before parsing
   anything, and refuses any tool name outside the compile-time allowlist
-  (`internal/tools/registry_windows.go`). Meant to run as a Windows service
-  under an elevated account — that service install/manifest isn't written yet.
+  (`internal/tools/registry_windows.go`). Runs as an elevated Windows service;
+  macOS/Linux implementations run in the logged-in user's session.
 - `cmd/daemon` — low privilege. Polls the backend for pending tool calls,
   forwards each to the executor over the signed local channel, reports the
   result back.
@@ -44,23 +44,20 @@ future tool added to the name list before its Win32 code lands.
 ## Build
 
 ```sh
-# Windows target (the only one that actually runs tools):
+# Windows target:
 GOOS=windows GOARCH=amd64 go build -o bin/ ./...
 
-# Native build (Linux/macOS) — compiles and lets you exercise the IPC layer,
-# allowlist rejection, and daemon/backend polling logic; tool execution itself
-# always returns "windows only" on non-Windows, by design (executor_other.go).
+# Native build (Linux/macOS):
 go build ./...
 go test ./...
 ```
 
 ## Run as Windows services (install/install.ps1)
 
-All 3 binaries now integrate with the Windows Service Control Manager via
-`internal/winsvc` — `svc.IsWindowsService()` detects whether the process was
-actually launched by the SCM; if so it does the full StartPending/Running/
-Stop/Shutdown handshake, otherwise it just runs the same loop directly
-(interactive/dev mode, unchanged from before).
+All 3 binaries integrate with the Windows Service Control Manager via
+`internal/winsvc`. The installer registers each binary with the explicit
+`service` argument, which selects the StartPending/Running/Stop/Shutdown SCM
+path; launching a binary without that argument remains interactive/dev mode.
 
 ```powershell
 # From a Windows machine (or copy the built binaries there):
@@ -76,6 +73,23 @@ cd install
 .\uninstall.ps1 -Full       # also wipes config.json and the IPC secret
 ```
 
+Configs created before agent 0.2.0 have no `agentToken`. The installer detects
+that case, saves `config.json.pre-token.bak`, and requires a new one-time token.
+Use `-ForceReEnroll` to deliberately rotate the device identity.
+
+## Run on macOS
+
+Build the four commands into `install/`, then use the LaunchAgent installer:
+
+```sh
+go build -o install/enroll ./cmd/enroll
+go build -o install/daemon ./cmd/daemon
+go build -o install/telemetry ./cmd/telemetry
+go build -o install/executor ./cmd/executor
+chmod +x install/install-macos.sh
+install/install-macos.sh --backend https://itsupport.schoolsai.work/api --token '<token>'
+```
+
 Process separation carries into the service accounts: `SupportAgentExecutor`
 runs as `LocalSystem` (the only one that touches privileged Win32 APIs),
 `SupportAgentDaemon`/`SupportAgentTelemetry` run as `NT AUTHORITY\NetworkService`
@@ -83,11 +97,10 @@ runs as `LocalSystem` (the only one that touches privileged Win32 APIs),
 comment for the one flagged simplification (IPC secret is a machine-wide env
 var, not scoped per-service via the registry).
 
-**Verified**: cross-compiles clean for windows/amd64, `go vet`/`go test` clean
-on both platforms, and the refactored run-loops smoke-tested for real in
-interactive mode (this repo's dev environment isn't Windows, so the actual SCM
-handshake — StartPending/Running/Stop — could not be exercised end-to-end;
-flagged, not assumed working from compilation alone).
+**Verified**: cross-compiles clean for windows/amd64 and `go test ./...` passes.
+The release installer was also exercised end-to-end on a Windows VM: all three
+services installed under `C:\SupportAgent`, completed the real SCM handshake,
+remained Running, and sent heartbeats to the production endpoint.
 
 ## Run manually (no service, for local dev/testing)
 
@@ -109,12 +122,9 @@ export AGENT_IPC_SECRET="<shared secret, same value for daemon and executor>"
 
 ## Known gaps (flagged, not silently assumed done)
 
-- **mTLS**: agent talks plain HTTPS with no client cert yet. `cmd/enroll`
-  generates a real Ed25519 keypair and sends the public half, but the backend
-  only returns a placeholder `cert_serial` (see
-  `backend/src/enrollment/routes.ts`) — nothing yet issues a real certificate
-  off that public key, and the private key it saves isn't used for anything
-  past enrollment (no client-cert presentation on later requests).
+- **Public transport**: enrollment issues a real certificate and a per-device
+  token. Direct deployments can use mTLS; the Cloudflare Tunnel production
+  route uses the token because the tunnel does not forward client certificates.
 - **IPC transport**: loopback HTTP + HMAC, not a Windows named pipe with an
   ACL. Loopback-only binding is the real boundary today; a named pipe would be
   tighter.

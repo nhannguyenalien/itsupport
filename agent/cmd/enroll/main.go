@@ -18,6 +18,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 
 	"support-agent/agent/internal/config"
 )
@@ -28,12 +29,39 @@ type registerRequest struct {
 	PublicKey    string `json:"publicKey"`
 	OSVersion    string `json:"osVersion,omitempty"`
 	AgentVersion string `json:"agentVersion,omitempty"`
+	// Multi-OS computer-use addendum (docs/v0.1-computer-use-addendum.md) —
+	// which desktop.* implementation this device's agent actually has wired
+	// (see agent/internal/tools/registry_{windows,darwin,linux}.go).
+	Platform string `json:"platform,omitempty"`
+}
+
+// agentPlatform maps the Go runtime's GOOS to the platform strings
+// backend/src/db/schema.sql's devices.platform column accepts. Deliberately
+// fails enrollment for anything else rather than mislabeling a device as
+// windows/mac/linux when it isn't — the backend has no agent implementation
+// for other OSes, so it's better the human running this see a clear error
+// than have computer-use silently target the wrong environment.
+func agentPlatform() (string, error) {
+	switch runtime.GOOS {
+	case "windows":
+		return "windows", nil
+	case "darwin":
+		return "mac", nil
+	case "linux":
+		return "linux", nil
+	default:
+		return "", fmt.Errorf("no agent implementation for GOOS=%q — see docs/v0.1-computer-use-addendum.md", runtime.GOOS)
+	}
 }
 
 type registerResponse struct {
-	DeviceID   string `json:"deviceId"`
-	CertSerial string `json:"certSerial"`
-	Error      string `json:"error"`
+	DeviceID         string `json:"deviceId"`
+	CertSerial       string `json:"certSerial"`
+	CertificatePEM   string `json:"certificatePem"`
+	CACertificatePEM string `json:"caCertificatePem"`
+	AgentURL         string `json:"agentUrl"`
+	AgentToken       string `json:"agentToken"`
+	Error            string `json:"error"`
 }
 
 func main() {
@@ -68,11 +96,17 @@ func main() {
 		hostname = "unknown-host"
 	}
 
+	platform, err := agentPlatform()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	reqBody, err := json.Marshal(registerRequest{
 		Token:        *token,
 		Hostname:     hostname,
 		PublicKey:    pubPEM,
-		AgentVersion: "0.1.0-dev",
+		AgentVersion: "0.2.0",
+		Platform:     platform,
 	})
 	if err != nil {
 		log.Fatalf("marshal request: %v", err)
@@ -94,17 +128,23 @@ func main() {
 	}
 
 	cfg := config.Config{
-		BackendURL:    *backendURL,
-		DeviceID:      result.DeviceID,
-		PrivateKeyPEM: privPEM,
-		PublicKeyPEM:  pubPEM,
+		BackendURL:       result.AgentURL,
+		DeviceID:         result.DeviceID,
+		PrivateKeyPEM:    privPEM,
+		PublicKeyPEM:     pubPEM,
+		CertificatePEM:   result.CertificatePEM,
+		CACertificatePEM: result.CACertificatePEM,
+		AgentToken:       result.AgentToken,
+	}
+	if cfg.BackendURL == "" {
+		log.Fatal("backend did not return the agent API URL")
 	}
 	if err := config.Save(*configPath, cfg); err != nil {
 		log.Fatalf("failed to save config to %s: %v", *configPath, err)
 	}
 
-	fmt.Printf("Enrolled successfully.\n  device_id:  %s\n  cert_serial: %s (placeholder — see known gaps, real mTLS cert issuance isn't built yet)\n  config:     %s\n",
-		result.DeviceID, result.CertSerial, *configPath)
+	fmt.Printf("Enrolled successfully.\n  device_id:  %s\n  cert_serial: %s\n  agent_api:  %s\n  config:     %s\n",
+		result.DeviceID, result.CertSerial, cfg.BackendURL, *configPath)
 }
 
 func encodePublicKeyPEM(pub ed25519.PublicKey) (string, error) {

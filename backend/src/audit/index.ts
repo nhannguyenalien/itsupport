@@ -1,4 +1,4 @@
-import { pool } from "../db/pool.js";
+import { queryTenantScoped } from "../db/pool.js";
 
 export type ActorType = "user" | "ai" | "system" | "agent" | "technician";
 
@@ -17,7 +17,8 @@ export interface AuditEvent {
  * delete rows here; if something needs correcting, write a new audit_log row
  * that says so, don't rewrite history. */
 export async function recordAudit(event: AuditEvent): Promise<void> {
-  await pool.query(
+  await queryTenantScoped(
+    event.tenantId,
     `INSERT INTO audit_log (tenant_id, actor_type, actor_id, event_type, event_data, ticket_id, device_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [

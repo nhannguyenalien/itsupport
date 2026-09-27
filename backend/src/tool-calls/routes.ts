@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { pool } from "../db/pool.js";
+import { pool, queryTenantScoped, withTenantContext } from "../db/pool.js";
 import { getTool } from "../tool-registry/index.js";
 import { requestToolCall } from "./service.js";
 import { recordToolCallResult } from "./execution.js";
@@ -116,7 +116,8 @@ export async function toolCallRoutes(app: FastifyInstance) {
   // this for a push channel later doesn't change anything upstream of this file.
   app.get("/devices/:deviceId/tool-calls/pending", async (req, reply) => {
     const { deviceId } = deviceParams.parse(req.params);
-    const result = await pool.query(
+    if (!req.agentTenantId) return reply.code(401).send({ error: "agent tenant context required" });
+    const result = await queryTenantScoped(req.agentTenantId,
       `SELECT id, tool, params, risk FROM tool_calls
        WHERE device_id = $1 AND executed_at IS NULL
        ORDER BY requested_at ASC`,
@@ -133,9 +134,10 @@ export async function toolCallRoutes(app: FastifyInstance) {
   app.post("/tool-calls/:toolCallId/result", async (req, reply) => {
     const { toolCallId } = toolCallParams.parse(req.params);
     const b = resultBody.parse(req.body);
+    if (!req.agentTenantId) return reply.code(401).send({ error: "agent tenant context required" });
 
     try {
-      await recordToolCallResult(toolCallId, b, "agent");
+      await withTenantContext(req.agentTenantId, () => recordToolCallResult(toolCallId, b, req.agentTenantId!, "agent"));
     } catch (err) {
       if (err instanceof Error && err.message.includes("not found")) {
         return reply.code(404).send({ error: "tool call not found" });

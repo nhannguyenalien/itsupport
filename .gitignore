@@ -8,4 +8,9 @@ build/
 .DS_Store
 agent/bin/
 frontend/.next/
+.next/
+frontend/public/downloads/agent/darwin-*/
+frontend/public/downloads/agent/windows-*/
 *.tsbuildinfo
+infra/secrets/
+infra/backups/

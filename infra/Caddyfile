@@ -1,0 +1,39 @@
+{
+  admin off
+  auto_https off
+}
+
+:8080 {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+    -Server
+  }
+  @api path /api/*
+  handle @api {
+    uri strip_prefix /api
+    reverse_proxy backend:3000 {
+      header_up -X-Agent-Cert-Serial
+    }
+  }
+  reverse_proxy frontend:3000
+}
+
+:8443 {
+  tls /etc/caddy/agent-server.crt /etc/caddy/agent-server.key {
+    client_auth {
+      mode require_and_verify
+      trusted_ca_cert_file /etc/caddy/agent-ca.crt
+    }
+  }
+  @agent path_regexp agent ^/(devices/[^/]+/(heartbeat|tool-calls/pending)|tool-calls/[^/]+/result)$
+  handle @agent {
+    request_header X-Agent-Cert-Serial {tls_client_serial}
+    reverse_proxy backend:3000 {
+      header_up X-Agent-Cert-Serial {http.request.header.X-Agent-Cert-Serial}
+    }
+  }
+  respond 404
+}
