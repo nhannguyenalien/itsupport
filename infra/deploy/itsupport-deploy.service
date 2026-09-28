@@ -4,5 +4,6 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+SuccessExitStatus=75
 ExecStart=/home/mac/.local/bin/itsupport-auto-deploy
 TimeoutStartSec=30min

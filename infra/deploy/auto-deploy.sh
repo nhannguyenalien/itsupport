@@ -16,7 +16,8 @@ url = 'https://api.github.com/repos/nhannguyenalien/itsupport/actions/workflows/
 with urllib.request.urlopen(urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json'}), timeout=30) as response:
     runs = json.load(response)['workflow_runs']
 if not runs or runs[0]['status'] != 'completed' or runs[0]['conclusion'] != 'success':
-    sys.exit('Waiting for successful CI for ' + sys.argv[1])
+    print('Waiting for successful CI for ' + sys.argv[1])
+    sys.exit(75)
 PY
 previous=$(git rev-parse HEAD)
 compose=(docker compose -f infra/docker-compose.yml -f infra/docker-compose.neon.yml --env-file infra/.env)
