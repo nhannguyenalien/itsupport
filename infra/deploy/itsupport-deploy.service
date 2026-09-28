@@ -1,0 +1,8 @@
+[Unit]
+Description=Deploy IT Support from GitHub main after successful CI
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/mac/.local/bin/itsupport-auto-deploy
+TimeoutStartSec=30min
