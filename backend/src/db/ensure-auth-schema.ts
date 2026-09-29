@@ -3,6 +3,9 @@ import { adminPool as pool } from "./pool.js";
 // Keeps existing development volumes usable. Production deployments should
 // execute the equivalent statements through their normal migration pipeline.
 export async function ensureAuthSchema(): Promise<void> {
+  await pool.query(`ALTER TABLE ticket_messages ADD COLUMN IF NOT EXISTS attachments JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await pool.query(`ALTER TABLE computer_use_sessions ADD COLUMN IF NOT EXISTS action_count INTEGER NOT NULL DEFAULT 0`);
+  await pool.query(`ALTER TABLE computer_use_sessions ADD COLUMN IF NOT EXISTS stop_requested BOOLEAN NOT NULL DEFAULT false`);
   // Device API credentials allow agents to use the normal HTTPS endpoint when
   // an ingress (for example Cloudflare Tunnel) terminates TLS before Caddy.
   // Only the hash is persisted; the raw token is returned once at enrollment.

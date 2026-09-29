@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
+import { attachmentInput, extractAttachment } from "../documents/index.js";
 import { recordAudit } from "../audit/index.js";
 
 const createTicketBody = z
@@ -19,9 +20,10 @@ const createTicketBody = z
   });
 
 const addMessageBody = z.object({
-  authorType: z.enum(["user", "ai", "system", "technician"]),
+  authorType: z.literal("user").optional(),
   authorId: z.string().uuid().optional(),
-  body: z.string().min(1),
+  body: z.string().max(8000).default(""),
+  attachments: z.array(attachmentInput).max(1).default([]),
 });
 
 const listQuery = z.object({ tenantId: z.string().uuid() });
@@ -80,26 +82,31 @@ export async function ticketRoutes(app: FastifyInstance) {
       [ticketId],
     );
 
-    reply.send({ ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows, approvals: approvals.rows });
+    const session = await pool.query(`SELECT * FROM computer_use_sessions WHERE ticket_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1`, [ticketId]);
+    reply.send({ computerUseSession: session.rows[0] ?? null, ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows, approvals: approvals.rows });
   });
 
-  app.post("/tickets/:ticketId/messages", async (req, reply) => {
+  app.post("/tickets/:ticketId/messages", { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req, reply) => {
     const { ticketId } = ticketParams.parse(req.params);
     const b = addMessageBody.parse(req.body);
 
     const ticketRow = await pool.query(`SELECT tenant_id, device_id FROM tickets WHERE id = $1`, [ticketId]);
     if (ticketRow.rowCount === 0) return reply.code(404).send({ error: "ticket not found" });
 
+    if (!b.body.trim() && !b.attachments.length) return reply.code(400).send({ error: "Hãy nhập yêu cầu hoặc chọn tài liệu." });
+    let attachments;
+    try { attachments = await Promise.all(b.attachments.map(extractAttachment)); }
+    catch (error) { return reply.code(400).send({ error: error instanceof Error ? error.message : "Không đọc được tài liệu." }); }
     const result = await pool.query(
-      `INSERT INTO ticket_messages (ticket_id, author_type, author_id, body)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [ticketId, b.authorType, b.authorId ?? null, b.body],
+      `INSERT INTO ticket_messages (ticket_id, author_type, author_id, body, attachments)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [ticketId, "user", req.authUser!.id, b.body, JSON.stringify(attachments)],
     );
 
     await recordAudit({
       tenantId: ticketRow.rows[0].tenant_id,
-      actorType: b.authorType === "ai" ? "ai" : b.authorType === "technician" ? "technician" : "user",
-      actorId: b.authorId ?? null,
+      actorType: "user",
+      actorId: req.authUser!.id,
       eventType: "ticket.message_added",
       ticketId,
       deviceId: ticketRow.rows[0].device_id,

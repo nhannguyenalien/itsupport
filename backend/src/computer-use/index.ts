@@ -1,3 +1,5 @@
+import { referenceHistory, DOCUMENT_INSTRUCTIONS } from "../documents/index.js";
+import { applyDataPolicy } from "../ai-orchestration/redact.js";
 import OpenAI from "openai";
 import { pool } from "../db/pool.js";
 import { requestToolCall } from "../tool-calls/service.js";
@@ -32,7 +34,7 @@ function getClient(): OpenAI {
     );
   }
   if (!client) {
-    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL });
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL, timeout: 45000, maxRetries: 0 });
   }
   return client;
 }
@@ -46,6 +48,9 @@ const MODEL = process.env.OPENAI_COMPUTER_USE_MODEL ?? "gpt-5.6-sol";
 
 export interface ComputerUseSession {
   id: string;
+  created_at: string;
+  action_count: number;
+  stop_requested: boolean;
   tenant_id: string;
   ticket_id: string;
   device_id: string;
@@ -77,15 +82,21 @@ async function loadSession(sessionId: string): Promise<ComputerUseSession | unde
  * "resume" rather than splitting the OpenAI-calling logic in two. */
 export async function startSession(ticketId: string): Promise<ComputerUseSession> {
   const ticketRow = await pool.query(
-    `SELECT t.tenant_id, t.device_id, d.platform
+    `SELECT t.tenant_id, t.device_id, d.platform, d.last_seen_at
      FROM tickets t LEFT JOIN devices d ON d.id = t.device_id
      WHERE t.id = $1`,
     [ticketId],
   );
   if (ticketRow.rowCount === 0) throw new Error("ticket not found");
-  const { tenant_id, device_id, platform } = ticketRow.rows[0];
+  const { tenant_id, device_id, platform, last_seen_at } = ticketRow.rows[0];
   if (!device_id) throw new Error("computer-use requires a device-targeted ticket");
 
+  if (!last_seen_at || Date.now() - new Date(last_seen_at).getTime() > 90000) throw new Error("Máy chưa kết nối. Hãy mở agent hỗ trợ trên máy cần thao tác.");
+  const active = await pool.query<ComputerUseSession>(`SELECT * FROM computer_use_sessions WHERE device_id = $1 AND status = 'active'`, [device_id]);
+  if (active.rows[0]?.ticket_id === ticketId) return active.rows[0];
+  if (active.rowCount) throw new Error("Máy đang có phiên hỗ trợ khác. Hãy dừng phiên đó trước.");
+  const pending = await pool.query(`SELECT id FROM tool_calls WHERE device_id = $1 AND executed_at IS NULL LIMIT 1`, [device_id]);
+  if (pending.rowCount) throw new Error("Máy còn thao tác đang chờ. Hãy chờ kết quả trước khi bắt đầu.");
   // Multi-OS computer-use addendum (docs/v0.1-computer-use-addendum.md) —
   // devices.platform ('windows'|'mac'|'linux') and the computer_use_preview
   // tool's `environment` enum happen to share the same three string values,
@@ -134,29 +145,8 @@ export async function startSession(ticketId: string): Promise<ComputerUseSession
     deviceId: device_id,
   });
 
-  // Customer-facing status/chat view (docs/v0.1-computer-use-addendum.md) —
-  // system-triggered once here, never something the AI decides to call
-  // itself (that's why it's excluded from the regular ai-orchestration tool
-  // list, see ai-orchestration/index.ts's domain filter). Best-effort: a
-  // failure here (e.g. the tenant somehow rejects it) shouldn't abort the
-  // computer-use session itself — opening a status page for the customer is
-  // not a precondition for the AI actually doing its job.
-  const customerViewResult = await requestToolCall({
-    ticketId,
-    initiatedBy: "ai",
-    tool: "desktop.open_customer_view",
-    params: {},
-    reasoning: "Computer-use: opening the customer-facing status/chat view",
-  });
-  await recordAudit({
-    tenantId: tenant_id,
-    actorType: "system",
-    eventType: "computer_use.customer_view_requested",
-    eventData: { outcome: customerViewResult.outcome },
-    ticketId,
-    deviceId: device_id,
-  });
-
+  // The customer is already in chat. Opening another window here would invalidate
+  // the initial screenshot before the first action is dispatched.
   return updated.rows[0];
 }
 
@@ -375,6 +365,9 @@ async function dispatchAction(
   remaining: OpenAI.Responses.ComputerActionList,
   batchSafetyChecks: OpenAI.Responses.ResponseComputerToolCall.PendingSafetyCheck[],
 ): Promise<void> {
+  const fresh = await loadSession(session.id);
+  if (fresh?.stop_requested || fresh?.status === "ended") { await stopSession(session.id); return; }
+  await pool.query(`UPDATE computer_use_sessions SET action_count = action_count + 1 WHERE id = $1`, [session.id]);
   const mapped = toolForAction(action);
   if (!mapped) {
     await endSession(session, "unrecognized computer-use action type from the model");
@@ -442,6 +435,14 @@ export async function advanceSession(sessionId: string): Promise<ComputerUseSess
   if (!session) throw new Error("computer-use session not found");
   if (session.status === "ended") return session;
 
+  if (session.stop_requested || Date.now() - new Date(session.created_at).getTime() > 20 * 60 * 1000 || session.action_count >= 40) {
+    await stopSession(sessionId);
+    return (await loadSession(sessionId))!;
+  }
+  if (session.pending_batch_safety_checks?.length) {
+    await endSession(session, "Cần kỹ thuật viên kiểm tra cảnh báo an toàn trước khi tiếp tục.");
+    return (await loadSession(sessionId))!;
+  }
   const resolved = await resolvePendingScreenshot(session);
   if (!resolved.ready) return (await loadSession(sessionId))!; // may have changed (new pending id, or ended) — return fresh
 
@@ -484,7 +485,9 @@ export async function advanceSession(sessionId: string): Promise<ComputerUseSess
     // First call of the session — no prior computer_call to answer, so the
     // screenshot goes in as a normal input image alongside instructions,
     // per OpenAI's computer-use guide.
-    const ticketRow = await pool.query(`SELECT title FROM tickets WHERE id = $1`, [session.ticket_id]);
+    const ticketRow = await pool.query(`SELECT t.title, tn.ai_data_policy FROM tickets t JOIN tenants tn ON tn.id = t.tenant_id WHERE t.id = $1`, [session.ticket_id]);
+    const history = await pool.query(`SELECT author_type, body, attachments FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at DESC LIMIT 20`, [session.ticket_id]);
+    const context = referenceHistory(history.rows.reverse() as { author_type: string; body: string }[]).map((m) => m.content).join("\n");
     response = await openai.responses.create({
       model: MODEL,
       tools: [tool],
@@ -502,7 +505,8 @@ export async function advanceSession(sessionId: string): Promise<ComputerUseSess
                 `explain before anything irreversible (deleting a file, uninstalling software, or anything ` +
                 `you cannot undo) — do not just do it. When you are done, respond with a message instead of ` +
                 `another action, and start that message with exactly "RESOLVED:" if you fixed the issue, or ` +
-                `"ESCALATE:" if you are stuck, unsure, or this needs a human's judgment.`,
+                `"ESCALATE:" if you are stuck, unsure, or this needs a human's judgment. Respond in Vietnamese. ` +
+                DOCUMENT_INSTRUCTIONS + "\nRecent chat and reference documents:\n" + String(applyDataPolicy(ticketRow.rows[0].ai_data_policy, context)),
             },
             { type: "input_image", image_url: outputScreenshot.image_url!, detail: "auto" },
           ],
@@ -522,10 +526,7 @@ export async function advanceSession(sessionId: string): Promise<ComputerUseSess
       type: "computer_call_output",
       call_id: session.pending_batch_call_id ?? resolved.priorCallId!,
       output: outputScreenshot,
-      acknowledged_safety_checks:
-        session.pending_batch_safety_checks && session.pending_batch_safety_checks.length
-          ? (session.pending_batch_safety_checks as unknown as OpenAI.Responses.ResponseComputerToolCallOutputItem.AcknowledgedSafetyCheck[])
-          : undefined,
+
     };
     response = await openai.responses.create({
       model: MODEL,
@@ -546,6 +547,10 @@ export async function advanceSession(sessionId: string): Promise<ComputerUseSess
 
   const computerCall = response.output.find((item): item is OpenAI.Responses.ResponseComputerToolCall => item.type === "computer_call");
 
+  if (computerCall?.pending_safety_checks?.length) {
+    await endSession(session, "Cần kỹ thuật viên kiểm tra cảnh báo an toàn trước khi tiếp tục.");
+    return (await loadSession(sessionId))!;
+  }
   if (!computerCall) {
     // No further action proposed — the model responded with a message
     // instead of another action. Persist the response id first (same
@@ -584,5 +589,15 @@ export async function advanceSession(sessionId: string): Promise<ComputerUseSess
   const [firstAction, ...restActions] = rawActions;
   await dispatchAction(session, response.id, firstAction, computerCall.call_id, restActions, computerCall.pending_safety_checks);
 
+  return (await loadSession(sessionId))!;
+}
+
+/** Stop further steps; an action already delivered to the agent may finish. */
+export async function stopSession(sessionId: string): Promise<ComputerUseSession> {
+  const session = await loadSession(sessionId);
+  if (!session) throw new Error("computer-use session not found");
+  if (session.status === "ended") return session;
+  if (session.pending_approval_id) await pool.query(`UPDATE approvals SET status = 'rejected', decided_at = now() WHERE id = $1 AND status = 'pending'`, [session.pending_approval_id]);
+  await endSession(session, "Đã dừng phiên (theo yêu cầu hoặc hết giới hạn 20 phút/40 thao tác). Thao tác đã gửi xuống máy có thể hoàn tất; không tạo bước tiếp theo.");
   return (await loadSession(sessionId))!;
 }

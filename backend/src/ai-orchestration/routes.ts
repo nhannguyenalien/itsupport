@@ -1,3 +1,5 @@
+import { withExecutionLock } from "../db/execution-lock.js";
+import { pool } from "../db/pool.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { runAiWorkflow } from "./index.js";
@@ -11,11 +13,15 @@ export async function aiOrchestrationRoutes(app: FastifyInstance) {
   app.post("/tickets/:ticketId/ai-step", async (req, reply) => {
     const { ticketId } = ticketParams.parse(req.params);
     try {
-      const result = await runAiWorkflow(ticketId);
+      const result = await withExecutionLock(ticketId, async () => {
+        const active = await pool.query(`SELECT s.id FROM computer_use_sessions s JOIN tickets t ON t.device_id = s.device_id WHERE t.id = $1 AND s.status = 'active'`, [ticketId]);
+        if (active.rowCount) throw Object.assign(new Error("Hãy dừng phiên màn hình trước khi chạy chẩn đoán."), { statusCode: 409 });
+        return runAiWorkflow(ticketId);
+      });
       reply.send(result);
     } catch (err) {
       req.log.error({ err }, "ai-step failed");
-      reply.code(500).send({ error: err instanceof Error ? err.message : String(err) });
+      reply.code((err as { statusCode?: number }).statusCode ?? 500).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 }

@@ -18,8 +18,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const body = await res.text();
     let code: string | undefined;
-    try { code = JSON.parse(body).code; } catch { /* Non-JSON proxy error. */ }
-    throw new ApiError(res.status, code, `${init?.method ?? "GET"} ${path} -> ${res.status}: ${body}`);
+    let message = `Yêu cầu thất bại (${res.status}).`;
+    try { const parsed = JSON.parse(body); code = parsed.code; if (typeof parsed.error === "string") message = parsed.error; } catch { /* Non-JSON proxy error. */ }
+    throw new ApiError(res.status, code, message);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
@@ -67,6 +68,7 @@ export interface TicketMessage {
   id: string;
   author_type: "user" | "ai" | "system" | "technician";
   body: string;
+  attachments?: { name: string; size: number; text: string }[];
   created_at: string;
 }
 
@@ -95,6 +97,7 @@ export interface Approval {
 }
 
 export interface TicketDetail extends Ticket {
+  computerUseSession: ComputerUseSession | null;
   messages: TicketMessage[];
   toolCalls: ToolCall[];
   approvals: Approval[];
@@ -127,6 +130,7 @@ export interface ComputerUseSession {
   ticket_id: string;
   device_id: string;
   status: "active" | "ended";
+  stop_requested: boolean;
   openai_response_id: string | null;
   pending_tool_call_id: string | null;
   pending_approval_id: string | null;
@@ -199,7 +203,7 @@ export const api = {
   getTicket: (ticketId: string) => request<TicketDetail>(`/tickets/${ticketId}`),
   createTicket: (body: { tenantId: string; deviceId?: string; platformConnectionId?: string; title: string; scenario?: string }) =>
     request<Ticket>(`/tickets`, { method: "POST", body: JSON.stringify(body) }),
-  addMessage: (ticketId: string, body: { authorType: string; body: string }) =>
+  addMessage: (ticketId: string, body: { authorType: string; body: string; attachments?: { name: string; base64: string }[] }) =>
     request<TicketMessage>(`/tickets/${ticketId}/messages`, { method: "POST", body: JSON.stringify(body) }),
 
   approveApproval: (approvalId: string) => request(`/approvals/${approvalId}/approve`, { method: "POST", body: "{}" }),
@@ -224,6 +228,8 @@ export const api = {
   // pending-approvals card).
   startComputerUseSession: (ticketId: string) =>
     request<ComputerUseSession>(`/tickets/${ticketId}/computer-use/start`, { method: "POST", body: "{}" }),
+  stopComputerUseSession: (sessionId: string) =>
+    request<ComputerUseSession>(`/computer-use-sessions/${sessionId}/stop`, { method: "POST", body: "{}" }),
   advanceComputerUseSession: (sessionId: string) =>
     request<ComputerUseSession>(`/computer-use-sessions/${sessionId}/advance`, { method: "POST", body: "{}" }),
   // Not a fetch() — used directly as an <img src>. Not authenticated (matches

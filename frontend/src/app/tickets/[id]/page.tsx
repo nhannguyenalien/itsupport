@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { api, type Approval, type TicketDetail } from "@/lib/api";
+import { api, ApiError, type Approval, type TicketDetail } from "@/lib/api";
 
 const statusText: Record<string, string> = {
   open: "Sẵn sàng hỗ trợ", diagnosing: "Đang kiểm tra", awaiting_approval: "Cần bạn xác nhận",
@@ -24,6 +24,10 @@ function approvalQuestion(approval: Approval): string {
 }
 
 function friendlyError(value: unknown): string {
+  if (value instanceof ApiError) {
+    if (value.status === 401) return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+    if (value.status < 500) return value.message;
+  }
   const message = String(value);
   if (message.includes("401") || message.includes("403")) return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
   if (message.includes("Failed to fetch")) return "Không thể kết nối tới dịch vụ hỗ trợ. Vui lòng thử lại sau ít phút.";
@@ -34,6 +38,11 @@ export default function TicketDetailPage() {
   const { id: ticketId } = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [message, setMessage] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [screenMode, setScreenMode] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const advancing = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -52,18 +61,53 @@ export default function TicketDetailPage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [ticket?.messages.length, ticket?.approvals.length, busy]);
 
-  async function askAi() { await api.runAiStep(ticketId); await load(true); }
+  const sessionId = ticket?.computerUseSession?.id;
+  useEffect(() => {
+    if (!sessionId || paused) return;
+    let disposed = false;
+    const timer = window.setInterval(async () => {
+      if (advancing.current) return;
+      advancing.current = true;
+      try { await api.advanceComputerUseSession(sessionId); if (!disposed) await load(true); }
+      catch (e) {
+        if (!disposed && !(e instanceof ApiError && e.status === 409)) { setPaused(true); setError(friendlyError(e)); }
+      } finally { advancing.current = false; }
+    }, 3000);
+    return () => { disposed = true; window.clearInterval(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, paused]);
+
+  async function askAi() {
+    if (ticket?.computerUseSession) { setPaused(false); return; }
+    if (screenMode) { await api.startComputerUseSession(ticketId); setPaused(false); }
+    else await api.runAiStep(ticketId);
+    await load(true);
+  }
+
+  async function stopScreen() {
+    if (!sessionId) return;
+    try { await api.stopComputerUseSession(sessionId); setPaused(false); await load(true); }
+    catch (e) { setError(friendlyError(e)); }
+  }
 
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
     const body = message.trim();
-    if (!body || busy) return;
-    setBusy(true); setError(null); setMessage("");
+    if ((!body && !file) || busy || sessionId) return;
+    setBusy(true); setError(null);
+    let saved = false;
     try {
-      await api.addMessage(ticketId, { authorType: "user", body });
+      const attachments = file ? [{ name: file.name, base64: await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Không đọc được tệp."));
+        reader.onload = () => resolve(String(reader.result).split(",")[1]);
+        reader.readAsDataURL(file);
+      }) }] : [];
+      await api.addMessage(ticketId, { authorType: "user", body, attachments });
+      saved = true; setMessage(""); setFile(null); if (fileInput.current) fileInput.current.value = "";
       await load(true);
       await askAi();
-    } catch (e) { setMessage(body); setError(friendlyError(e)); }
+    } catch (e) { setError((saved ? "Tin nhắn đã lưu. Chọn Thử lại để tiếp tục xử lý. " : "") + friendlyError(e)); }
     finally { setBusy(false); }
   }
 
@@ -80,9 +124,9 @@ export default function TicketDetailPage() {
 
   if (!ticket) return <div className="support-loading">Đang mở cuộc trò chuyện…</div>;
 
-  const messages = ticket.messages.filter((item) => item.author_type !== "system");
+  const messages = ticket.messages;
   const approvals = ticket.approvals.filter((item) => item.status === "pending");
-  const isWorking = busy || ticket.toolCalls.some((item) => item.result === null);
+  const isWorking = busy || (!!sessionId && !paused && approvals.length === 0);
 
   return (
     <section className="support-chat-shell">
@@ -99,25 +143,36 @@ export default function TicketDetailPage() {
         {messages.map((item) => (
           <div key={item.id} className={`support-message ${item.author_type === "user" ? "from-user" : "from-support"}`}>
             {item.author_type !== "user" && <span className="support-avatar">✦</span>}
-            <div><p>{item.body}</p><time>{new Date(item.created_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time></div>
+            <div><p>{item.body}</p>{item.attachments?.map((attachment, index) => <details key={index}><summary>📎 {attachment.name} · {Math.ceil(attachment.size / 1024)} KB</summary><pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{attachment.text}</pre></details>)}<time>{new Date(item.created_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time></div>
           </div>
         ))}
         {approvals.map((approval) => (
           <div key={approval.id} className="support-message from-support support-confirmation">
             <span className="support-avatar">✦</span>
-            <div><p>{approvalQuestion(approval)}</p><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>Đồng ý, tiếp tục</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>Không đồng ý</button></div></div>
+            <div><p>{approvalQuestion(approval)}</p>{approval.reasoning && <p>{approval.reasoning}</p>}<details><summary>Xem thao tác cụ thể: {approval.tool}</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(Object.fromEntries(Object.entries(approval.params).filter(([key]) => !key.startsWith("__"))), null, 2)}</pre></details><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>Đồng ý, tiếp tục</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>Không đồng ý</button></div></div>
           </div>
         ))}
         {isWorking && <div className="support-message from-support support-typing"><span className="support-avatar">✦</span><div><i /><i /><i /><span>Đang kiểm tra và xử lý…</span></div></div>}
         <div ref={endRef} />
       </main>
 
-      {error && <div className="support-error">{error}</div>}
+      {error && <div className="support-error">{error} <button disabled={busy} onClick={() => { setError(null); setPaused(false); setBusy(true); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>Thử lại</button></div>}
+      <div className="support-chat-controls">
+        {sessionId ? <><span>{ticket.computerUseSession?.stop_requested ? "Đang dừng phiên…" : paused ? "Phiên màn hình đang tạm dừng do lỗi" : "Phiên web/màn hình đang mở"}</span><button type="button" onClick={() => void stopScreen()}>Dừng phiên</button><small>Thao tác đã gửi xuống máy có thể hoàn tất. Đóng trang sẽ tạm ngừng gửi bước tiếp theo.</small></> : <label><input type="checkbox" checked={screenMode} disabled={busy} onChange={(e) => setScreenMode(e.target.checked)} /> Thao tác web/màn hình trên máy đã kết nối</label>}
+        {!sessionId && <button type="button" disabled={busy || approvals.length > 0} onClick={() => { setBusy(true); setError(null); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>Tiếp tục hỗ trợ</button>}
+        <label>Đính kèm tài liệu <input ref={fileInput} type="file" accept=".pdf,.docx,.txt,.md" disabled={busy || !!sessionId} onChange={(e) => {
+          const selected = e.target.files?.[0] ?? null;
+          if (selected && selected.size > 5 * 1024 * 1024) { setError("Tệp không được vượt quá 5 MB."); e.target.value = ""; setFile(null); return; }
+          setFile(selected);
+        }} /></label>
+        {file && <button type="button" onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = ""; }}>Bỏ tệp</button>}
+        <small>PDF có chữ, DOCX, TXT, MD · tối đa 5 MB và 60.000 ký tự/tệp · nội dung được gửi cho AI để xử lý yêu cầu.</small>
+      </div>
       <form className="support-composer" onSubmit={sendMessage}>
-        <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder="Nhập vấn đề bạn đang gặp…" rows={1} disabled={busy || approvals.length > 0} aria-label="Tin nhắn hỗ trợ" />
-        <button className="primary" type="submit" disabled={busy || approvals.length > 0 || !message.trim()} aria-label="Gửi tin nhắn">Gửi</button>
+        <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder="Nhập vấn đề bạn đang gặp…" rows={1} disabled={busy || approvals.length > 0 || !!sessionId} aria-label="Tin nhắn hỗ trợ" />
+        <button className="primary" type="submit" disabled={busy || approvals.length > 0 || !!sessionId || (!message.trim() && !file)} aria-label="Gửi tin nhắn">Gửi</button>
       </form>
-      <p className="support-hint">Nhấn Enter để gửi · Mọi thay đổi quan trọng đều cần bạn xác nhận</p>
+      <p className="support-hint">Nhấn Enter để gửi · Thao tác tuân theo quyền hỗ trợ của đơn vị · Không tự nhập mật khẩu hoặc mã OTP vào chat</p>
     </section>
   );
 }

@@ -55,11 +55,12 @@ export async function toolCallRoutes(app: FastifyInstance) {
     const approval = approvalRow.rows[0];
     const tool = getTool(approval.tool)!;
 
-    await pool.query(
-      `UPDATE approvals SET status = 'approved', decided_by = $1, decided_at = now() WHERE id = $2`,
+    const decided = await pool.query(
+      `UPDATE approvals SET status = 'approved', decided_by = $1, decided_at = now() WHERE id = $2 AND status = 'pending' RETURNING id`,
       [actorId ?? null, approvalId],
     );
 
+    if (!decided.rowCount) return reply.code(409).send({ error: "approval already decided" });
     const call = await pool.query(
       `INSERT INTO tool_calls (ticket_id, device_id, platform_connection_id, tool, risk, params, approval_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
@@ -93,7 +94,7 @@ export async function toolCallRoutes(app: FastifyInstance) {
     const approval = approvalRow.rows[0];
 
     await pool.query(
-      `UPDATE approvals SET status = 'rejected', decided_by = $1, decided_at = now() WHERE id = $2`,
+      `UPDATE approvals SET status = 'rejected', decided_by = $1, decided_at = now() WHERE id = $2 AND status = 'pending'`,
       [actorId ?? null, approvalId],
     );
 

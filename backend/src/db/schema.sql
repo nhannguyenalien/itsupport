@@ -218,6 +218,7 @@ CREATE TABLE ticket_messages (
     author_type     TEXT NOT NULL CHECK (author_type IN ('user', 'ai', 'system', 'technician')),
     author_id       UUID, -- users.id when author_type = 'user' or 'technician'
     body            TEXT NOT NULL,
+    attachments     JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -323,6 +324,8 @@ CREATE TABLE computer_use_sessions (
     device_id             UUID NOT NULL REFERENCES devices(id),
 
     status                TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended')),
+    stop_requested       BOOLEAN NOT NULL DEFAULT false,
+    action_count         INTEGER NOT NULL DEFAULT 0,
     openai_response_id    TEXT, -- OpenAI Responses API response id, for previous_response_id chaining
 
     -- Exactly one of these is set while a step is in flight: the tool_calls row

@@ -1,3 +1,4 @@
+import { referenceHistory, DOCUMENT_INSTRUCTIONS, type Attachment } from "../documents/index.js";
 import OpenAI from "openai";
 import { pool } from "../db/pool.js";
 import { allTools } from "../tool-registry/index.js";
@@ -100,17 +101,17 @@ async function loadTicketForOrchestration(ticketId: string) {
   const row = ticketRes.rows[0];
 
   const messages = await pool.query(
-    `SELECT author_type, body FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC LIMIT 50`,
+    `SELECT author_type, body, attachments FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at DESC LIMIT 20`,
     [ticketId],
   );
   const toolCalls = await pool.query(
     `SELECT tool, params, result, result_data, error_message, verification_status
-     FROM tool_calls WHERE ticket_id = $1 AND parent_tool_call_id IS NULL ORDER BY requested_at ASC LIMIT 20`,
+     FROM tool_calls WHERE ticket_id = $1 AND parent_tool_call_id IS NULL ORDER BY requested_at DESC LIMIT 20`,
     [ticketId],
   );
   const approvals = await pool.query(
     `SELECT tool, params, status, reasoning, decided_at
-     FROM approvals WHERE ticket_id = $1 ORDER BY created_at ASC LIMIT 20`,
+     FROM approvals WHERE ticket_id = $1 ORDER BY created_at DESC LIMIT 20`,
     [ticketId],
   );
 
@@ -127,8 +128,8 @@ async function loadTicketForOrchestration(ticketId: string) {
     ticket: row as { id: string; title: string; status: string; tenant_id: string; ai_data_policy: AiDataPolicy },
     target,
     tenant: { id: row.tenant_id, ai_data_policy: row.ai_data_policy, autonomous_low_risk_enabled: row.autonomous_low_risk_enabled } as TenantRow,
-    messages: messages.rows as { author_type: string; body: string }[],
-    toolCalls: toolCalls.rows as {
+    messages: messages.rows.reverse() as { author_type: string; body: string; attachments: Attachment[] }[],
+    toolCalls: toolCalls.rows.reverse() as {
       tool: string;
       params: unknown;
       result: string | null;
@@ -136,7 +137,7 @@ async function loadTicketForOrchestration(ticketId: string) {
       error_message: string | null;
       verification_status: string;
     }[],
-    approvals: approvals.rows as {
+    approvals: approvals.rows.reverse() as {
       tool: string;
       params: unknown;
       status: "pending" | "approved" | "rejected";
@@ -159,16 +160,16 @@ function buildMessages(ctx: NonNullable<Awaited<ReturnType<typeof loadTicketForO
     })
     .join("\n");
 
-  const chatHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = ctx.messages.map((m) => ({
+  const chatHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = referenceHistory(ctx.messages).map((m) => ({
     role: m.author_type === "ai" ? "assistant" : "user",
-    content: `[${m.author_type}] ${m.body}`,
+    content: String(applyDataPolicy(ctx.tenant.ai_data_policy, m.content)),
   }));
   const approvalHistory = ctx.approvals
     .map((a) => `- ${a.tool}(${JSON.stringify(a.params)}) -> ${a.status}${a.decided_at ? ` at ${a.decided_at}` : ""}`)
     .join("\n");
 
   return [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: SYSTEM_PROMPT + "\n" + DOCUMENT_INSTRUCTIONS },
     {
       role: "user",
       content:

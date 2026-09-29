@@ -308,3 +308,10 @@ input, select {
 .auth-google:disabled { opacity: .65; cursor: wait; }
 .auth-divider { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: #687771; font-size: 13px; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: #e1e8e4; }
+
+.support-chat-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; padding: .75rem 1rem; border-top: 1px solid #e2e8f0; font-size: .875rem; }
+.support-chat-controls label { display: flex; align-items: center; gap: .5rem; }
+.support-chat-controls input[type=file] { max-width: 240px; }
+.support-chat-controls small { flex-basis: 100%; color: #64748b; }
+.support-message details { margin: .5rem 0; max-width: 100%; }
+.support-message summary { cursor: pointer; overflow-wrap: anywhere; }
