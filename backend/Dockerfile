@@ -15,7 +15,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY --from=build /app/node_modules ./node_modules
+RUN npm prune --omit=dev --ignore-scripts --offline --no-audit --no-fund
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 3000
