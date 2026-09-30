@@ -45,3 +45,36 @@ for (const scenario of [
     assert.equal(writes, 0);
   } finally { await app.close(); mock.restoreAll(); }
 });
+
+const { remoteInstall } = await import('../src/remote-support/install.js');
+const tenant = '22222222-2222-4222-8222-222222222222';
+test('installer uses only the authenticated tenant group and HTTPS', () => {
+  process.env.MESHCENTRAL_URL = 'https://mesh.example.test';
+  process.env.MESHCENTRAL_TENANT_GROUPS = JSON.stringify({ [tenant]: '@$' + 'A'.repeat(62) });
+  assert.equal(remoteInstall(device, 'mac'), null);
+  const config = remoteInstall(tenant, 'mac')!;
+  assert.equal(new URL(config.url).searchParams.get('meshid'), '@$' + 'A'.repeat(62));
+  assert.equal(new URL(config.url).searchParams.get('id'), '10005');
+  assert.equal(new URL(remoteInstall(tenant, 'windows')!.url).searchParams.get('id'), '4');
+  process.env.MESHCENTRAL_URL = 'http://mesh.example.test';
+  assert.throws(() => remoteInstall(tenant, 'mac'));
+});
+
+for (const valid of [false, true]) test(`remote installer enforces active device credential: ${valid}`, async () => {
+  process.env.MESHCENTRAL_URL = 'https://mesh.example.test';
+  process.env.MESHCENTRAL_TENANT_GROUPS = JSON.stringify({ [tenant]: 'A'.repeat(64) });
+  mock.method(adminPool, 'query', async (sql: string, params: unknown[]) => {
+    assert.match(sql, /cert_revoked_at IS NULL/);
+    assert.match(sql, /AND id = \$2/);
+    assert.equal(params[1], device);
+    return { rows: valid ? [{ id: device, tenant_id: tenant }] : [], rowCount: valid ? 1 : 0 };
+  });
+  mock.method(pool, 'query', async () => ({ rows: [{ platform: 'mac' }], rowCount: 1 }));
+  const app = Fastify();
+  await registerAuth(app); await deviceRoutes(app);
+  try {
+    const result = await app.inject({ url: `/devices/${device}/remote-install`, headers: { authorization: 'Bearer agent' } });
+    assert.equal(result.statusCode, valid ? 200 : 401, result.body);
+    if (valid) assert.equal(result.headers['cache-control'], 'no-store');
+  } finally { await app.close(); mock.restoreAll(); }
+});

@@ -106,3 +106,41 @@ if result.returncode:
     sys.exit(1)
 print('Đã xác minh máy gửi heartbeat thành công.')
 PYTHON
+
+# Install the official remote-support package in the same customer setup flow.
+echo "Đang cài Mesh Agent để kỹ thuật viên hỗ trợ từ xa. Mỗi phiên cần khách chấp thuận."
+echo "macOS có thể yêu cầu mật khẩu quản trị để cài dịch vụ."
+REMOTE_DIR="$(mktemp -d)"
+trap 'rm -rf "$REMOTE_DIR"' EXIT
+/usr/bin/python3 - "$CONFIG_PATH" "$REMOTE_DIR" <<'PYTHON'
+import json, pathlib, sys, urllib.request, urllib.parse
+config = json.load(open(sys.argv[1]))
+request = urllib.request.Request(config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId'] + '/remote-install', headers={'Authorization': 'Bearer ' + config['agentToken']})
+try:
+    with urllib.request.urlopen(request, timeout=30) as response:
+        remote = json.load(response)
+    url = urllib.parse.urlparse(remote['url'])
+    if url.scheme != 'https' or url.netloc != urllib.parse.urlparse(remote['server']).netloc:
+        raise ValueError('Invalid remote installer URL')
+    existing = pathlib.Path('/usr/local/mesh_services/meshagent/meshagent/meshagent.msh')
+    if pathlib.Path('/Library/LaunchDaemons/meshagent.plist').exists():
+        settings = existing.read_text()
+        import base64
+        group_hex = base64.b64decode(remote['group'].replace('@', '+').replace('$', '/')).hex().upper()
+        if ('MeshID=0x' + group_hex) not in settings or ('MeshServer=wss://' + url.hostname + ':443/') not in settings:
+            raise ValueError('An existing Mesh Agent belongs to another server or group; contact your administrator')
+        pathlib.Path(sys.argv[2], 'already-installed').touch()
+    else:
+        with urllib.request.urlopen(remote['url'], timeout=120) as response:
+            pathlib.Path(sys.argv[2], 'MeshAgent.zip').write_bytes(response.read())
+except Exception as error:
+    print('Support Agent đã cài. Mesh Agent chưa sẵn sàng: ' + str(error), file=sys.stderr)
+    sys.exit(1)
+PYTHON
+if [[ ! -f "$REMOTE_DIR/already-installed" ]]; then
+  /usr/bin/ditto -x -k "$REMOTE_DIR/MeshAgent.zip" "$REMOTE_DIR/package"
+  /usr/bin/sudo /usr/sbin/installer -pkg "$REMOTE_DIR/package/MeshAgent.pkg" -target /
+fi
+/usr/bin/sudo /bin/launchctl print system/meshagent >/dev/null
+echo "Mesh Agent đã cài. Vào System Settings > Privacy & Security, cấp Screen Recording và Accessibility cho Mesh Agent."
+echo "Quản trị viên liên kết máy trong Dashboard > Thiết bị > Hỗ trợ từ xa."

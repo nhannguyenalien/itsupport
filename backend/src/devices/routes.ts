@@ -5,11 +5,25 @@ import { recordAudit } from "../audit/index.js";
 
 import { meshNodeId, remoteConsoleUrl, remoteDeviceUrl } from "../remote-support/links.js";
 
+import { remoteInstall } from "../remote-support/install.js";
+
 const listQuery = z.object({ tenantId: z.string().uuid() });
 const deviceParams = z.object({ deviceId: z.string().uuid() });
 const actorBody = z.object({ actorId: z.string().uuid().optional() });
 
 export async function deviceRoutes(app: FastifyInstance) {
+  app.get("/devices/:deviceId/remote-install", async (req, reply) => {
+    const { deviceId } = deviceParams.parse(req.params);
+    if (!req.agentTenantId || req.agentDeviceId !== deviceId) return reply.code(401).send({ error: "agent identity required" });
+    const result = await queryTenantScoped(req.agentTenantId,
+      `SELECT platform FROM devices WHERE id = $1 AND cert_revoked_at IS NULL`, [deviceId]);
+    const platform = result.rows[0]?.platform;
+    if (!platform) return reply.code(404).send({ error: "device unavailable" });
+    if (!["mac", "windows"].includes(platform)) return reply.code(400).send({ error: "unsupported platform" });
+    const config = remoteInstall(req.agentTenantId, platform);
+    if (!config) return reply.code(503).send({ error: "Remote support is not configured for this workspace" });
+    return reply.header("Cache-Control", "no-store").send(config);
+  });
   app.get("/devices/:deviceId/remote-support", async (req, reply) => {
     if (req.authUser!.role === "member") return reply.code(403).send({ error: "technician role required" });
     const { deviceId } = deviceParams.parse(req.params);

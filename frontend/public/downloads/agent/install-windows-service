@@ -191,3 +191,29 @@ Start-Service -Name "SupportAgentDaemon"
 Start-Service -Name "SupportAgentTelemetry"
 
 Write-Host "Done. Check status with: Get-Service SupportAgent*"
+
+Write-Host "Installing Mesh Agent for remote technical support. Each session requires customer consent."
+$agentConfig = Get-Content $configPath -Raw | ConvertFrom-Json
+$remote = Invoke-RestMethod -Uri ($agentConfig.backendUrl.TrimEnd('/') + '/devices/' + $agentConfig.deviceId + '/remote-install') -Headers @{ Authorization = 'Bearer ' + $agentConfig.agentToken } -TimeoutSec 30
+$remoteUri = [Uri]$remote.url
+if ($remoteUri.Scheme -ne 'https' -or $remoteUri.Authority -ne ([Uri]$remote.server).Authority) { throw 'Invalid remote installer URL' }
+$meshService = Get-Service -Name 'Mesh Agent' -ErrorAction SilentlyContinue
+$receiptPath = Join-Path $InstallDir 'mesh-install.json'
+if ($meshService) {
+    if (-not (Test-Path $receiptPath)) { throw 'Existing Mesh Agent detected. Ask your administrator to verify its server and group before continuing.' }
+    $receipt = Get-Content $receiptPath -Raw | ConvertFrom-Json
+    if ($receipt.server -ne $remote.server -or $receipt.group -ne $remote.group) { throw 'Existing Mesh Agent belongs to another server or group.' }
+} else {
+    $meshTemp = Join-Path $InstallDir ('mesh-setup-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $meshTemp | Out-Null
+    try {
+        $meshExe = Join-Path $meshTemp 'meshagent.exe'
+        Invoke-WebRequest -UseBasicParsing -Uri $remote.url -OutFile $meshExe -TimeoutSec 120
+        $meshProcess = Start-Process -FilePath $meshExe -ArgumentList '-fullinstall' -Wait -PassThru
+        if ($meshProcess.ExitCode -ne 0) { throw "Mesh Agent installation failed ($($meshProcess.ExitCode))" }
+        $meshService = Get-Service -Name 'Mesh Agent' -ErrorAction Stop
+        if ($meshService.Status -ne 'Running') { Start-Service -Name 'Mesh Agent' }
+        @{ server = $remote.server; group = $remote.group } | ConvertTo-Json | Set-Content $receiptPath
+    } finally { Remove-Item -Recurse -Force $meshTemp }
+}
+Write-Host 'Mesh Agent installed. An administrator can link this machine in Dashboard > Devices > Remote support.'

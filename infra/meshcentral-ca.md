@@ -1,6 +1,6 @@
 # MeshCentral remote support
 
-Deployment (2026-09-30): https://mesh.bluetechsw.com on `root@rootcloud`.
+Deployment (2026-09-30): https://mesh.schoolsai.work on `root@rootcloud`.
 MeshCentral 1.2.5 runs as the dedicated `meshcentral` user under systemd.
 The loopback HTTP listener on 127.0.0.1:4430 is reached through a dedicated
 Cloudflare tunnel; there is no new public inbound port. Existing nginx services
@@ -29,7 +29,7 @@ and the IT Support deployment on macmini are independent.
 
 ## Application configuration and enrollment
 
-Set `MESHCENTRAL_URL=https://mesh.bluetechsw.com` in macmini's `infra/.env`.
+Set `MESHCENTRAL_URL=https://mesh.schoolsai.work` in macmini's `infra/.env`.
 Docker Compose passes it to the backend. No MeshCentral admin token goes to the
 browser; MeshCentral authenticates users and independently enforces ACLs.
 
@@ -61,3 +61,27 @@ Backend tests verify role/tenant rejection and deep-link ID handling. Before
 claiming end-to-end remote control, enroll a consenting Windows/macOS client and
 verify desktop, mouse/keyboard, reject/timeout consent, disconnect, and scoped
 technician permissions. No customer device is enrolled automatically.
+
+## Bundled customer installation
+
+The original macOS/Windows CLI now installs Mesh Agent after Support Agent enrollment.
+It requests `/devices/:deviceId/remote-install` with the device credential.
+Set `MESHCENTRAL_TENANT_GROUPS` to a JSON object mapping tenant UUIDs to the
+64-character MeshCentral group IDs (without `mesh//`). Create a separate
+agent group per customer with consent 127; grant technicians only their groups.
+Unconfigured tenants receive 503 rather than joining a shared customer group.
+Keep the JSON single-quoted in Compose's `.env` to preserve `$` in IDs.
+
+macOS downloads the official universal ZIP package and invokes `sudo installer`;
+customers must grant Screen Recording and Accessibility in System Settings.
+Windows downloads the official x64 installer and installs its service as admin.
+Existing Mesh installations are not overwritten when their ownership is unknown.
+Failures stop setup with an error; Support Agent remains installed, and rerunning
+the original command retries without consuming another enrollment token.
+Dashboard node association still requires an administrator to paste the device link
+once. Agent installation does not grant a technician permissions automatically.
+
+Public tunnel origin on rootcloud: `http://127.0.0.1:4430`; public HTTPS uses 443.
+If the tunnel runs inside a container, use a reachable host address instead of its
+container loopback. Preserve WebSocket support and do not put an interactive
+Cloudflare Access login in front of the Mesh agent endpoints.

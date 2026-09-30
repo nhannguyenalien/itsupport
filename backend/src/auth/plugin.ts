@@ -19,6 +19,7 @@ function isAgentRoute(req: FastifyRequest): boolean {
   const path = req.url.split("?")[0];
   return (
     (req.method === "POST" && /^\/devices\/[^/]+\/heartbeat$/.test(path)) ||
+    (req.method === "GET" && /^\/devices\/[^/]+\/remote-install$/.test(path)) ||
     (req.method === "GET" && /^\/devices\/[^/]+\/tool-calls\/pending$/.test(path)) ||
     (req.method === "POST" && /^\/tool-calls\/[^/]+\/result$/.test(path))
   );
