@@ -313,5 +313,16 @@
   "connectionStatus.revoked": "Révoqué",
   "connectionStatus.error": "Erreur",
   "ai.failed": "Le traitement IA a échoué. Votre message est enregistré ; sélectionnez Réessayer.",
-  "ai.incomplete": "Le traitement est incomplet. L’appareil ne répond peut-être pas ou la limite de diagnostic est atteinte. Consultez les résultats et réessayez."
+  "ai.incomplete": "Le traitement est incomplet. L’appareil ne répond peut-être pas ou la limite de diagnostic est atteinte. Consultez les résultats et réessayez.",
+  "remote.title": "Assistance à distance par un technicien",
+  "remote.error": "Impossible de charger ou enregistrer la configuration. Vérifiez les autorisations et l’identifiant MeshCentral.",
+  "remote.unavailable": "L’assistance à distance n’est pas configurée.",
+  "remote.registered": "Lien MeshCentral enregistré ; consultez la connexion dans la console.",
+  "remote.unregistered": "Cet appareil n’est pas lié à MeshCentral.",
+  "remote.consent": "Arrêtez la session IA et attendez la fin des actions avant de prendre le contrôle. Le technicien doit se connecter à MeshCentral et le client doit accepter sur son appareil.",
+  "remote.open": "Ouvrir le contrôle de l’appareil",
+  "remote.console": "Ouvrir MeshCentral",
+  "remote.install": "Dans MeshCentral : créez un groupe distinct pour le client, autorisez uniquement ses techniciens, sélectionnez Add Agent et installez-le sur son appareil. Sur macOS, autorisez l’enregistrement de l’écran et l’accessibilité. Ouvrez ensuite l’appareil dans un nouvel onglet et collez son lien ci-dessous. Mesh Agent s’installe séparément de Support Agent.",
+  "remote.node": "Identifiant ou lien MeshCentral (vide pour dissocier)",
+  "remote.save": "Enregistrer le lien"
 }

@@ -1,65 +1,63 @@
-# MeshCentral + step-ca (Coolify deployment)
+# MeshCentral remote support
 
-Deployed 2026-09-02 on the user's own Coolify instance at `cool.toidayhoc.com`,
-project `support-agent-infra` (uuid `oplxknzd4yt0ue8iaxq7q0zg`), NOT on the
-observer_system trading VPS — kept off that box deliberately (it's low on
-free RAM/disk and hosts other tenants + the live trading bot).
+Deployment (2026-09-30): https://mesh.bluetechsw.com on `root@rootcloud`.
+MeshCentral 1.2.5 runs as the dedicated `meshcentral` user under systemd.
+The loopback HTTP listener on 127.0.0.1:4430 is reached through a dedicated
+Cloudflare tunnel; there is no new public inbound port. Existing nginx services
+and the IT Support deployment on macmini are independent.
 
-## Services
+## Operations
 
-| Service | Coolify app uuid | Public URL | Container status |
-|---|---|---|---|
-| MeshCentral | `qaezeghl2zpls8kgpph2xvv6` | https://support-agent-mesh.toidayhoc.com | running, real cert generated for this hostname, `tlsOffload`+`trustedProxy` on (serves plain HTTP internally, Traefik terminates TLS) |
-| step-ca | `ldyfgnx0zgm6ykzh17b67tbt` | https://support-agent-ca.toidayhoc.com | running:healthy, real root+intermediate CA generated, fingerprint in `.env.meshcentral-ca` |
+- Code and pinned npm lockfile: `/opt/itsupport-meshcentral`.
+- Persistent config/database/keys: `meshcentral-data` under that directory.
+- Files/backups: `meshcentral-files`, `meshcentral-backups`.
+- Units: `itsupport-meshcentral.service`, `itsupport-meshcentral-tunnel.service`.
+- Tunnel configuration/credential: `/etc/itsupport-meshcentral/` (root only).
+- Bootstrap admin credential: `/root/itsupport-meshcentral-admin.json` (mode 600).
+  Retrieve privately over SSH; never commit or paste into chat/logs. Set up MFA
+  in My Account and create named technician accounts with scoped device access.
+- Status: `systemctl status itsupport-meshcentral itsupport-meshcentral-tunnel`.
+- Logs: `journalctl -u itsupport-meshcentral -n 50 --no-pager`.
+- Limits: MeshCentral 768 MiB / 75% CPU; tunnel 192 MiB. Initial host free disk
+  40 GiB, available RAM ~3 GiB, swap already full. Monitor before expanding.
+- Before upgrades: stop MeshCentral, take a protected off-host copy of data,
+  files, package-lock.json and config, then restart. Backups contain secrets.
+  Upgrade pinned versions in a maintenance window and verify real agent sessions.
+- Roll back an upgrade with the previous package-lock.json (`npm ci --omit=dev`)
+  and a compatible data backup. Do not erase live data to roll back the app.
+- Disable service: `systemctl disable --now itsupport-meshcentral itsupport-meshcentral-tunnel`.
 
-Both have persistent volumes attached (`/home/step` for step-ca,
-`/opt/meshcentral/meshcentral-data` + `meshcentral-files` for MeshCentral) so
-data survives redeploys/restarts.
+## Application configuration and enrollment
 
-## Known-good, actually verified
+Set `MESHCENTRAL_URL=https://mesh.bluetechsw.com` in macmini's `infra/.env`.
+Docker Compose passes it to the backend. No MeshCentral admin token goes to the
+browser; MeshCentral authenticates users and independently enforces ACLs.
 
-- Both containers build and run cleanly (checked via Coolify's deployment
-  logs and `status` field, not just "deploy succeeded").
-- step-ca generated a real root CA and is serving HTTPS on its internal port
-  — confirmed from its own boot log, not assumed.
-- MeshCentral generated a real cert for `support-agent-mesh.toidayhoc.com`
-  (had to fix this explicitly — it defaults to a placeholder hostname and
-  needs `HOSTNAME` + `DYNAMIC_CONFIG=true` env vars to pick up the real one).
-- MeshCentral has no users yet — first account created via the web UI becomes
-  site admin. Deliberately did not create this account; that's the user's to
-  create.
-- DNS: `*.toidayhoc.com` is proxied through Cloudflare (per the user) and
-  resolves correctly to both apps' hostnames.
+1. Sign in to MeshCentral. Create a device group for each customer; grant only
+   assigned named technicians access. Do not share the server administrator.
+2. Use **Add Agent** in that group. Install its signed agent on the intended
+   client with the customer's permission. This is separate from Support Agent.
+   On macOS, enable Screen Recording and Accessibility in System Settings.
+3. Open the device in its own MeshCentral tab; copy its `?node=...` link.
+4. In IT Support → Devices → Technician remote support, an IT Support admin
+   pastes that link (or its 64-character node ID / 96-character hex ID) and saves.
+   A blank value removes only the link, not the installed agent.
+5. Technicians can open remote support from Devices or the ticket. Stop the AI
+   desktop session and wait for pending actions before taking remote control.
+   This release provides navigation, not an automatic/atomic AI handoff lock.
+6. Connect from MeshCentral. Server defaults require customer consent for
+   desktop, terminal and files; timeout never auto-accepts. A privacy bar is on.
 
-## Open issue — NOT resolved, needs the user's Cloudflare access
+A saved link does not prove agent installation, online status or an active
+remote session. MeshCentral provides those states. Support Agent revocation
+hides the link but does not revoke MeshCentral access: revoke/remove the device
+in MeshCentral too. Tenant admins configure mappings; they must choose the
+correct device. MeshCentral ACLs remain the access boundary even with a wrong ID.
 
-Both public URLs currently return an HTTP 302 redirecting to themselves
-(`Location: https://<same-host>/`), served with `server: cloudflare` and no
-other identifying headers, and — critically — **identical regardless of
-origin-side changes** (tried MeshCentral both TLS-native and with
-`tlsOffload` on; response didn't change at all). That strongly suggests the
-redirect is happening at Cloudflare's edge, not reaching Traefik/the
-containers, but this could not be confirmed without dashboard/API access to
-the Cloudflare zone, which this session doesn't have.
+## Validation and remaining on-device acceptance
 
-Most likely causes, roughly in order of likelihood:
-1. A Cloudflare Redirect Rule / Page Rule on the `toidayhoc.com` zone that
-   matches these new subdomains and loops them back to themselves.
-2. Zone-wide "Always Use HTTPS" or "Automatic HTTPS Rewrites" interacting
-   oddly with a new hostname that has no rule of its own yet.
-3. (Less likely, since `cool.toidayhoc.com` itself works fine end-to-end
-   through the same Cloudflare zone) an SSL/TLS mode mismatch.
-
-**Next step**: check Cloudflare dashboard → `toidayhoc.com` zone → Rules
-(Redirect Rules / Page Rules) and SSL/TLS → Overview, for anything matching
-`support-agent-*` or wildcard `*.toidayhoc.com`. Once that's sorted, both
-URLs should just work — nothing further needed on the Coolify/container side
-for that part.
-
-## Still to do once reachable
-
-- User creates the first MeshCentral account (becomes site admin).
-- Wire `MESHCENTRAL_URL` / CA config into `backend/.env` for the actual
-  takeover-fallback and mTLS-enrollment integration (not done yet — no
-  reachable endpoint to test against until the redirect issue above is
-  fixed).
+HTTPS and authenticated WebSocket access can be tested independently of a client.
+Backend tests verify role/tenant rejection and deep-link ID handling. Before
+claiming end-to-end remote control, enroll a consenting Windows/macOS client and
+verify desktop, mouse/keyboard, reject/timeout consent, disconnect, and scoped
+technician permissions. No customer device is enrolled automatically.

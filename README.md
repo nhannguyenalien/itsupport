@@ -3,7 +3,9 @@
 An AI support agent for Windows fleets: diagnoses via read-only tools, proposes a
 remediation, waits for human approval on any state-changing action, executes
 through a privilege-separated Go agent, and verifies success deterministically
-before closing the ticket. Falls back to human takeover (MeshCentral) on failure.
+before closing the ticket. Technicians can open MeshCentral from tickets or
+devices after an admin links a separately installed Mesh Agent. See
+[remote support setup](infra/meshcentral-ca.md); handoff is manual.
 
 Full scope contract: [`docs/v0.1-spec.md`](docs/v0.1-spec.md) — read that before
 adding anything. If it's not in the IN list there, it's not v0.1.
@@ -22,8 +24,7 @@ adding anything. If it's not in the IN list there, it's not v0.1.
   switches.
 - **Transport**: HTTPS through Cloudflare Tunnel with a per-device bearer token;
   enrollment also issues X.509 material for direct/private mTLS deployments.
-- **Remote takeover**: MeshCentral (external, integrated via its API — not
-  reimplemented).
+- **Remote takeover**: MeshCentral (external authenticated console with per-device links).
 
 ## Repo layout
 

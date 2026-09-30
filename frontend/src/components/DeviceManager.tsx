@@ -1,5 +1,6 @@
 "use client";
 
+import RemoteSupport from "./RemoteSupport";
 import { useLanguage } from "@/lib/i18n";
 
 import { useRouter } from "next/navigation";
@@ -163,6 +164,7 @@ export default function DevicesPage() {
               </details>
             </div>
           </div>
+          {!d.revoked && <RemoteSupport deviceId={d.id} />}
         </div>
       ))}
     </div>

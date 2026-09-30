@@ -313,5 +313,16 @@
   "connectionStatus.revoked": "Revoked",
   "connectionStatus.error": "Error",
   "ai.failed": "AI processing failed. Your message is saved; select Retry.",
-  "ai.incomplete": "Processing is incomplete. The device may not have responded or the diagnostic limit was reached. Review results and select Retry."
+  "ai.incomplete": "Processing is incomplete. The device may not have responded or the diagnostic limit was reached. Review results and select Retry.",
+  "remote.title": "Technician remote support",
+  "remote.error": "Unable to load or save configuration. Check permissions and the MeshCentral device ID.",
+  "remote.unavailable": "Remote support is not configured.",
+  "remote.registered": "MeshCentral link saved; check connection status in the console.",
+  "remote.unregistered": "This device is not linked to MeshCentral.",
+  "remote.consent": "Stop the AI session and wait for current actions to finish before taking control. Technicians must sign in to MeshCentral; the customer must approve the request on their device.",
+  "remote.open": "Open device control",
+  "remote.console": "Open MeshCentral",
+  "remote.install": "In MeshCentral: create a separate device group for the customer, grant access only to assigned technicians, select Add Agent and install it on the client. On macOS, grant Screen Recording and Accessibility permissions. Then open the device in a separate tab and paste its link below. Mesh Agent is installed separately from Support Agent.",
+  "remote.node": "MeshCentral device ID or link (leave blank to unlink)",
+  "remote.save": "Save link"
 }

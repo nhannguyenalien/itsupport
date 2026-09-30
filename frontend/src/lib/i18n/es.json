@@ -313,5 +313,16 @@
   "connectionStatus.revoked": "Revocado",
   "connectionStatus.error": "Error",
   "ai.failed": "El procesamiento de IA falló. Tu mensaje está guardado; selecciona Reintentar.",
-  "ai.incomplete": "El procesamiento está incompleto. Es posible que el dispositivo no responda o se haya alcanzado el límite de diagnóstico. Revisa los resultados y reintenta."
+  "ai.incomplete": "El procesamiento está incompleto. Es posible que el dispositivo no responda o se haya alcanzado el límite de diagnóstico. Revisa los resultados y reintenta.",
+  "remote.title": "Soporte remoto de un técnico",
+  "remote.error": "No se pudo cargar o guardar la configuración. Compruebe los permisos y el ID de MeshCentral.",
+  "remote.unavailable": "El soporte remoto no está configurado.",
+  "remote.registered": "Enlace MeshCentral guardado; consulte la conexión en la consola.",
+  "remote.unregistered": "Este dispositivo no está vinculado a MeshCentral.",
+  "remote.consent": "Detenga la sesión de IA y espere a que terminen las acciones antes de tomar el control. El técnico debe iniciar sesión en MeshCentral y el cliente debe aceptar en su dispositivo.",
+  "remote.open": "Abrir control del dispositivo",
+  "remote.console": "Abrir MeshCentral",
+  "remote.install": "En MeshCentral: cree un grupo separado para el cliente, autorice solo a los técnicos asignados, seleccione Add Agent e instálelo en el equipo. En macOS, conceda permisos de grabación de pantalla y accesibilidad. Abra el dispositivo en otra pestaña y pegue su enlace aquí. Mesh Agent se instala por separado de Support Agent.",
+  "remote.node": "ID o enlace de MeshCentral (vacío para desvincular)",
+  "remote.save": "Guardar enlace"
 }

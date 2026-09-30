@@ -1,5 +1,6 @@
 "use client";
 
+import RemoteSupport from "./RemoteSupport";
 import { useLanguage } from "@/lib/i18n";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -146,6 +147,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
           <p><span className={`support-status-dot ${isWorking ? "working" : ""}`} />{isWorking ? tx("Đang xử lý yêu cầu…") : tx(statusText[ticket.status] ?? "Đang hỗ trợ")}</p>
         </div>
       </header>
+      {ticket.device_id && <div style={{ padding: "0 24px 12px" }}><RemoteSupport deviceId={ticket.device_id} /></div>}
 
       <main className="support-chat-messages" aria-live="polite">
         {messages.length === 0 && <div className="support-welcome"><span>✦</span><h2>{tx("Xin chào, tôi có thể giúp gì cho bạn?")}</h2><p>{tx("Hãy mô tả vấn đề bằng lời bình thường. Tôi sẽ tự kiểm tra và chọn cách xử lý phù hợp.")}</p></div>}

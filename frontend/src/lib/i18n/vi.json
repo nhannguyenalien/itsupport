@@ -313,5 +313,16 @@
   "connectionStatus.revoked": "Đã thu hồi",
   "connectionStatus.error": "Có lỗi",
   "ai.failed": "AI gặp lỗi khi xử lý. Tin nhắn đã lưu; hãy chọn Thử lại.",
-  "ai.incomplete": "Chưa hoàn tất xử lý. Thiết bị có thể chưa phản hồi hoặc đã đạt giới hạn kiểm tra. Xem kết quả và chọn Thử lại."
+  "ai.incomplete": "Chưa hoàn tất xử lý. Thiết bị có thể chưa phản hồi hoặc đã đạt giới hạn kiểm tra. Xem kết quả và chọn Thử lại.",
+  "remote.title": "Kỹ thuật viên hỗ trợ từ xa",
+  "remote.error": "Không thể tải hoặc lưu cấu hình. Kiểm tra quyền và mã thiết bị MeshCentral.",
+  "remote.unavailable": "Dịch vụ hỗ trợ từ xa chưa được cấu hình.",
+  "remote.registered": "Đã lưu liên kết MeshCentral; trạng thái kết nối xem trong bảng điều khiển.",
+  "remote.unregistered": "Máy này chưa được liên kết MeshCentral.",
+  "remote.consent": "Dừng phiên AI và chờ thao tác hiện tại hoàn tất trước khi điều khiển. Kỹ thuật viên cần đăng nhập MeshCentral; khách phải chấp thuận yêu cầu trên máy.",
+  "remote.open": "Mở điều khiển máy",
+  "remote.console": "Mở MeshCentral",
+  "remote.install": "Trong MeshCentral: tạo nhóm máy riêng cho khách, chỉ cấp quyền cho kỹ thuật viên phụ trách, chọn Add Agent và cài trên máy khách. Trên macOS, cấp quyền Screen Recording và Accessibility. Sau đó mở máy trong tab riêng và dán liên kết bên dưới. Mesh Agent được cài riêng với Support Agent.",
+  "remote.node": "Mã thiết bị hoặc liên kết MeshCentral (để trống để hủy liên kết)",
+  "remote.save": "Lưu liên kết"
 }

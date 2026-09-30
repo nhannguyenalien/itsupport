@@ -3,11 +3,37 @@ import { z } from "zod";
 import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 
+import { meshNodeId, remoteConsoleUrl, remoteDeviceUrl } from "../remote-support/links.js";
+
 const listQuery = z.object({ tenantId: z.string().uuid() });
 const deviceParams = z.object({ deviceId: z.string().uuid() });
 const actorBody = z.object({ actorId: z.string().uuid().optional() });
 
 export async function deviceRoutes(app: FastifyInstance) {
+  app.get("/devices/:deviceId/remote-support", async (req, reply) => {
+    if (req.authUser!.role === "member") return reply.code(403).send({ error: "technician role required" });
+    const { deviceId } = deviceParams.parse(req.params);
+    const result = await queryTenantScoped(req.authUser!.tenantId,
+      `SELECT meshcentral_device_id, cert_revoked_at FROM devices WHERE id = $1`, [deviceId]);
+    const device = result.rows[0];
+    if (!device) return reply.code(404).send({ error: "device not found" });
+    const consoleUrl = remoteConsoleUrl();
+    reply.send({ consoleUrl, nodeId: device.meshcentral_device_id,
+      url: consoleUrl && device.meshcentral_device_id && !device.cert_revoked_at ? remoteDeviceUrl(device.meshcentral_device_id) : null });
+  });
+
+  app.put("/devices/:deviceId/remote-support", async (req, reply) => {
+    if (req.authUser!.role !== "admin") return reply.code(403).send({ error: "admin role required" });
+    const { deviceId } = deviceParams.parse(req.params);
+    const { nodeId } = z.object({ nodeId: meshNodeId.nullable() }).parse(req.body);
+    const result = await queryTenantScoped(req.authUser!.tenantId,
+      `UPDATE devices SET meshcentral_device_id = $2 WHERE id = $1 AND cert_revoked_at IS NULL RETURNING id`, [deviceId, nodeId]);
+    if (!result.rowCount) return reply.code(404).send({ error: "device unavailable" });
+    await recordAudit({ tenantId: req.authUser!.tenantId, actorType: "user", actorId: req.authUser!.id,
+      eventType: "device.remote_support_configured", deviceId });
+    reply.send({ ok: true });
+  });
+
   // Agent-facing: telemetry process calls this periodically. This is what
   // "Dashboard shows online/offline" (Definition of Done #3) is actually built
   // on — status flips to 'online' here; the offline sweep in index.ts flips
