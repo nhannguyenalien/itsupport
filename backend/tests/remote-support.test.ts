@@ -91,7 +91,7 @@ test('remote identity conversion and tenant group isolation', async () => {
   assert.throws(() => shareUrl('https://mesh.example.test/'));
 });
 
-for (const role of ['member', 'technician', 'admin']) test(`${role} can enable and revoke support, with private links restricted`, async () => {
+for (const platform of ['mac', 'windows', 'linux']) for (const role of ['member', 'technician', 'admin']) test(`${platform} ${role} can enable and revoke support, with private links restricted`, async () => {
   process.env.MESHCENTRAL_URL = 'https://mesh.example.test';
   process.env.MESHCENTRAL_API_USER = 'api'; process.env.MESHCENTRAL_API_PASSWORD = 'test';
   process.env.MESHCENTRAL_TENANT_GROUPS = JSON.stringify({ [tenant]: 'A'.repeat(64) });
@@ -103,7 +103,7 @@ for (const role of ['member', 'technician', 'admin']) test(`${role} can enable a
   mock.method(adminPool, 'connect', async () => ({ query: async () => ({ rows: [{ acquired: true }] }), release() {} }));
   mock.method(pool, 'query', async (sql: string) => {
     if (sql.startsWith('SELECT 1')) return { rows: [{}], rowCount: 1 };
-    if (sql.includes('meshcentral_device_id')) return { rows: [{ meshcentral_device_id: nodeId, cert_revoked_at: null }], rowCount: 1 };
+    if (sql.includes('meshcentral_device_id')) return { rows: [{ platform, meshcentral_device_id: nodeId, cert_revoked_at: null }], rowCount: 1 };
     if (sql.includes('audit')) return { rows: [], rowCount: 1 };
     throw new Error('Unexpected SQL: ' + sql);
   });
@@ -111,7 +111,7 @@ for (const role of ['member', 'technician', 'admin']) test(`${role} can enable a
     if (command.action === 'nodes') return { nodes: { ['mesh//' + 'A'.repeat(64)]: [{ _id: 'node//' + nodeId }] } };
     if (command.action === 'deviceShares') return { deviceShares: shares };
     if (command.action === 'createDeviceShareLink') {
-      assert.equal(command.p, 3); assert.equal(command.consent, 88); assert.equal(command.expire, 60);
+      assert.equal(command.p, platform === 'linux' ? 1 : 3); assert.equal(command.consent, platform === 'linux' ? 0 : 88); assert.equal(command.expire, 60);
       creates++;
       shares = [{ guestName: 'ITSupport:' + device, publicid: 'share', startTime: Date.now() - 100, expireTime: Date.now() + 3600000, url: 'https://mesh.example.test/sharing?c=test' }];
       return { result: 'OK' };
@@ -124,6 +124,7 @@ for (const role of ['member', 'technician', 'admin']) test(`${role} can enable a
   try {
     const on = await toggle(true); assert.equal(on.statusCode, 200, on.body); assert.equal(on.json().enabled, true);
     assert.equal(!!on.json().url, role !== 'member');
+    assert.equal(on.json().mode, platform === 'linux' ? 'terminal' : 'desktop-terminal');
     assert.equal((await toggle(true)).statusCode, 200); assert.equal(creates, 1);
     const off = await toggle(false); assert.equal(off.statusCode, 200, off.body); assert.equal(off.json().enabled, false); assert.equal(off.json().url, null); assert.equal(removes, 1);
     assert.equal((await toggle(false)).statusCode, 200); assert.equal(removes, 1);

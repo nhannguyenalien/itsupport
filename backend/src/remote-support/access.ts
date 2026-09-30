@@ -26,7 +26,7 @@ export async function withRemoteLock<T>(deviceId: string, run: () => Promise<T>)
   } finally { try { await client.query('ROLLBACK'); } finally { client.release(); } }
 }
 export async function remoteDevice(tenantId: string, deviceId: string) {
-  const result = await queryTenantScoped(tenantId, 'SELECT meshcentral_device_id, cert_revoked_at FROM devices WHERE id = $1', [deviceId]);
+  const result = await queryTenantScoped(tenantId, 'SELECT platform, meshcentral_device_id, cert_revoked_at FROM devices WHERE id = $1', [deviceId]);
   if (!result.rows[0]) throw Object.assign(new Error('Device not found'), { statusCode: 404 });
   return result.rows[0];
 }
@@ -45,10 +45,11 @@ export function shareUrl(value: string): string {
 }
 export async function remoteStatus(tenantId: string, deviceId: string, technician: boolean) {
   const device = await remoteDevice(tenantId, deviceId);
+  const mode = device.platform === 'linux' ? 'terminal' : 'desktop-terminal';
   const ready = meshConfigured() && !!device.meshcentral_device_id && !device.cert_revoked_at;
-  if (!ready) return { ready: false, enabled: false, expiresAt: null, url: null };
+  if (!ready) return { mode, ready: false, enabled: false, expiresAt: null, url: null };
   await verifyNode(tenantId, normalizeNodeId(device.meshcentral_device_id));
   const share = activeShare(await supportShares(normalizeNodeId(device.meshcentral_device_id), deviceId));
-  return { ready: true, enabled: !!share, expiresAt: share ? new Date(share.expireTime).toISOString() : null,
+  return { mode, ready: true, enabled: !!share, expiresAt: share ? new Date(share.expireTime).toISOString() : null,
     url: share && technician ? shareUrl(share.url) : null };
 }

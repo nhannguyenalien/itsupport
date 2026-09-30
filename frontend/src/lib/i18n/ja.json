@@ -333,5 +333,9 @@
   "remote.notReady": "端末の準備ができていません。インストーラーを再実行すると自動接続します。",
   "remote.enabledHint": "担当者は60分間、画面の操作やターミナルでのコマンド実行を要求できます。オフにするとサポート権限を取り消します。",
   "remote.disabledHint": "画面操作やターミナルでのサポートが必要なときにオンにしてください。端末での接続承認も必要です。",
-  "linux.installHint": "systemd を使用する Linux x64/ARM64。bash、curl、Python 3、sudo 権限が必要です。リモート画面はデスクトップ環境に依存し、AI 画面操作は現在 X11 のみ対応しています。"
+  "linux.installHint": "systemd を使用する Linux x64/ARM64。bash、curl、Python 3、sudo 権限が必要です。ターミナル/CLI でサポートするため、デスクトップは不要です。",
+  "remote.terminalTitle": "Linux ターミナルサポート",
+  "remote.terminalEnabledHint": "技術者は60分間、root 権限でコマンドを実行できます。OFF にするとアクセスを取り消します。",
+  "remote.terminalDisabledHint": "ON にすると、技術者に60分間の root コマンド実行を許可します。デスクトップは不要です。",
+  "remote.openTerminal": "ターミナルを開く"
 }

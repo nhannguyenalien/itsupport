@@ -333,5 +333,9 @@
   "remote.notReady": "Este dispositivo no está listo. Ejecuta de nuevo el instalador para conectarlo automáticamente.",
   "remote.enabledHint": "Un técnico puede solicitar controlar el escritorio y ejecutar comandos durante 60 minutos. Desactiva para revocar el acceso.",
   "remote.disabledHint": "Activa para recibir asistencia por escritorio o terminal. También debes aprobar el acceso en tu dispositivo.",
-  "linux.installHint": "Linux x64/ARM64 con systemd. Requiere bash, curl, Python 3 y sudo. El escritorio remoto depende del entorno gráfico; las herramientas de IA solo admiten X11."
+  "linux.installHint": "Linux x64/ARM64 con systemd. Requiere bash, curl, Python 3 y sudo. Soporte mediante terminal/CLI, sin escritorio.",
+  "remote.terminalTitle": "Soporte por terminal Linux",
+  "remote.terminalEnabledHint": "Los técnicos pueden ejecutar comandos como root durante 60 minutos. Desactiva para revocar el acceso.",
+  "remote.terminalDisabledHint": "Activa para permitir que los técnicos ejecuten comandos como root durante 60 minutos. No requiere escritorio.",
+  "remote.openTerminal": "Abrir terminal"
 }

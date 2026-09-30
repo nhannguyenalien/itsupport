@@ -68,7 +68,7 @@ base = config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId']
 def request(url, data=None, authenticated=False):
     if urllib.parse.urlparse(url).scheme != 'https':
         raise ValueError('HTTPS required')
-    headers = {'Content-Type': 'application/json'}
+    headers = {'Content-Type': 'application/json', 'User-Agent': 'ITSupport-Agent/1.0'}
     if authenticated:
         headers['Authorization'] = 'Bearer ' + config['agentToken']
     req = urllib.request.Request(url, data=json.dumps(data).encode() if data is not None else None, headers=headers)

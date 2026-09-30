@@ -40,17 +40,19 @@ export default function RemoteSupport({ deviceId }: { deviceId: string }) {
     finally { if (current === generation.current) { busy.current = false; setSaving(false); } }
   }
 
+  const terminal = data?.mode === "terminal";
+  const title = terminal ? "remote.terminalTitle" : "remote.title";
   return <section style={{ marginTop: 12, padding: 12, border: "1px solid var(--border, #ddd)", borderRadius: 12 }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-      <strong>{tx("remote.title")}</strong>
-      <button type="button" role="switch" aria-checked={data?.enabled ?? false} aria-label={tx("remote.title")}
+      <strong>{tx(title)}</strong>
+      <button type="button" role="switch" aria-checked={data?.enabled ?? false} aria-label={tx(title)}
         disabled={!data || (!data.ready && !data.enabled) || saving} onClick={() => void toggle()}
         style={{ minWidth: 80, borderRadius: 20, background: data?.enabled ? "#15803d" : "#64748b", color: "white", padding: "8px 16px" }}>
         {tx(saving ? "remote.updating" : !data ? "remote.loading" : data.enabled ? "remote.on" : "remote.off")}
       </button>
     </div>
     {error && <p role="alert">{tx("remote.error")}</p>}
-    {data && <p className="muted">{tx(!data.ready ? "remote.notReady" : data.enabled ? "remote.enabledHint" : "remote.disabledHint")}</p>}
-    {data?.enabled && data.url && <a href={data.url} target="_blank" rel="noopener noreferrer">{tx("remote.open")} ↗</a>}
+    {data && <p className="muted">{tx(!data.ready ? "remote.notReady" : data.enabled ? (terminal ? "remote.terminalEnabledHint" : "remote.enabledHint") : (terminal ? "remote.terminalDisabledHint" : "remote.disabledHint"))}</p>}
+    {data?.enabled && data.url && <a href={data.url} target="_blank" rel="noopener noreferrer">{tx(terminal ? "remote.openTerminal" : "remote.open")} ↗</a>}
   </section>;
 }

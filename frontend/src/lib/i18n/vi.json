@@ -333,5 +333,9 @@
   "remote.notReady": "Máy chưa sẵn sàng. Chạy lại bộ cài để kết nối hỗ trợ tự động.",
   "remote.enabledHint": "Kỹ thuật viên có thể yêu cầu điều khiển màn hình và chạy lệnh Terminal trong 60 phút. Tắt để thu hồi quyền hỗ trợ.",
   "remote.disabledHint": "Bật khi cần hỗ trợ màn hình hoặc Terminal. Bạn vẫn cần chấp thuận trên máy.",
-  "linux.installHint": "Linux x64/ARM64 dùng systemd. Cần bash, curl, Python 3 và quyền sudo. Hỗ trợ màn hình phụ thuộc desktop; công cụ AI điều khiển màn hình hiện chỉ hỗ trợ X11."
+  "linux.installHint": "Linux x64/ARM64 dùng systemd. Cần bash, curl, Python 3 và quyền sudo. Kỹ thuật hỗ trợ qua Terminal/CLI; không cần desktop.",
+  "remote.terminalTitle": "Hỗ trợ Terminal Linux",
+  "remote.terminalEnabledHint": "Kỹ thuật có thể chạy lệnh với quyền root trong 60 phút. Tắt OFF để thu hồi quyền.",
+  "remote.terminalDisabledHint": "Bật ON cho phép kỹ thuật chạy lệnh với quyền root trong 60 phút. Không cần desktop.",
+  "remote.openTerminal": "Mở Terminal"
 }

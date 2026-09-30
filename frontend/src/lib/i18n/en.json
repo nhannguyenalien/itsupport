@@ -333,5 +333,9 @@
   "remote.notReady": "This device is not ready. Run the installer again to connect support automatically.",
   "remote.enabledHint": "A technician can request desktop control and Terminal commands for 60 minutes. Turn off to revoke support access.",
   "remote.disabledHint": "Turn on for desktop or Terminal support. You still need to approve access on your device.",
-  "linux.installHint": "Linux x64/ARM64 with systemd. Requires bash, curl, Python 3 and sudo access. Remote desktop depends on the desktop environment; AI desktop tools currently support X11 only."
+  "linux.installHint": "Linux x64/ARM64 with systemd. Requires bash, curl, Python 3 and sudo access. Technical support uses Terminal/CLI; no desktop required.",
+  "remote.terminalTitle": "Linux terminal support",
+  "remote.terminalEnabledHint": "Technicians can run commands as root for 60 minutes. Switch OFF to revoke access.",
+  "remote.terminalDisabledHint": "Switch ON to allow technicians to run commands as root for 60 minutes. No desktop required.",
+  "remote.openTerminal": "Open terminal"
 }

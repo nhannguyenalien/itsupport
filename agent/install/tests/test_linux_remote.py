@@ -31,6 +31,7 @@ class RemoteInstallerTests(unittest.TestCase):
             requests, installs, registrations = [], [], []
             def urlopen(req, timeout):
                 requests.append(req.full_url)
+                self.assertEqual(req.get_header('User-agent'), 'ITSupport-Agent/1.0')
                 if req.full_url.startswith('https://api.test'):
                     self.assertEqual(req.get_header('Authorization'), 'Bearer secret')
                 else:

@@ -159,11 +159,12 @@ Support Agent binaries: `/opt/itsupport-agent`; credentials and IPC environment:
 `itsupport-daemon`, `itsupport-telemetry`. Agent application logs are also written
 under `/etc/itsupport-agent`. Mesh Agent uses `meshagent.service`.
 
-Remote access uses the existing chat support ON/OFF and session consent controls.
-An unattended/headless machine may not be able to display the local consent
-prompt; this installer does not bypass consent. Desktop control depends on the
-Linux desktop/session. The existing AI X11 tools require a user graphical session
-and are not enabled by this root system service; Wayland automation and Linux IT
+Linux support is Terminal/CLI only, including headless servers. The customer explicitly
+switches support ON in chat to grant technicians root terminal access for 60 minutes;
+OFF revokes the share. Linux shares exclude desktop and files and do not require a
+GUI consent dialog. Windows/macOS retain their local consent prompts.
+
+AI desktop automation is not enabled by this root system service. Linux AI IT
 repair tools are not implemented by this onboarding change.
 
 Build both Linux architectures with `agent/build-release.sh`. Publish the ignored
