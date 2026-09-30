@@ -216,4 +216,20 @@ if ($meshService) {
         @{ server = $remote.server; group = $remote.group } | ConvertTo-Json | Set-Content $receiptPath
     } finally { Remove-Item -Recurse -Force $meshTemp }
 }
-Write-Host 'Mesh Agent installed. An administrator can link this machine in Dashboard > Devices > Remote support.'
+$serviceInfo = Get-CimInstance Win32_Service -Filter "Name='Mesh Agent'"
+$servicePath = $serviceInfo.PathName
+if ($servicePath -match '^"([^"]+\.exe)"') { $installedMesh = $Matches[1] }
+elseif ($servicePath -match '^(.+?\.exe)(?:\s|$)') { $installedMesh = $Matches[1] }
+else { throw 'Cannot locate the installed remote agent' }
+$meshNode = ((& $installedMesh -nodeid) | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $meshNode -notmatch '^(?:[a-fA-F0-9]{96}|[A-Za-z0-9@$]{64})$') { throw 'Cannot identify the installed remote agent' }
+for ($attempt = 0; $attempt -lt 6; $attempt++) {
+    try {
+        $null = Invoke-RestMethod -Method Post -Uri ($agentConfig.backendUrl.TrimEnd('/') + '/devices/' + $agentConfig.deviceId + '/remote-register') -Headers @{ Authorization = 'Bearer ' + $agentConfig.agentToken } -ContentType 'application/json' -Body (@{ nodeId = $meshNode } | ConvertTo-Json) -TimeoutSec 20
+        break
+    } catch {
+        if ($attempt -eq 5) { throw 'Remote support registration failed. Run the installer again to retry.' }
+        Start-Sleep -Seconds 3
+    }
+}
+Write-Host 'Remote support is connected. Use the On/Off switch in chat.'

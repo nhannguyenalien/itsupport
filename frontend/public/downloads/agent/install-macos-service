@@ -148,6 +148,25 @@ fi
 # Only directory traversal changes; agent configuration and file permissions stay intact.
 /usr/bin/sudo /bin/chmod a+x /usr/local/mesh_services /usr/local/mesh_services/meshagent /usr/local/mesh_services/meshagent/meshagent
 /usr/bin/sudo /bin/launchctl print system/meshagent >/dev/null
+/usr/bin/python3 - "$CONFIG_PATH" <<'PYTHON'
+import json, re, subprocess, sys, time
+config = json.load(open(sys.argv[1]))
+binary = '/usr/local/mesh_services/meshagent/meshagent/meshagent'
+node = subprocess.check_output(['/usr/bin/sudo', binary, '-nodeid'], timeout=30, text=True).strip()
+if not re.fullmatch(r'(?:[a-fA-F0-9]{96}|[A-Za-z0-9@$]{64})', node):
+    raise RuntimeError('Could not identify the installed remote agent')
+url = config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId'] + '/remote-register'
+for attempt in range(6):
+    result = subprocess.run(['/usr/bin/curl', '--fail', '--silent', '--proto', '=https', '--max-time', '20',
+        '-H', 'Authorization: Bearer ' + config['agentToken'], '-H', 'Content-Type: application/json',
+        '--data-binary', json.dumps({'nodeId': node}), url], capture_output=True)
+    if result.returncode == 0:
+        print('Hỗ trợ kỹ thuật đã kết nối. Bạn có thể Bật/Tắt ngay trong khung chat.')
+        break
+    if attempt == 5:
+        raise RuntimeError('Remote support registration failed. Run the installer again to retry.')
+    time.sleep(3)
+PYTHON
 echo "Mesh Agent đã cài. Vào System Settings > Privacy & Security, cấp Screen Recording và Accessibility cho Mesh Agent."
 echo "Quản trị viên liên kết máy trong Dashboard > Thiết bị > Hỗ trợ từ xa."
 echo "Nếu chưa thấy meshagent: nhấn +, Cmd+Shift+G, nhập /usr/local/mesh_services/meshagent/meshagent/meshagent rồi thêm."

@@ -314,8 +314,8 @@
   "connectionStatus.error": "Error",
   "ai.failed": "AI processing failed. Your message is saved; select Retry.",
   "ai.incomplete": "Processing is incomplete. The device may not have responded or the diagnostic limit was reached. Review results and select Retry.",
-  "remote.title": "Technician remote support",
-  "remote.error": "Unable to load or save configuration. Check permissions and the MeshCentral device ID.",
+  "remote.title": "Technical support",
+  "remote.error": "Could not confirm the status. Try again; it will also refresh automatically.",
   "remote.unavailable": "Remote support is not configured.",
   "remote.registered": "MeshCentral link saved; check connection status in the console.",
   "remote.unregistered": "This device is not linked to MeshCentral.",
@@ -325,5 +325,12 @@
   "remote.install": "In MeshCentral: create a separate device group for the customer, grant access only to assigned technicians, select Add Agent and install it on the client. On macOS, grant Screen Recording and Accessibility permissions. Then open the device in a separate tab and paste its link below. Mesh Agent is installed separately from Support Agent.",
   "remote.node": "MeshCentral device ID or link (leave blank to unlink)",
   "remote.save": "Save link",
-  "chat.older": "Show older messages ({count} remaining)"
+  "chat.older": "Show older messages ({count} remaining)",
+  "remote.on": "On",
+  "remote.off": "Off",
+  "remote.updating": "Updating…",
+  "remote.loading": "Loading…",
+  "remote.notReady": "This device is not ready. Run the installer again to connect support automatically.",
+  "remote.enabledHint": "A technician can request access for 60 minutes. Turn off to revoke support access from this chat.",
+  "remote.disabledHint": "Turn on when you need a technician. You still need to approve access on your device."
 }

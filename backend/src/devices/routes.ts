@@ -3,7 +3,9 @@ import { z } from "zod";
 import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 
-import { meshNodeId, remoteConsoleUrl, remoteDeviceUrl } from "../remote-support/links.js";
+import { meshNodeId } from "../remote-support/links.js";
+import { meshTransport } from "../remote-support/client.js";
+import { normalizeNodeId, verifyNode, withRemoteLock, remoteDevice, supportShares, activeShare, remoteStatus } from "../remote-support/access.js";
 
 import { remoteInstall } from "../remote-support/install.js";
 
@@ -24,28 +26,56 @@ export async function deviceRoutes(app: FastifyInstance) {
     if (!config) return reply.code(503).send({ error: "Remote support is not configured for this workspace" });
     return reply.header("Cache-Control", "no-store").send(config);
   });
-  app.get("/devices/:deviceId/remote-support", async (req, reply) => {
-    if (req.authUser!.role === "member") return reply.code(403).send({ error: "technician role required" });
+  app.post("/devices/:deviceId/remote-register", async (req, reply) => {
     const { deviceId } = deviceParams.parse(req.params);
-    const result = await queryTenantScoped(req.authUser!.tenantId,
-      `SELECT meshcentral_device_id, cert_revoked_at FROM devices WHERE id = $1`, [deviceId]);
-    const device = result.rows[0];
-    if (!device) return reply.code(404).send({ error: "device not found" });
-    const consoleUrl = remoteConsoleUrl();
-    reply.send({ consoleUrl, nodeId: device.meshcentral_device_id,
-      url: consoleUrl && device.meshcentral_device_id && !device.cert_revoked_at ? remoteDeviceUrl(device.meshcentral_device_id) : null });
+    if (!req.agentTenantId || req.agentDeviceId !== deviceId) return reply.code(401).send({ error: "agent identity required" });
+    const nodeId = normalizeNodeId(z.object({ nodeId: meshNodeId }).parse(req.body).nodeId);
+    return withRemoteLock("node:" + nodeId, () => withRemoteLock(deviceId, async () => {
+      const device = await remoteDevice(req.agentTenantId!, deviceId);
+      if (device.cert_revoked_at) return reply.code(404).send({ error: "device unavailable" });
+      // Never silently rebind an existing device while a support session may exist.
+      if (device.meshcentral_device_id && normalizeNodeId(device.meshcentral_device_id) !== nodeId) return reply.code(409).send({ error: "device already linked" });
+      await verifyNode(req.agentTenantId!, nodeId);
+      const duplicate = await queryTenantScoped(req.agentTenantId!, 'SELECT id FROM devices WHERE meshcentral_device_id = $1 AND id <> $2', [nodeId, deviceId]);
+      if (duplicate.rowCount) return reply.code(409).send({ error: "remote agent already linked" });
+      await queryTenantScoped(req.agentTenantId!, 'UPDATE devices SET meshcentral_device_id = $2 WHERE id = $1 AND cert_revoked_at IS NULL', [deviceId, nodeId]);
+      return { ok: true };
+    }));
+  });
+
+  app.get("/devices/:deviceId/remote-support", async (req, reply) => {
+    const { deviceId } = deviceParams.parse(req.params);
+    reply.header("Cache-Control", "no-store");
+    return remoteStatus(req.authUser!.tenantId, deviceId, req.authUser!.role !== "member");
   });
 
   app.put("/devices/:deviceId/remote-support", async (req, reply) => {
-    if (req.authUser!.role !== "admin") return reply.code(403).send({ error: "admin role required" });
     const { deviceId } = deviceParams.parse(req.params);
-    const { nodeId } = z.object({ nodeId: meshNodeId.nullable() }).parse(req.body);
-    const result = await queryTenantScoped(req.authUser!.tenantId,
-      `UPDATE devices SET meshcentral_device_id = $2 WHERE id = $1 AND cert_revoked_at IS NULL RETURNING id`, [deviceId, nodeId]);
-    if (!result.rowCount) return reply.code(404).send({ error: "device unavailable" });
-    await recordAudit({ tenantId: req.authUser!.tenantId, actorType: "user", actorId: req.authUser!.id,
-      eventType: "device.remote_support_configured", deviceId });
-    reply.send({ ok: true });
+    const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);
+    const user = req.authUser!;
+    return withRemoteLock(deviceId, async () => {
+      const device = await remoteDevice(user.tenantId, deviceId);
+      if (!device.meshcentral_device_id || device.cert_revoked_at) return reply.code(409).send({ error: "remote agent not ready" });
+      const nodeId = normalizeNodeId(device.meshcentral_device_id);
+      await verifyNode(user.tenantId, nodeId);
+      const shares = await supportShares(nodeId, deviceId);
+      if (enabled && !activeShare(shares)) {
+        await meshTransport.command({ action: "createDeviceShareLink", nodeid: nodeId,
+          guestname: "ITSupport:" + deviceId, p: 2, consent: 8 | 64, expire: 60 });
+      } else if (!enabled) {
+        for (const share of shares) await meshTransport.command({ action: "removeDeviceShare", nodeid: nodeId, publicid: share.publicid });
+      }
+      let status = await remoteStatus(user.tenantId, deviceId, user.role !== "member");
+      for (let attempt = 0; status.enabled !== enabled && attempt < 3; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        status = await remoteStatus(user.tenantId, deviceId, user.role !== "member");
+      }
+      if (status.enabled !== enabled) throw Object.assign(new Error("Remote support state was not confirmed; retry"), { statusCode: 503 });
+      await recordAudit({ tenantId: user.tenantId, actorType: "user", actorId: user.id,
+        eventType: enabled ? "device.remote_support_enabled" : "device.remote_support_disabled", deviceId });
+      reply.header("Cache-Control", "no-store");
+      return status;
+    });
   });
 
   // Agent-facing: telemetry process calls this periodically. This is what

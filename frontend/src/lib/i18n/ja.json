@@ -314,8 +314,8 @@
   "connectionStatus.error": "エラー",
   "ai.failed": "AI処理でエラーが発生しました。メッセージは保存されています。再試行してください。",
   "ai.incomplete": "処理が完了していません。デバイスが応答していないか、診断の上限に達しました。結果を確認して再試行してください。",
-  "remote.title": "技術者によるリモートサポート",
-  "remote.error": "設定を読み込みまたは保存できません。権限とMeshCentralの端末IDを確認してください。",
+  "remote.title": "技術サポート",
+  "remote.error": "状態を確認できませんでした。再試行してください。自動的にも再確認します。",
   "remote.unavailable": "リモートサポートが設定されていません。",
   "remote.registered": "MeshCentralリンクを保存しました。接続状況はコンソールで確認してください。",
   "remote.unregistered": "この端末はMeshCentralに連携されていません。",
@@ -325,5 +325,12 @@
   "remote.install": "MeshCentralで顧客ごとに端末グループを作り、担当技術者だけに権限を付与し、Add Agentから顧客の端末にインストールしてください。macOSでは画面収録とアクセシビリティを許可します。端末を別タブで開き、下にリンクを貼り付けてください。Mesh AgentはSupport Agentとは別にインストールします。",
   "remote.node": "MeshCentral端末IDまたはリンク（空欄で連携解除）",
   "remote.save": "リンクを保存",
-  "chat.older": "以前のメッセージを表示（残り{count}件）"
+  "chat.older": "以前のメッセージを表示（残り{count}件）",
+  "remote.on": "オン",
+  "remote.off": "オフ",
+  "remote.updating": "変更中…",
+  "remote.loading": "読み込み中…",
+  "remote.notReady": "端末の準備ができていません。インストーラーを再実行すると自動接続します。",
+  "remote.enabledHint": "60分間、担当者が接続を要求できます。オフにすると、このチャットからのサポート権限を取り消します。",
+  "remote.disabledHint": "技術サポートが必要なときにオンにしてください。端末での接続承認も必要です。"
 }

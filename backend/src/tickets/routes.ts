@@ -1,4 +1,4 @@
-import { remoteConsoleUrl, remoteDeviceUrl } from "../remote-support/links.js";
+import { remoteStatus } from "../remote-support/access.js";
 import { getWorkflowState } from "../ai-orchestration/jobs.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -122,23 +122,15 @@ export async function ticketRoutes(app: FastifyInstance) {
     if (req.authUser!.role === "member") return reply.code(403).send({ error: "technician role required" });
     const { ticketId } = ticketParams.parse(req.params);
     const result = await pool.query(
-      `SELECT d.meshcentral_device_id
+      `SELECT d.id AS device_id
        FROM tickets t JOIN devices d ON d.id = t.device_id
        WHERE t.id = $1 AND d.cert_revoked_at IS NULL`,
       [ticketId],
     );
     if (result.rowCount === 0) return reply.code(404).send({ error: "ticket not found" });
 
-    const meshId = result.rows[0].meshcentral_device_id;
-    if (!meshId) {
-      return reply.code(404).send({
-        error: "this device has no MeshCentral agent registered — takeover isn't available for it",
-      });
-    }
-    if (!remoteConsoleUrl()) {
-      return reply.code(500).send({ error: "MESHCENTRAL_URL is not configured on the backend" });
-    }
-
-    reply.send({ url: remoteDeviceUrl(meshId) });
+    const status = await remoteStatus(req.authUser!.tenantId, result.rows[0].device_id, true);
+    if (!status.enabled || !status.url) return reply.code(409).send({ error: "Customer must enable remote support first" });
+    reply.header("Cache-Control", "no-store").send({ url: status.url });
   });
 }

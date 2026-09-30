@@ -1,60 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api, type AuthUser } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { api } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
 export default function RemoteSupport({ deviceId }: { deviceId: string }) {
   const { tx } = useLanguage();
-  const [role, setRole] = useState<AuthUser["role"]>("member");
   const [data, setData] = useState<Awaited<ReturnType<typeof api.remoteSupport>> | null>(null);
-  const [value, setValue] = useState("");
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const generation = useRef(0);
+  const busy = useRef(false);
+  const requestVersion = useRef(0);
   useEffect(() => {
-    let active = true;
-    setData(null); setValue(""); setRole("member"); setError(false);
-    void api.me().then(async ({ user }) => {
-      if (!active) return;
-      setRole(user.role);
-      if (user.role === "member") return;
-      const result = await api.remoteSupport(deviceId);
-      if (active) { setData(result); setValue(result.nodeId ?? ""); }
-    }).catch(() => { if (active) setError(true); });
-    return () => { active = false; };
+    const current = ++generation.current;
+    setData(null); setError(false); setSaving(false); busy.current = false;
+    async function refresh() {
+      if (busy.current) return;
+      const revision = ++requestVersion.current;
+      try {
+        const result = await api.remoteSupport(deviceId);
+        if (current === generation.current && revision === requestVersion.current && !busy.current) { setData(result); setError(false); }
+      } catch { if (current === generation.current && revision === requestVersion.current && !busy.current) setError(true); }
+    }
+    void refresh();
+    const timer = setInterval(() => void refresh(), 10000);
+    return () => { ++generation.current; clearInterval(timer); };
   }, [deviceId]);
-  if (role === "member") return null;
 
-  async function save() {
-    setSaving(true); setError(false);
+  async function toggle() {
+    if (!data || busy.current) return;
+    const current = generation.current;
+    ++requestVersion.current;
+    busy.current = true; setSaving(true); setError(false);
     try {
-      let id = value.trim();
-      if (id.startsWith("https://")) {
-        const url = new URL(id);
-        if (url.origin !== data?.consoleUrl) throw new Error("Wrong server");
-        id = url.searchParams.get("gotonode") ?? url.searchParams.get("node") ?? "";
-        if (!id) throw new Error("Missing node");
-      }
-      if (id.startsWith("node//")) id = id.slice(6);
-      await api.setRemoteSupport(deviceId, id || null);
-      const result = await api.remoteSupport(deviceId);
-      setData(result); setValue(result.nodeId ?? "");
-    } catch { setError(true); }
-    finally { setSaving(false); }
+      const result = await api.setRemoteSupport(deviceId, !data.enabled);
+      if (current === generation.current) setData(result);
+    } catch { if (current === generation.current) setError(true); }
+    finally { if (current === generation.current) { busy.current = false; setSaving(false); } }
   }
 
-  return <details style={{ marginTop: 10 }}>
-    <summary>{tx("remote.title")}</summary>
+  return <section style={{ marginTop: 12, padding: 12, border: "1px solid var(--border, #ddd)", borderRadius: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <strong>{tx("remote.title")}</strong>
+      <button type="button" role="switch" aria-checked={data?.enabled ?? false} aria-label={tx("remote.title")}
+        disabled={!data || (!data.ready && !data.enabled) || saving} onClick={() => void toggle()}
+        style={{ minWidth: 80, borderRadius: 20, background: data?.enabled ? "#15803d" : "#64748b", color: "white", padding: "8px 16px" }}>
+        {tx(saving ? "remote.updating" : !data ? "remote.loading" : data.enabled ? "remote.on" : "remote.off")}
+      </button>
+    </div>
     {error && <p role="alert">{tx("remote.error")}</p>}
-    {!data ? (!error && <p>{tx("Đang tải thiết bị…")}</p>) : !data.consoleUrl ? <p>{tx("remote.unavailable")}</p> : <>
-      <p className="muted">{tx(data.nodeId ? "remote.registered" : "remote.unregistered")}</p>
-      <p>{tx("remote.consent")}</p>
-      <p><a href={data.url ?? data.consoleUrl} target="_blank" rel="noopener noreferrer">{tx(data.url ? "remote.open" : "remote.console")} ↗</a></p>
-      {role === "admin" && <>
-        <p className="muted">{tx("remote.install")}</p>
-        <label>{tx("remote.node")}<input style={{ width: "100%", marginTop: 6 }} value={value} onChange={e => setValue(e.target.value)} placeholder="node//…" /></label>
-        <button disabled={saving} onClick={() => void save()}>{tx(saving ? "Đang tạo…" : "remote.save")}</button>
-      </>}
-    </>}
-  </details>;
+    {data && <p className="muted">{tx(!data.ready ? "remote.notReady" : data.enabled ? "remote.enabledHint" : "remote.disabledHint")}</p>}
+    {data?.enabled && data.url && <a href={data.url} target="_blank" rel="noopener noreferrer">{tx("remote.open")} ↗</a>}
+  </section>;
 }

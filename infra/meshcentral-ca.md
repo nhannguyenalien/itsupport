@@ -29,38 +29,33 @@ and the IT Support deployment on macmini are independent.
 
 ## Application configuration and enrollment
 
-Set `MESHCENTRAL_URL=https://mesh.schoolsai.work` in macmini's `infra/.env`.
-Docker Compose passes it to the backend. No MeshCentral admin token goes to the
-browser; MeshCentral authenticates users and independently enforces ACLs.
+Set `MESHCENTRAL_URL=https://mesh.schoolsai.work`, `MESHCENTRAL_API_USER`,
+and `MESHCENTRAL_API_PASSWORD` in macmini's protected `infra/.env`.
+The service account needs remote desktop and guest sharing on configured tenant
+groups, with terminal/files denied and no site administrator privileges. Its
+credential is stored in `/root/itsupport-meshcentral-api.json` (mode 600).
+Never expose it to browsers or logs.
 
-1. Sign in to MeshCentral. Create a device group for each customer; grant only
-   assigned named technicians access. Do not share the server administrator.
-2. Use **Add Agent** in that group. Install its signed agent on the intended
-   client with the customer's permission. This is separate from Support Agent.
-   On macOS, enable Screen Recording and Accessibility in System Settings.
-3. Open the device in its own MeshCentral tab; copy its `?node=...` link.
-4. In IT Support → Devices → Technician remote support, an IT Support admin
-   pastes that link (or its 64-character node ID / 96-character hex ID) and saves.
-   A blank value removes only the link, not the installed agent.
-5. Technicians can open remote support from Devices or the ticket. Stop the AI
-   desktop session and wait for pending actions before taking remote control.
-   This release provides navigation, not an automatic/atomic AI handoff lock.
-6. Connect from MeshCentral. Server defaults require customer consent for
-   desktop, terminal and files; timeout never auto-accepts. A privacy bar is on.
+The chat shows one On/Off switch. On creates a desktop-only share for 60 minutes,
+requiring device consent and showing a privacy bar. Repeated On reuses the active
+share. Off revokes all application-issued shares for that device. Only IT Support
+technicians/admins receive the share URL; members can grant/revoke access without
+receiving the URL. Independent MeshCentral administrator access is separate.
+Tenant-scoped device lookup and MeshCentral group membership are checked before
+issuing access. Agent enrollment automatically registers its node ID using the
+existing device credential; customers never need to copy node IDs.
 
-A saved link does not prove agent installation, online status or an active
-remote session. MeshCentral provides those states. Support Agent revocation
-hides the link but does not revoke MeshCentral access: revoke/remove the device
-in MeshCentral too. Tenant admins configure mappings; they must choose the
-correct device. MeshCentral ACLs remain the access boundary even with a wrong ID.
+Stop AI desktop actions before taking control: this switch does not implement an
+atomic AI handoff lock. macOS still requires Screen Recording and Accessibility.
+Device revocation in IT Support does not remove independently granted MeshCentral
+access; revoke/remove the device in MeshCentral as well.
 
 ## Validation and remaining on-device acceptance
 
-HTTPS and authenticated WebSocket access can be tested independently of a client.
-Backend tests verify role/tenant rejection and deep-link ID handling. Before
-claiming end-to-end remote control, enroll a consenting Windows/macOS client and
-verify desktop, mouse/keyboard, reject/timeout consent, disconnect, and scoped
-technician permissions. No customer device is enrolled automatically.
+Tests cover tenant/role boundaries, repeat On/Off, expiry and link validation.
+The scoped production service account has been verified to create, list and revoke
+a desktop-only consent share without opening a remote desktop connection.
+Real screen capture, keyboard/mouse and consent UI still need an on-device test.
 
 ## Bundled customer installation
 
@@ -78,8 +73,9 @@ Windows downloads the official x64 installer and installs its service as admin.
 Existing Mesh installations are not overwritten when their ownership is unknown.
 Failures stop setup with an error; Support Agent remains installed, and rerunning
 the original command retries without consuming another enrollment token.
-Dashboard node association still requires an administrator to paste the device link
-once. Agent installation does not grant a technician permissions automatically.
+After installation, the CLI reads the local Mesh Agent identity and registers it
+with the backend. Existing customers can rerun the original installer to register
+their installed agent. The customer enables access using the chat switch.
 
 Public tunnel origin on rootcloud: `http://127.0.0.1:4430`; public HTTPS uses 443.
 If the tunnel runs inside a container, use a reachable host address instead of its

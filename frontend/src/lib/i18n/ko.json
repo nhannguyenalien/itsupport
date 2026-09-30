@@ -314,8 +314,8 @@
   "connectionStatus.error": "오류",
   "ai.failed": "AI 처리 중 오류가 발생했습니다. 메시지는 저장되었습니다. 다시 시도를 선택하세요.",
   "ai.incomplete": "처리가 완료되지 않았습니다. 기기가 응답하지 않거나 진단 한도에 도달했습니다. 결과를 확인하고 다시 시도하세요.",
-  "remote.title": "기술자 원격 지원",
-  "remote.error": "설정을 불러오거나 저장할 수 없습니다. 권한과 MeshCentral 장치 ID를 확인하세요.",
+  "remote.title": "기술 지원",
+  "remote.error": "상태를 확인할 수 없습니다. 다시 시도하세요. 자동으로도 다시 확인합니다.",
   "remote.unavailable": "원격 지원이 설정되지 않았습니다.",
   "remote.registered": "MeshCentral 링크가 저장되었습니다. 연결 상태는 콘솔에서 확인하세요.",
   "remote.unregistered": "이 장치는 MeshCentral에 연결되지 않았습니다.",
@@ -325,5 +325,12 @@
   "remote.install": "MeshCentral에서 고객별 장치 그룹을 만들고 담당 기술자에게만 권한을 부여한 후 Add Agent를 선택하여 고객 장치에 설치하세요. macOS에서는 화면 기록 및 손쉬운 사용 권한을 허용하세요. 장치를 새 탭에서 열고 아래에 링크를 붙여 넣으세요. Mesh Agent는 Support Agent와 별도로 설치됩니다.",
   "remote.node": "MeshCentral 장치 ID 또는 링크 (연결 해제 시 비워 두세요)",
   "remote.save": "링크 저장",
-  "chat.older": "이전 메시지 보기 ({count}개 남음)"
+  "chat.older": "이전 메시지 보기 ({count}개 남음)",
+  "remote.on": "켜짐",
+  "remote.off": "꺼짐",
+  "remote.updating": "변경 중…",
+  "remote.loading": "로딩 중…",
+  "remote.notReady": "기기가 준비되지 않았습니다. 설치 프로그램을 다시 실행하면 자동으로 연결됩니다.",
+  "remote.enabledHint": "60분 동안 기술자가 접근을 요청할 수 있습니다. 끄면 이 채팅의 지원 접근 권한이 취소됩니다.",
+  "remote.disabledHint": "기술 지원이 필요하면 켜세요. 기기에서도 접근을 승인해야 합니다."
 }

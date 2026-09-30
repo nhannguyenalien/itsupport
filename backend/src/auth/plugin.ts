@@ -20,6 +20,7 @@ function isAgentRoute(req: FastifyRequest): boolean {
   return (
     (req.method === "POST" && /^\/devices\/[^/]+\/heartbeat$/.test(path)) ||
     (req.method === "GET" && /^\/devices\/[^/]+\/remote-install$/.test(path)) ||
+    (req.method === "POST" && /^\/devices\/[^/]+\/remote-register$/.test(path)) ||
     (req.method === "GET" && /^\/devices\/[^/]+\/tool-calls\/pending$/.test(path)) ||
     (req.method === "POST" && /^\/tool-calls\/[^/]+\/result$/.test(path))
   );
@@ -58,6 +59,7 @@ async function ownsResource(req: FastifyRequest, tenantId: string): Promise<bool
 
 function requiredRole(req: FastifyRequest): "admin" | "technician" | null {
   const path = req.url.split("?")[0];
+  if (req.method === "PUT" && /^\/devices\/[^/]+\/remote-support$/.test(path)) return null;
   if (req.method === "GET" || path.startsWith("/auth/")) return null;
   if (/^\/tenants\/[^/]+\/(?:enable|disable)-/.test(path)) return "admin";
   if (/^\/devices\/[^/]+\/(?:revoke|pause|unpause)$/.test(path)) return "admin";

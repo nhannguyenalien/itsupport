@@ -314,8 +314,8 @@
   "connectionStatus.error": "Có lỗi",
   "ai.failed": "AI gặp lỗi khi xử lý. Tin nhắn đã lưu; hãy chọn Thử lại.",
   "ai.incomplete": "Chưa hoàn tất xử lý. Thiết bị có thể chưa phản hồi hoặc đã đạt giới hạn kiểm tra. Xem kết quả và chọn Thử lại.",
-  "remote.title": "Kỹ thuật viên hỗ trợ từ xa",
-  "remote.error": "Không thể tải hoặc lưu cấu hình. Kiểm tra quyền và mã thiết bị MeshCentral.",
+  "remote.title": "Hỗ trợ kỹ thuật",
+  "remote.error": "Chưa xác nhận được trạng thái. Hãy thử lại; hệ thống sẽ tự kiểm tra lại.",
   "remote.unavailable": "Dịch vụ hỗ trợ từ xa chưa được cấu hình.",
   "remote.registered": "Đã lưu liên kết MeshCentral; trạng thái kết nối xem trong bảng điều khiển.",
   "remote.unregistered": "Máy này chưa được liên kết MeshCentral.",
@@ -325,5 +325,12 @@
   "remote.install": "Trong MeshCentral: tạo nhóm máy riêng cho khách, chỉ cấp quyền cho kỹ thuật viên phụ trách, chọn Add Agent và cài trên máy khách. Trên macOS, cấp quyền Screen Recording và Accessibility. Sau đó mở máy trong tab riêng và dán liên kết bên dưới. Mesh Agent được cài riêng với Support Agent.",
   "remote.node": "Mã thiết bị hoặc liên kết MeshCentral (để trống để hủy liên kết)",
   "remote.save": "Lưu liên kết",
-  "chat.older": "Xem tin cũ hơn ({count} tin)"
+  "chat.older": "Xem tin cũ hơn ({count} tin)",
+  "remote.on": "Bật",
+  "remote.off": "Tắt",
+  "remote.updating": "Đang đổi…",
+  "remote.loading": "Đang tải…",
+  "remote.notReady": "Máy chưa sẵn sàng. Chạy lại bộ cài để kết nối hỗ trợ tự động.",
+  "remote.enabledHint": "Kỹ thuật viên có thể yêu cầu vào máy trong 60 phút. Tắt để ngắt quyền hỗ trợ từ cuộc trò chuyện này.",
+  "remote.disabledHint": "Bật khi cần kỹ thuật viên vào máy hỗ trợ. Bạn vẫn cần chấp thuận trên máy."
 }

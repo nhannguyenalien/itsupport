@@ -314,8 +314,8 @@
   "connectionStatus.error": "Erreur",
   "ai.failed": "Le traitement IA a échoué. Votre message est enregistré ; sélectionnez Réessayer.",
   "ai.incomplete": "Le traitement est incomplet. L’appareil ne répond peut-être pas ou la limite de diagnostic est atteinte. Consultez les résultats et réessayez.",
-  "remote.title": "Assistance à distance par un technicien",
-  "remote.error": "Impossible de charger ou enregistrer la configuration. Vérifiez les autorisations et l’identifiant MeshCentral.",
+  "remote.title": "Assistance technique",
+  "remote.error": "Impossible de confirmer l’état. Réessayez ; il sera aussi actualisé automatiquement.",
   "remote.unavailable": "L’assistance à distance n’est pas configurée.",
   "remote.registered": "Lien MeshCentral enregistré ; consultez la connexion dans la console.",
   "remote.unregistered": "Cet appareil n’est pas lié à MeshCentral.",
@@ -325,5 +325,12 @@
   "remote.install": "Dans MeshCentral : créez un groupe distinct pour le client, autorisez uniquement ses techniciens, sélectionnez Add Agent et installez-le sur son appareil. Sur macOS, autorisez l’enregistrement de l’écran et l’accessibilité. Ouvrez ensuite l’appareil dans un nouvel onglet et collez son lien ci-dessous. Mesh Agent s’installe séparément de Support Agent.",
   "remote.node": "Identifiant ou lien MeshCentral (vide pour dissocier)",
   "remote.save": "Enregistrer le lien",
-  "chat.older": "Voir les messages précédents ({count} restants)"
+  "chat.older": "Voir les messages précédents ({count} restants)",
+  "remote.on": "Activée",
+  "remote.off": "Désactivée",
+  "remote.updating": "Mise à jour…",
+  "remote.loading": "Chargement…",
+  "remote.notReady": "Cet appareil n’est pas prêt. Relancez le programme d’installation pour le connecter automatiquement.",
+  "remote.enabledHint": "Un technicien peut demander l’accès pendant 60 minutes. Désactivez pour révoquer l’accès depuis cette conversation.",
+  "remote.disabledHint": "Activez pour demander une assistance. Vous devez aussi accepter l’accès sur votre appareil."
 }

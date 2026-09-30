@@ -193,8 +193,8 @@ export const api = {
 
   getMetrics: (tenantId: string) => request<Metrics>(`/metrics?tenantId=${tenantId}`),
 
-  remoteSupport: (deviceId: string) => request<{ consoleUrl: string | null; nodeId: string | null; url: string | null }>(`/devices/${deviceId}/remote-support`),
-  setRemoteSupport: (deviceId: string, nodeId: string | null) => request(`/devices/${deviceId}/remote-support`, { method: "PUT", body: JSON.stringify({ nodeId }) }),
+  remoteSupport: (deviceId: string) => request<{ ready: boolean; enabled: boolean; expiresAt: string | null; url: string | null }>(`/devices/${deviceId}/remote-support`),
+  setRemoteSupport: (deviceId: string, enabled: boolean) => request<{ ready: boolean; enabled: boolean; expiresAt: string | null; url: string | null }>(`/devices/${deviceId}/remote-support`, { method: "PUT", body: JSON.stringify({ enabled }) }),
   listDevices: (tenantId: string) => request<Device[]>(`/devices?tenantId=${tenantId}`),
   createEnrollmentToken: (tenantId: string) =>
     request<EnrollmentToken>(`/enrollment-tokens`, { method: "POST", body: JSON.stringify({ tenantId }) }),

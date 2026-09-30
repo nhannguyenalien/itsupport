@@ -314,8 +314,8 @@
   "connectionStatus.error": "Error",
   "ai.failed": "El procesamiento de IA falló. Tu mensaje está guardado; selecciona Reintentar.",
   "ai.incomplete": "El procesamiento está incompleto. Es posible que el dispositivo no responda o se haya alcanzado el límite de diagnóstico. Revisa los resultados y reintenta.",
-  "remote.title": "Soporte remoto de un técnico",
-  "remote.error": "No se pudo cargar o guardar la configuración. Compruebe los permisos y el ID de MeshCentral.",
+  "remote.title": "Soporte técnico",
+  "remote.error": "No se pudo confirmar el estado. Inténtalo de nuevo; también se actualizará automáticamente.",
   "remote.unavailable": "El soporte remoto no está configurado.",
   "remote.registered": "Enlace MeshCentral guardado; consulte la conexión en la consola.",
   "remote.unregistered": "Este dispositivo no está vinculado a MeshCentral.",
@@ -325,5 +325,12 @@
   "remote.install": "En MeshCentral: cree un grupo separado para el cliente, autorice solo a los técnicos asignados, seleccione Add Agent e instálelo en el equipo. En macOS, conceda permisos de grabación de pantalla y accesibilidad. Abra el dispositivo en otra pestaña y pegue su enlace aquí. Mesh Agent se instala por separado de Support Agent.",
   "remote.node": "ID o enlace de MeshCentral (vacío para desvincular)",
   "remote.save": "Guardar enlace",
-  "chat.older": "Ver mensajes anteriores ({count} restantes)"
+  "chat.older": "Ver mensajes anteriores ({count} restantes)",
+  "remote.on": "Activado",
+  "remote.off": "Desactivado",
+  "remote.updating": "Actualizando…",
+  "remote.loading": "Cargando…",
+  "remote.notReady": "Este dispositivo no está listo. Ejecuta de nuevo el instalador para conectarlo automáticamente.",
+  "remote.enabledHint": "Un técnico puede solicitar acceso durante 60 minutos. Desactiva para revocar el acceso de soporte desde este chat.",
+  "remote.disabledHint": "Activa cuando necesites un técnico. También debes aprobar el acceso en tu dispositivo."
 }
