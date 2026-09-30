@@ -324,5 +324,6 @@
   "remote.console": "Mở MeshCentral",
   "remote.install": "Trong MeshCentral: tạo nhóm máy riêng cho khách, chỉ cấp quyền cho kỹ thuật viên phụ trách, chọn Add Agent và cài trên máy khách. Trên macOS, cấp quyền Screen Recording và Accessibility. Sau đó mở máy trong tab riêng và dán liên kết bên dưới. Mesh Agent được cài riêng với Support Agent.",
   "remote.node": "Mã thiết bị hoặc liên kết MeshCentral (để trống để hủy liên kết)",
-  "remote.save": "Lưu liên kết"
+  "remote.save": "Lưu liên kết",
+  "chat.older": "Xem tin cũ hơn ({count} tin)"
 }

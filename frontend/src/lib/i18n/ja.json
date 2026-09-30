@@ -324,5 +324,6 @@
   "remote.console": "MeshCentralを開く",
   "remote.install": "MeshCentralで顧客ごとに端末グループを作り、担当技術者だけに権限を付与し、Add Agentから顧客の端末にインストールしてください。macOSでは画面収録とアクセシビリティを許可します。端末を別タブで開き、下にリンクを貼り付けてください。Mesh AgentはSupport Agentとは別にインストールします。",
   "remote.node": "MeshCentral端末IDまたはリンク（空欄で連携解除）",
-  "remote.save": "リンクを保存"
+  "remote.save": "リンクを保存",
+  "chat.older": "以前のメッセージを表示（残り{count}件）"
 }

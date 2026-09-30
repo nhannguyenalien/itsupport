@@ -39,6 +39,7 @@ function friendlyError(value: unknown): string {
 export default function TicketChat({ ticketId }: { ticketId: string }) {
   const { tx, locale } = useLanguage();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
+  const [visibleMessageCount, setVisibleMessageCount] = useState(10);
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [screenMode, setScreenMode] = useState(false);
@@ -133,6 +134,12 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
     ...ticket.toolCalls.map((item) => ({ kind: "tool" as const, item, at: item.requested_at })),
   ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const messages = ticket.messages;
+  const messageEvents = timeline.filter((event) => event.kind === "message");
+  const hiddenMessageCount = Math.max(0, messageEvents.length - visibleMessageCount);
+  const firstVisibleMessage = messageEvents[hiddenMessageCount];
+  const visibleTimeline = hiddenMessageCount && firstVisibleMessage
+    ? timeline.slice(timeline.indexOf(firstVisibleMessage))
+    : timeline;
   const approvals = ticket.approvals.filter((item) => item.status === "pending");
   const workflowError = ticket.aiWorkflow?.status === "failed" ? "ai.failed" :
     ["execution_timeout", "step_limit", "rejected"].includes(ticket.aiWorkflow?.stoppedBecause ?? "") ? "ai.incomplete" : null;
@@ -151,7 +158,8 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
 
       <main className="support-chat-messages" aria-live="polite">
         {messages.length === 0 && <div className="support-welcome"><span>✦</span><h2>{tx("Xin chào, tôi có thể giúp gì cho bạn?")}</h2><p>{tx("Hãy mô tả vấn đề bằng lời bình thường. Tôi sẽ tự kiểm tra và chọn cách xử lý phù hợp.")}</p></div>}
-        {timeline.map((event) => {
+        {hiddenMessageCount > 0 && <button type="button" onClick={() => setVisibleMessageCount((count) => count + 10)}>{tx("chat.older", { count: hiddenMessageCount })}</button>}
+        {visibleTimeline.map((event) => {
           if (event.kind === "tool") return <ToolActivity key={event.item.id} call={event.item} />;
           const item = event.item;
           return (

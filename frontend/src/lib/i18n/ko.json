@@ -324,5 +324,6 @@
   "remote.console": "MeshCentral 열기",
   "remote.install": "MeshCentral에서 고객별 장치 그룹을 만들고 담당 기술자에게만 권한을 부여한 후 Add Agent를 선택하여 고객 장치에 설치하세요. macOS에서는 화면 기록 및 손쉬운 사용 권한을 허용하세요. 장치를 새 탭에서 열고 아래에 링크를 붙여 넣으세요. Mesh Agent는 Support Agent와 별도로 설치됩니다.",
   "remote.node": "MeshCentral 장치 ID 또는 링크 (연결 해제 시 비워 두세요)",
-  "remote.save": "링크 저장"
+  "remote.save": "링크 저장",
+  "chat.older": "이전 메시지 보기 ({count}개 남음)"
 }

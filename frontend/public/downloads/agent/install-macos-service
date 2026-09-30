@@ -128,7 +128,7 @@ try:
         raise ValueError('Invalid remote installer URL')
     existing = pathlib.Path('/usr/local/mesh_services/meshagent/meshagent/meshagent.msh')
     if pathlib.Path('/Library/LaunchDaemons/meshagent.plist').exists():
-        settings = existing.read_text()
+        settings = subprocess.check_output(['/usr/bin/sudo', '/bin/cat', str(existing)], text=True)
         import base64
         group_hex = base64.b64decode(remote['group'].replace('@', '+').replace('$', '/')).hex().upper()
         if ('MeshID=0x' + group_hex) not in settings or ('MeshServer=wss://' + url.hostname + ':443/') not in settings:
@@ -144,6 +144,10 @@ if [[ ! -f "$REMOTE_DIR/already-installed" ]]; then
   /usr/bin/ditto -x -k "$REMOTE_DIR/MeshAgent.zip" "$REMOTE_DIR/package"
   /usr/bin/sudo /usr/sbin/installer -pkg "$REMOTE_DIR/package/MeshAgent.pkg" -target /
 fi
+# Allow the signed-in user to select the executable in macOS privacy settings.
+# Only directory traversal changes; agent configuration and file permissions stay intact.
+/usr/bin/sudo /bin/chmod a+x /usr/local/mesh_services /usr/local/mesh_services/meshagent /usr/local/mesh_services/meshagent/meshagent
 /usr/bin/sudo /bin/launchctl print system/meshagent >/dev/null
 echo "Mesh Agent đã cài. Vào System Settings > Privacy & Security, cấp Screen Recording và Accessibility cho Mesh Agent."
 echo "Quản trị viên liên kết máy trong Dashboard > Thiết bị > Hỗ trợ từ xa."
+echo "Nếu chưa thấy meshagent: nhấn +, Cmd+Shift+G, nhập /usr/local/mesh_services/meshagent/meshagent/meshagent rồi thêm."

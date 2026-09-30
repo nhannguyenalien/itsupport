@@ -324,5 +324,6 @@
   "remote.console": "Open MeshCentral",
   "remote.install": "In MeshCentral: create a separate device group for the customer, grant access only to assigned technicians, select Add Agent and install it on the client. On macOS, grant Screen Recording and Accessibility permissions. Then open the device in a separate tab and paste its link below. Mesh Agent is installed separately from Support Agent.",
   "remote.node": "MeshCentral device ID or link (leave blank to unlink)",
-  "remote.save": "Save link"
+  "remote.save": "Save link",
+  "chat.older": "Show older messages ({count} remaining)"
 }
