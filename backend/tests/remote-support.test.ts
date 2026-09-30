@@ -111,7 +111,7 @@ for (const role of ['member', 'technician', 'admin']) test(`${role} can enable a
     if (command.action === 'nodes') return { nodes: { ['mesh//' + 'A'.repeat(64)]: [{ _id: 'node//' + nodeId }] } };
     if (command.action === 'deviceShares') return { deviceShares: shares };
     if (command.action === 'createDeviceShareLink') {
-      assert.equal(command.p, 2); assert.equal(command.consent, 72); assert.equal(command.expire, 60);
+      assert.equal(command.p, 3); assert.equal(command.consent, 88); assert.equal(command.expire, 60);
       creates++;
       shares = [{ guestName: 'ITSupport:' + device, publicid: 'share', startTime: Date.now() - 100, expireTime: Date.now() + 3600000, url: 'https://mesh.example.test/sharing?c=test' }];
       return { result: 'OK' };

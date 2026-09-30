@@ -320,7 +320,7 @@
   "remote.registered": "MeshCentral link saved; check connection status in the console.",
   "remote.unregistered": "This device is not linked to MeshCentral.",
   "remote.consent": "Stop the AI session and wait for current actions to finish before taking control. Technicians must sign in to MeshCentral; the customer must approve the request on their device.",
-  "remote.open": "Open device control",
+  "remote.open": "Open desktop & Terminal",
   "remote.console": "Open MeshCentral",
   "remote.install": "In MeshCentral: create a separate device group for the customer, grant access only to assigned technicians, select Add Agent and install it on the client. On macOS, grant Screen Recording and Accessibility permissions. Then open the device in a separate tab and paste its link below. Mesh Agent is installed separately from Support Agent.",
   "remote.node": "MeshCentral device ID or link (leave blank to unlink)",
@@ -331,6 +331,6 @@
   "remote.updating": "Updating…",
   "remote.loading": "Loading…",
   "remote.notReady": "This device is not ready. Run the installer again to connect support automatically.",
-  "remote.enabledHint": "A technician can request access for 60 minutes. Turn off to revoke support access from this chat.",
-  "remote.disabledHint": "Turn on when you need a technician. You still need to approve access on your device."
+  "remote.enabledHint": "A technician can request desktop control and Terminal commands for 60 minutes. Turn off to revoke support access.",
+  "remote.disabledHint": "Turn on for desktop or Terminal support. You still need to approve access on your device."
 }

@@ -320,7 +320,7 @@
   "remote.registered": "MeshCentralリンクを保存しました。接続状況はコンソールで確認してください。",
   "remote.unregistered": "この端末はMeshCentralに連携されていません。",
   "remote.consent": "制御を開始する前にAIセッションを停止し、実行中の操作が完了するまで待ってください。技術者はMeshCentralへのログイン、顧客は端末上での承認が必要です。",
-  "remote.open": "端末の制御を開く",
+  "remote.open": "デスクトップとターミナルを開く",
   "remote.console": "MeshCentralを開く",
   "remote.install": "MeshCentralで顧客ごとに端末グループを作り、担当技術者だけに権限を付与し、Add Agentから顧客の端末にインストールしてください。macOSでは画面収録とアクセシビリティを許可します。端末を別タブで開き、下にリンクを貼り付けてください。Mesh AgentはSupport Agentとは別にインストールします。",
   "remote.node": "MeshCentral端末IDまたはリンク（空欄で連携解除）",
@@ -331,6 +331,6 @@
   "remote.updating": "変更中…",
   "remote.loading": "読み込み中…",
   "remote.notReady": "端末の準備ができていません。インストーラーを再実行すると自動接続します。",
-  "remote.enabledHint": "60分間、担当者が接続を要求できます。オフにすると、このチャットからのサポート権限を取り消します。",
-  "remote.disabledHint": "技術サポートが必要なときにオンにしてください。端末での接続承認も必要です。"
+  "remote.enabledHint": "担当者は60分間、画面の操作やターミナルでのコマンド実行を要求できます。オフにするとサポート権限を取り消します。",
+  "remote.disabledHint": "画面操作やターミナルでのサポートが必要なときにオンにしてください。端末での接続承認も必要です。"
 }

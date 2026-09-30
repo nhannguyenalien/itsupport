@@ -320,7 +320,7 @@
   "remote.registered": "Enlace MeshCentral guardado; consulte la conexión en la consola.",
   "remote.unregistered": "Este dispositivo no está vinculado a MeshCentral.",
   "remote.consent": "Detenga la sesión de IA y espere a que terminen las acciones antes de tomar el control. El técnico debe iniciar sesión en MeshCentral y el cliente debe aceptar en su dispositivo.",
-  "remote.open": "Abrir control del dispositivo",
+  "remote.open": "Abrir escritorio y terminal",
   "remote.console": "Abrir MeshCentral",
   "remote.install": "En MeshCentral: cree un grupo separado para el cliente, autorice solo a los técnicos asignados, seleccione Add Agent e instálelo en el equipo. En macOS, conceda permisos de grabación de pantalla y accesibilidad. Abra el dispositivo en otra pestaña y pegue su enlace aquí. Mesh Agent se instala por separado de Support Agent.",
   "remote.node": "ID o enlace de MeshCentral (vacío para desvincular)",
@@ -331,6 +331,6 @@
   "remote.updating": "Actualizando…",
   "remote.loading": "Cargando…",
   "remote.notReady": "Este dispositivo no está listo. Ejecuta de nuevo el instalador para conectarlo automáticamente.",
-  "remote.enabledHint": "Un técnico puede solicitar acceso durante 60 minutos. Desactiva para revocar el acceso de soporte desde este chat.",
-  "remote.disabledHint": "Activa cuando necesites un técnico. También debes aprobar el acceso en tu dispositivo."
+  "remote.enabledHint": "Un técnico puede solicitar controlar el escritorio y ejecutar comandos durante 60 minutos. Desactiva para revocar el acceso.",
+  "remote.disabledHint": "Activa para recibir asistencia por escritorio o terminal. También debes aprobar el acceso en tu dispositivo."
 }

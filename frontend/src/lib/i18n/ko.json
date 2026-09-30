@@ -320,7 +320,7 @@
   "remote.registered": "MeshCentral 링크가 저장되었습니다. 연결 상태는 콘솔에서 확인하세요.",
   "remote.unregistered": "이 장치는 MeshCentral에 연결되지 않았습니다.",
   "remote.consent": "제어하기 전에 AI 세션을 중지하고 현재 작업이 끝날 때까지 기다리세요. 기술자는 MeshCentral에 로그인해야 하며 고객은 장치에서 요청을 승인해야 합니다.",
-  "remote.open": "장치 제어 열기",
+  "remote.open": "데스크톱 및 터미널 열기",
   "remote.console": "MeshCentral 열기",
   "remote.install": "MeshCentral에서 고객별 장치 그룹을 만들고 담당 기술자에게만 권한을 부여한 후 Add Agent를 선택하여 고객 장치에 설치하세요. macOS에서는 화면 기록 및 손쉬운 사용 권한을 허용하세요. 장치를 새 탭에서 열고 아래에 링크를 붙여 넣으세요. Mesh Agent는 Support Agent와 별도로 설치됩니다.",
   "remote.node": "MeshCentral 장치 ID 또는 링크 (연결 해제 시 비워 두세요)",
@@ -331,6 +331,6 @@
   "remote.updating": "변경 중…",
   "remote.loading": "로딩 중…",
   "remote.notReady": "기기가 준비되지 않았습니다. 설치 프로그램을 다시 실행하면 자동으로 연결됩니다.",
-  "remote.enabledHint": "60분 동안 기술자가 접근을 요청할 수 있습니다. 끄면 이 채팅의 지원 접근 권한이 취소됩니다.",
-  "remote.disabledHint": "기술 지원이 필요하면 켜세요. 기기에서도 접근을 승인해야 합니다."
+  "remote.enabledHint": "기술자가 60분 동안 데스크톱 제어 및 터미널 명령 실행을 요청할 수 있습니다. 끄면 지원 접근 권한이 취소됩니다.",
+  "remote.disabledHint": "데스크톱 또는 터미널 지원이 필요하면 켜세요. 기기에서도 접근을 승인해야 합니다."
 }

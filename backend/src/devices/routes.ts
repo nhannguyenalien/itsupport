@@ -61,7 +61,7 @@ export async function deviceRoutes(app: FastifyInstance) {
       const shares = await supportShares(nodeId, deviceId);
       if (enabled && !activeShare(shares)) {
         await meshTransport.command({ action: "createDeviceShareLink", nodeid: nodeId,
-          guestname: "ITSupport:" + deviceId, p: 2, consent: 8 | 64, expire: 60 });
+          guestname: "ITSupport:" + deviceId, p: 1 | 2, consent: 8 | 16 | 64, expire: 60 });
       } else if (!enabled) {
         for (const share of shares) await meshTransport.command({ action: "removeDeviceShare", nodeid: nodeId, publicid: share.publicid });
       }

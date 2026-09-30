@@ -32,12 +32,12 @@ and the IT Support deployment on macmini are independent.
 Set `MESHCENTRAL_URL=https://mesh.schoolsai.work`, `MESHCENTRAL_API_USER`,
 and `MESHCENTRAL_API_PASSWORD` in macmini's protected `infra/.env`.
 The service account needs remote desktop and guest sharing on configured tenant
-groups, with terminal/files denied and no site administrator privileges. Its
+groups, with files denied (group rights 524288 | 8 | 1024 = 525320) and no site administrator privileges. Its
 credential is stored in `/root/itsupport-meshcentral-api.json` (mode 600).
 Never expose it to browsers or logs.
 
-The chat shows one On/Off switch. On creates a desktop-only share for 60 minutes,
-requiring device consent and showing a privacy bar. Repeated On reuses the active
+The chat shows one On/Off switch. On creates a desktop and Terminal share for 60 minutes,
+requiring device consent for both protocols and showing a desktop privacy bar. Repeated On reuses the active
 share. Off revokes all application-issued shares for that device. Only IT Support
 technicians/admins receive the share URL; members can grant/revoke access without
 receiving the URL. Independent MeshCentral administrator access is separate.
@@ -54,7 +54,7 @@ access; revoke/remove the device in MeshCentral as well.
 
 Tests cover tenant/role boundaries, repeat On/Off, expiry and link validation.
 The scoped production service account has been verified to create, list and revoke
-a desktop-only consent share without opening a remote desktop connection.
+a consent share without opening a remote desktop connection.
 Real screen capture, keyboard/mouse and consent UI still need an on-device test.
 
 ## Bundled customer installation
@@ -81,3 +81,17 @@ Public tunnel origin on rootcloud: `http://127.0.0.1:4430`; public HTTPS uses 44
 If the tunnel runs inside a container, use a reachable host address instead of its
 container loopback. Preserve WebSocket support and do not put an interactive
 Cloudflare Access login in front of the Mesh agent endpoints.
+
+## Terminal support
+
+New shares use protocol flags 3 (desktop + Terminal), consent 88 (desktop and
+Terminal prompts + desktop privacy bar), and a 60-minute expiry. Existing shares
+keep their original permissions: turn support Off and On to create a new link.
+In the shared Mesh page, select Terminal in the left menu and Connect. The
+customer approves the prompt on their device. No SSH listener or port 22 is needed.
+The shell runs with Mesh Agent privileges (the installed macOS daemon runs as
+root); this is privileged support access. File transfer remains disabled.
+
+To roll back, revert the app change and restore the API account group rights to
+525832 (adds NoTerminal). Revoke active application shares with the support switch;
+changing the application alone does not downgrade already-issued links.
