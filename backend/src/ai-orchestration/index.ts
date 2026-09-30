@@ -28,7 +28,7 @@ function getClient(): OpenAI {
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
-const SYSTEM_PROMPT = `You are an AI operations agent — either an AI Windows support agent diagnosing a
+const SYSTEM_PROMPT = `You are an AI operations agent — either an AI Windows, macOS or Linux support agent diagnosing a
 real Windows machine, or an AI marketing operations agent diagnosing an ads/tracking/analytics/CRM
 account — using ONLY the tools provided to you for this ticket's target (shown below). You have no other
 way to observe or affect it. Never claim something is fixed without verifying it: after any
@@ -48,6 +48,13 @@ Rules:
 - On macOS, only disk.usage, process.list and temp.scan are available. temp.clean is NOT
   supported by the installed agent. Explain this limitation before asking for approval;
   never offer to delete files, or recommend indiscriminate deletion of a temp directory.
+- On Linux, disk.usage, system.info, process.list and service.status are available read-only diagnostics.
+  service.restart is supported for application services with human approval and subsequent verification.
+  Infrastructure services (SSH, networking, Proxmox/VMs, containers and the support agent) are protected.
+  Never offer arbitrary shell commands, file deletion or unsupported Linux actions. Use system.info
+  for CPU utilization, load averages and RAM. Load average is not CPU percent; compare it
+  with cpu_count. Disk usage covers the requested filesystem, not every VM/storage pool.
+  Terminal access for technicians is separate from these AI diagnostic tools.
 - Reuse completed results for the current user request. Do not repeat the same read check.
 - Prefer read tools first to understand the actual state before proposing a fix.
 - When you call a state-changing tool, it may be held for human approval before it runs — that is
@@ -62,13 +69,16 @@ Rules:
 
 const DARWIN_AGENT_TOOLS = new Set(["disk.usage", "process.list", "temp.scan"]);
 
+const LINUX_AGENT_TOOLS = new Set(["disk.usage", "system.info", "process.list", "service.status", "service.restart"]);
+
 function deviceSupportsTool(platform: string, tool: string): boolean {
   const normalizedPlatform = platform.toLowerCase();
   if (normalizedPlatform === "mac" || normalizedPlatform === "darwin") return DARWIN_AGENT_TOOLS.has(tool);
   // The production agent's full IT support toolset is implemented on Windows.
   // Unknown/legacy Windows version strings are intentionally treated as Windows
   // so an older enrolled device is not silently stripped of its capabilities.
-  return normalizedPlatform !== "linux";
+  if (normalizedPlatform === "linux") return LINUX_AGENT_TOOLS.has(tool);
+  return true;
 }
 
 // Either a Windows device or a v0.2 marketing platform connection — exactly
@@ -360,7 +370,8 @@ async function queueExplicitReadChecks(ticketId: string): Promise<void> {
   if (!ctx?.target.device) return;
   const latestUserMessage = [...ctx.messages].reverse().find((message) => message.author_type === "user")?.body ?? "";
   const requested = [
-    { tool: "disk.usage", pattern: /dung\s*lượng\s*(?:ổ\s*đĩa|đĩa)|ổ\s*đĩa|disk\s*(?:space|usage)/i },
+    { tool: "disk.usage", pattern: /dung\s*lượng|ổ\s*đĩa|disk\s*(?:space|usage)/i },
+    { tool: "system.info", pattern: /quá\s*tải|qua\s*tai|\bcpu\b|\bram\b|bộ\s*nhớ|overload|memory|system\s*(?:load|info)|load\s*average/i },
     { tool: "process.list", pattern: /tiến\s*trình|process(?:es)?/i },
     { tool: "temp.scan", pattern: /tệp\s*tạm|file\s*tạm|temporary\s*files?|temp(?:orary)?\s*(?:scan|files?)/i },
   ];

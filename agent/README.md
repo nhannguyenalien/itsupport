@@ -164,8 +164,12 @@ switches support ON in chat to grant technicians root terminal access for 60 min
 OFF revokes the share. Linux shares exclude desktop and files and do not require a
 GUI consent dialog. Windows/macOS retain their local consent prompts.
 
-AI desktop automation is not enabled by this root system service. Linux AI IT
-repair tools are not implemented by this onboarding change.
+AI desktop automation is not enabled by this root system service. Linux AI chat supports read-only `disk.usage`, `system.info` (CPU sample, load and RAM),
+`process.list`, and `service.status`. `service.restart` supports application services
+through the existing approval and verification chain. SSH, agent, networking,
+Proxmox/VM and container infrastructure services are locally protected. There is
+no arbitrary shell execution or file deletion tool. Existing Linux installations
+need the updated executor binary; backend deployment alone cannot add agent capabilities.
 
 Build both Linux architectures with `agent/build-release.sh`. Publish the ignored
 `frontend/public/downloads/agent/linux-{amd64,arm64}` directories to the deployment

@@ -48,10 +48,11 @@ test('completed read tools are excluded for this request, but a new user request
   process.env.OPENAI_BASE_URL = `http://127.0.0.1:${port}`;
   const { pool } = await import('../src/db/pool.js');
   const { runAiStep } = await import('../src/ai-orchestration/index.js');
+  let platform = 'darwin';
   let messageDate = '2026-09-30T09:00:00Z';
   mock.method(pool, 'query', async (sql: string) => {
     let rows: any[] = [];
-    if (sql.includes('SELECT t.*')) rows = [{ id: 'ticket', tenant_id: 'tenant', device_id: 'device', device_platform: 'darwin', ai_data_policy: 'full' }];
+    if (sql.includes('SELECT t.*')) rows = [{ id: 'ticket', tenant_id: 'tenant', device_id: 'device', device_platform: platform, ai_data_policy: 'full' }];
     else if (sql.includes('FROM ticket_messages')) rows = [{ author_type: 'user', body: 'Kiểm tra ổ đĩa', created_at: messageDate, attachments: [] }];
     else if (sql.includes('FROM tool_calls')) rows = [{ tool: 'disk.usage', params: {}, result: 'success', result_data: {}, verification_status: 'not_required', requested_at: '2026-09-30T09:01:00Z' }];
     return { rows, rowCount: rows.length };
@@ -65,6 +66,10 @@ test('completed read tools are excluded for this request, but a new user request
     messageDate = '2026-09-30T09:02:00Z';
     await runAiStep('ticket');
     assert.equal(requests[1].tools.length, requests[0].tools.length + 1);
+    platform = 'linux';
+    await runAiStep('ticket');
+    assert.deepEqual(names(requests[2]).sort(), ['disk-usage', 'system-info', 'process-list', 'service-status', 'service-restart'].sort());
+    assert.match(requests[2].messages[0].content, /Load average is not CPU percent/);
   } finally {
     mock.restoreAll();
     await new Promise<void>(resolve => server.close(() => resolve()));

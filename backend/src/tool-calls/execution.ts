@@ -12,6 +12,7 @@ async function enqueueVerification(
   target: { deviceId: string | null; platformConnectionId: string | null },
   ticketId: string,
   toolName: string,
+  parentParams: Record<string, unknown>,
 ) {
   const tool = getTool(toolName);
   if (!tool || tool.verification.length === 0) {
@@ -21,27 +22,26 @@ async function enqueueVerification(
   await pool.query(`UPDATE tool_calls SET verification_status = 'pending' WHERE id = $1`, [parentId]);
   for (const verifyTool of tool.verification) {
     const verifyDef = getTool(verifyTool);
+    const params = Object.fromEntries((verifyDef?.params ?? [])
+      .filter((key) => Object.hasOwn(parentParams, key))
+      .map((key) => [key, parentParams[key]]));
     await pool.query(
       `INSERT INTO tool_calls (ticket_id, device_id, platform_connection_id, tool, risk, params, parent_tool_call_id)
-       VALUES ($1, $2, $3, $4, $5, '{}', $6)`,
-      [ticketId, target.deviceId, target.platformConnectionId, verifyTool, verifyDef?.risk ?? "read", parentId],
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [ticketId, target.deviceId, target.platformConnectionId, verifyTool, verifyDef?.risk ?? "read", JSON.stringify(params), parentId],
     );
   }
 }
 
-/** Rolls up a parent write call's verification_status once ALL of its
- * verification child calls have reported a result. v0.1/v0.2 simplification:
- * "passed" means every verification tool_call executed successfully (result =
- * 'success'). Doesn't yet parse returned values against an expected state —
- * known gap, see registry.json's verification field for intended per-tool
- * checks. */
+/** Wait for every verification result; service restarts also require a running service. */
 async function maybeFinalizeVerification(parentId: string) {
-  const children = await pool.query(`SELECT result FROM tool_calls WHERE parent_tool_call_id = $1`, [parentId]);
+  const children = await pool.query(`SELECT tool, result, result_data FROM tool_calls WHERE parent_tool_call_id = $1`, [parentId]);
   if (children.rowCount === 0) return;
   const allReported = children.rows.every((r) => r.result !== null);
   if (!allReported) return;
 
-  const allPassed = children.rows.every((r) => r.result === "success");
+  const allPassed = children.rows.every((r) => r.result === "success" &&
+    (r.tool !== "service.status" || r.result_data?.state === "RUNNING"));
   await pool.query(`UPDATE tool_calls SET verification_status = $1 WHERE id = $2`, [allPassed ? "passed" : "failed", parentId]);
 }
 
@@ -121,6 +121,7 @@ export async function recordToolCallResult(
       { deviceId: call.device_id, platformConnectionId: call.platform_connection_id },
       call.ticket_id,
       call.tool,
+      call.params ?? {},
     );
   }
 }

@@ -2,11 +2,13 @@
 
 package tools
 
-// Allowlist on Linux only wires the 9 desktop.* computer-use tools
-// (desktop_linux.go, an X11-only SCAFFOLD — see that file's header comment)
-// — the Windows-specific IT tools have no Linux implementation and simply
-// aren't listed here, same reasoning as registry_darwin.go.
+// Linux diagnostics use native read-only interfaces; desktop entries remain legacy.
 var Allowlist = map[string]Definition{
+	"process.list":         {Fn: ProcessList, Risk: RiskRead},
+	"service.status":       {Fn: ServiceStatus, Risk: RiskRead},
+	"service.restart":      {Fn: ServiceRestart, Risk: RiskMedium},
+	"disk.usage":           {Fn: DiskUsage, Risk: RiskRead},
+	"system.info":          {Fn: SystemInfo, Risk: RiskRead},
 	"desktop.screenshot":   {Fn: DesktopScreenshot, Risk: RiskRead},
 	"desktop.move":         {Fn: DesktopMove, Risk: RiskRead},
 	"desktop.wait":         {Fn: DesktopWait, Risk: RiskRead},
