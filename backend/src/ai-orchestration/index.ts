@@ -18,6 +18,8 @@ function getClient(): OpenAI {
   if (!client) {
     client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 45_000,
+      maxRetries: 1,
       baseURL: process.env.OPENAI_BASE_URL, // optional — lets this point at any OpenAI-compatible endpoint
     });
   }
@@ -41,6 +43,12 @@ Rules:
 - The current tool-call and approval state in the newest system context is the source of truth.
   Never repeat an older assistant claim that an approval is pending after it has been approved,
   rejected, executed, or verified.
+- Disk free space is NOT reclaimable space. Low free space does not prevent reclaiming
+  20–30 GB. Only scanned candidates can support an estimate; a temp scan is not a full-disk scan.
+- On macOS, only disk.usage, process.list and temp.scan are available. temp.clean is NOT
+  supported by the installed agent. Explain this limitation before asking for approval;
+  never offer to delete files, or recommend indiscriminate deletion of a temp directory.
+- Reuse completed results for the current user request. Do not repeat the same read check.
 - Prefer read tools first to understand the actual state before proposing a fix.
 - When you call a state-changing tool, it may be held for human approval before it runs — that is
   expected and not an error; explain your reasoning so the approver has context.
@@ -101,11 +109,11 @@ async function loadTicketForOrchestration(ticketId: string) {
   const row = ticketRes.rows[0];
 
   const messages = await pool.query(
-    `SELECT author_type, body, attachments FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at DESC LIMIT 20`,
+    `SELECT author_type, body, attachments, created_at FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at DESC LIMIT 20`,
     [ticketId],
   );
   const toolCalls = await pool.query(
-    `SELECT tool, params, result, result_data, error_message, verification_status
+    `SELECT tool, params, result, result_data, error_message, verification_status, requested_at
      FROM tool_calls WHERE ticket_id = $1 AND parent_tool_call_id IS NULL ORDER BY requested_at DESC LIMIT 20`,
     [ticketId],
   );
@@ -128,9 +136,10 @@ async function loadTicketForOrchestration(ticketId: string) {
     ticket: row as { id: string; title: string; status: string; tenant_id: string; ai_data_policy: AiDataPolicy },
     target,
     tenant: { id: row.tenant_id, ai_data_policy: row.ai_data_policy, autonomous_low_risk_enabled: row.autonomous_low_risk_enabled } as TenantRow,
-    messages: messages.rows.reverse() as { author_type: string; body: string; attachments: Attachment[] }[],
+    messages: messages.rows.reverse() as { author_type: string; body: string; attachments: Attachment[]; created_at: Date }[],
     toolCalls: toolCalls.rows.reverse() as {
       tool: string;
+      requested_at: Date;
       params: unknown;
       result: string | null;
       result_data: unknown;
@@ -170,17 +179,17 @@ function buildMessages(ctx: NonNullable<Awaited<ReturnType<typeof loadTicketForO
 
   return [
     { role: "system", content: SYSTEM_PROMPT + "\n" + DOCUMENT_INSTRUCTIONS },
+    ...chatHistory,
     {
       role: "user",
       content:
         `Ticket: "${ctx.ticket.title}" (status: ${ctx.ticket.status})\n` +
         `${describeTarget(ctx.target)}\n\n` +
-        `CURRENT AUTHORITATIVE STATE (newer than any chat message below):\n` +
+        `CURRENT AUTHORITATIVE STATE (newer than any chat message above):\n` +
         `Tool calls:\n${toolHistory || "(none yet)"}\n\n` +
         `Approvals:\n${approvalHistory || "(none)"}\n\n` +
         `Use this state, not old assistant status messages, when deciding what remains to do.`,
     },
-    ...chatHistory,
   ];
 }
 
@@ -204,6 +213,9 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
   const ctx = await loadTicketForOrchestration(ticketId);
   if (!ctx) throw new Error("ticket not found");
 
+  const latestUser = [...ctx.messages].reverse().find(m => m.author_type === "user");
+  const checked = new Set(ctx.toolCalls.filter(call => latestUser &&
+    new Date(call.requested_at) >= new Date(latestUser.created_at)).map(call => call.tool));
   const openai = getClient(); // throws clearly if no API key — caller surfaces this as an error, not a fake result
 
   const response = await openai.chat.completions.create({
@@ -217,7 +229,7 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
     // grows, and stops the model from ever proposing a tool with no way to
     // execute against this ticket's target.
     tools: allToolsAsOpenAiFunctions(
-      allTools().filter((t) =>
+      allTools().filter((t) => !(t.risk === "read" && checked.has(t.tool))).filter((t) =>
         ctx.target.device
           // windows_desktop (computer-use addendum) tools are excluded here on
           // purpose: they're driven through the separate Responses API
@@ -230,6 +242,7 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
       ),
     ),
     tool_choice: "auto",
+    parallel_tool_calls: false,
   });
 
   const choice = response.choices[0];
@@ -257,6 +270,9 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
     // (schema.ts's toOpenAiToolName) — convert back to our real "."-separated
     // tool name before it touches anything that looks it up in the registry.
     const toolName = fromOpenAiToolName(toolCall.function.name);
+    if (checked.has(toolName) && allTools().some(t => t.tool === toolName && t.risk === "read")) {
+      return { action: "continue", detail: "Đã có kết quả kiểm tra; sử dụng kết quả hiện có." };
+    }
     let params: Record<string, unknown> = {};
     try {
       params = JSON.parse(toolCall.function.arguments || "{}");
@@ -291,7 +307,7 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
     return { action: "tool_call_requested", detail: summary };
   }
 
-  const text = choice.message.content ?? "AI chưa trả về nội dung.";
+  const text = (choice.message.content ?? "AI chưa trả về nội dung.").replace(/^\s*\[(?:ai|assistant|system)\]\s*/i, "");
   // Models occasionally end a turn with a promise to perform another check
   // instead of issuing the tool call. Do not persist that misleading text or
   // stop the one-click workflow: immediately give the model another turn.
@@ -348,7 +364,9 @@ async function queueExplicitReadChecks(ticketId: string): Promise<void> {
     { tool: "process.list", pattern: /tiến\s*trình|process(?:es)?/i },
     { tool: "temp.scan", pattern: /tệp\s*tạm|file\s*tạm|temporary\s*files?|temp(?:orary)?\s*(?:scan|files?)/i },
   ];
-  const alreadyRequested = new Set(ctx.toolCalls.map((call) => call.tool));
+  const latestUser = [...ctx.messages].reverse().find(message => message.author_type === "user");
+  const alreadyRequested = new Set(ctx.toolCalls.filter(call => latestUser &&
+    new Date(call.requested_at) >= new Date(latestUser.created_at)).map(call => call.tool));
   for (const check of requested) {
     if (!check.pattern.test(latestUserMessage) || alreadyRequested.has(check.tool)) continue;
     if (!deviceSupportsTool(ctx.target.device.platform, check.tool)) continue;

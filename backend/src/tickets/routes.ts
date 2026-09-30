@@ -1,3 +1,4 @@
+import { getWorkflowState } from "../ai-orchestration/jobs.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
@@ -83,7 +84,7 @@ export async function ticketRoutes(app: FastifyInstance) {
     );
 
     const session = await pool.query(`SELECT * FROM computer_use_sessions WHERE ticket_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1`, [ticketId]);
-    reply.send({ computerUseSession: session.rows[0] ?? null, ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows, approvals: approvals.rows });
+    reply.send({ aiWorkflow: getWorkflowState(ticketId), computerUseSession: session.rows[0] ?? null, ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows, approvals: approvals.rows });
   });
 
   app.post("/tickets/:ticketId/messages", { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req, reply) => {

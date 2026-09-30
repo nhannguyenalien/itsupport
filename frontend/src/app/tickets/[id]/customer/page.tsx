@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/lib/i18n";
+
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, type TicketDetail } from "@/lib/api";
@@ -17,6 +19,10 @@ import { api, type TicketDetail } from "@/lib/api";
 /** Plain-English summary of what's happening right now — no tool names, no
  * JSON, just enough for someone who isn't IT staff to follow along. */
 function describeCurrentActivity(ticket: TicketDetail): string {
+  if (ticket.aiWorkflow?.status === "running") return "Đang kiểm tra và xử lý…";
+  if (ticket.aiWorkflow?.status === "failed") return "ai.failed";
+  if (["execution_timeout", "step_limit", "rejected"].includes(ticket.aiWorkflow?.stoppedBecause ?? "")) return "ai.incomplete";
+  if (ticket.aiWorkflow?.stoppedBecause === "completed") return "Sẵn sàng hỗ trợ";
   if (ticket.status === "resolved" || ticket.status === "closed") {
     return "This issue has been resolved.";
   }
@@ -33,6 +39,7 @@ function describeCurrentActivity(ticket: TicketDetail): string {
 }
 
 export default function CustomerTicketPage() {
+  const { tx } = useLanguage();
   const params = useParams<{ id: string }>();
   const ticketId = params.id;
 
@@ -55,7 +62,7 @@ export default function CustomerTicketPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
-  if (!ticket) return <p className="muted">Loading…</p>;
+  if (!ticket) return <p className="muted">{tx("Loading…")}</p>;
 
   async function sendMessage() {
     if (!messageBody.trim()) return;
@@ -73,36 +80,34 @@ export default function CustomerTicketPage() {
       <h1>{ticket.title}</h1>
       {error && (
         <div className="card" style={{ color: "#b91c1c" }}>
-          {error}
+          {tx(error)}
         </div>
       )}
 
       <div className="card" style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}>
-        <strong>{describeCurrentActivity(ticket)}</strong>
+        <strong>{tx(describeCurrentActivity(ticket))}</strong>
       </div>
 
       <div className="card">
-        <h3>Chat</h3>
-        {ticket.messages.length === 0 && <p className="muted">No messages yet.</p>}
+        <h3>{tx("Chat")}</h3>
+        {ticket.messages.length === 0 && <p className="muted">{tx("No messages yet.")}</p>}
         {ticket.messages.map((m) => (
           <div key={m.id} className={`msg msg-${m.author_type}`}>
             <div className="muted" style={{ fontSize: "0.75rem" }}>
-              {m.author_type === "ai" ? "Support AI" : m.author_type === "technician" ? "Technician" : m.author_type === "user" ? "You" : "System"}
+              {m.author_type === "ai" ? tx("Support AI") : m.author_type === "technician" ? tx("Technician") : m.author_type === "user" ? tx("You") : tx("System")}
             </div>
             {m.body}
           </div>
         ))}
         <div className="row" style={{ marginTop: "0.75rem" }}>
           <input
-            placeholder="Type a message…"
+            placeholder={tx("Type a message…")}
             value={messageBody}
             onChange={(e) => setMessageBody(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             style={{ flex: 1 }}
           />
-          <button className="primary" onClick={sendMessage}>
-            Send
-          </button>
+          <button className="primary" onClick={sendMessage}>{tx("Send")}</button>
         </div>
       </div>
     </div>

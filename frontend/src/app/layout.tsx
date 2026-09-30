@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { TopNav } from "./TopNav";
+import { LanguageProvider } from "@/lib/i18n";
 import { AuthGate } from "./AuthGate";
 
 export const metadata: Metadata = {
@@ -13,10 +14,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi">
       <body>
-        <AuthGate>
+        <LanguageProvider><AuthGate>
           <TopNav />
           <div className="main">{children}</div>
-        </AuthGate>
+        </AuthGate></LanguageProvider>
       </body>
     </html>
   );

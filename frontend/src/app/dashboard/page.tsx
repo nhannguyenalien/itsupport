@@ -1,10 +1,13 @@
 "use client";
 
+import { useLanguage } from "@/lib/i18n";
+
 import { useEffect, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
 import { api, type Tenant } from "@/lib/api";
 
 export default function DashboardPage() {
+  const { tx } = useLanguage();
   const { tenantId, ready } = useTenant();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +44,9 @@ export default function DashboardPage() {
   return (
     <div>
       <h1>AI Windows Support Agent</h1>
-      <p className="muted">Workspace của bạn được bảo vệ bằng phiên đăng nhập.</p>
+      <p className="muted">{tx("Workspace của bạn được bảo vệ bằng phiên đăng nhập.")}</p>
 
-      {error && <div className="card error-text">{error}</div>}
+      {error && <div className="card error-text">{tx(error)}</div>}
 
       {tenant && (
         <div className="card">
@@ -53,18 +56,18 @@ export default function DashboardPage() {
           <hr className="divider" />
           <div className="row">
             <div>
-              <div>AI status: <span className={tenant.ai_enabled ? "badge badge-online" : "badge badge-offline"}>{tenant.ai_enabled ? "enabled" : "disabled"}</span></div>
-              <div className="muted">Disabling blocks every AI-initiated tool call at the policy engine.</div>
+              <div>{tx("AI status:")} <span className={tenant.ai_enabled ? "badge badge-online" : "badge badge-offline"}>{tenant.ai_enabled ? tx("enabled") : tx("disabled")}</span></div>
+              <div className="muted">{tx("Disabling blocks every AI-initiated tool call at the policy engine.")}</div>
             </div>
-            <button className={tenant.ai_enabled ? "danger" : "primary"} onClick={toggleAi}>{tenant.ai_enabled ? "Disable Tenant AI" : "Enable Tenant AI"}</button>
+            <button className={tenant.ai_enabled ? "danger" : "primary"} onClick={toggleAi}>{tenant.ai_enabled ? tx("Disable Tenant AI") : tx("Enable Tenant AI")}</button>
           </div>
           <hr className="divider" />
           <div className="row">
             <div>
-              <div>Computer-use autonomy: <span className={tenant.computer_use_autonomous_enabled ? "badge badge-online" : "badge badge-offline"}>{tenant.computer_use_autonomous_enabled ? "autonomous" : "per-action approval"}</span></div>
-              <div className="muted">Autonomous click/type actions run without pausing, except detected card numbers.</div>
+              <div>{tx("Computer-use autonomy:")} <span className={tenant.computer_use_autonomous_enabled ? "badge badge-online" : "badge badge-offline"}>{tenant.computer_use_autonomous_enabled ? tx("autonomous") : tx("per-action approval")}</span></div>
+              <div className="muted">{tx("Autonomous click/type actions run without pausing, except detected card numbers.")}</div>
             </div>
-            <button className={tenant.computer_use_autonomous_enabled ? "danger" : "primary"} onClick={toggleComputerUseAutonomous}>{tenant.computer_use_autonomous_enabled ? "Require approval for every action" : "Enable autonomous computer-use"}</button>
+            <button className={tenant.computer_use_autonomous_enabled ? "danger" : "primary"} onClick={toggleComputerUseAutonomous}>{tenant.computer_use_autonomous_enabled ? tx("Require approval for every action") : tx("Enable autonomous computer-use")}</button>
           </div>
         </div>
       )}

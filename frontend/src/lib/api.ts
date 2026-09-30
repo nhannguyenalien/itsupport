@@ -97,6 +97,7 @@ export interface Approval {
 }
 
 export interface TicketDetail extends Ticket {
+  aiWorkflow?: { status: "running" | "finished" | "failed"; stoppedBecause?: string } | null;
   computerUseSession: ComputerUseSession | null;
   messages: TicketMessage[];
   toolCalls: ToolCall[];
@@ -217,7 +218,7 @@ export const api = {
   // Bounded autonomous diagnostic workflow. It stops at approval boundaries,
   // completion, timeout, or its server-side safety step limit.
   runAiStep: (ticketId: string) =>
-    request<{ action: "message" | "tool_call_requested" | "no_op"; detail: string; steps: number; stoppedBecause: string }>(`/tickets/${ticketId}/ai-step`, {
+    request<{ status: "running" | "finished" | "failed"; stoppedBecause?: string }>(`/tickets/${ticketId}/ai-step`, {
       method: "POST",
       body: "{}",
     }),

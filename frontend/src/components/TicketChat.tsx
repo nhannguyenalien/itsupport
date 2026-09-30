@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/lib/i18n";
+
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ToolActivity } from "./ToolActivity";
 import { api, ApiError, type Approval, type TicketDetail } from "@/lib/api";
@@ -34,6 +36,7 @@ function friendlyError(value: unknown): string {
 }
 
 export default function TicketChat({ ticketId }: { ticketId: string }) {
+  const { tx, locale } = useLanguage();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -41,13 +44,15 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
   const [paused, setPaused] = useState(false);
   const advancing = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const [localBusy, setBusy] = useState(false);
+  const busy = localBusy || ticket?.aiWorkflow?.status === "running";
+  const [messageSaved, setMessageSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   async function load(silent = false) {
     try { setTicket(await api.getTicket(ticketId)); if (!silent) setError(null); }
-    catch (e) { if (!silent) setError(friendlyError(e)); }
+    catch (e) { setError(friendlyError(e)); }
   }
 
   useEffect(() => {
@@ -92,12 +97,12 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
     event.preventDefault();
     const body = message.trim();
     if ((!body && !file) || busy || sessionId) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setMessageSaved(false);
     let saved = false;
     try {
       const attachments = file ? [{ name: file.name, base64: await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Không đọc được tệp."));
+        reader.onerror = () => reject(new Error(tx("Không đọc được tệp.")));
         reader.onload = () => resolve(String(reader.result).split(",")[1]);
         reader.readAsDataURL(file);
       }) }] : [];
@@ -105,7 +110,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
       saved = true; setMessage(""); setFile(null); if (fileInput.current) fileInput.current.value = "";
       await load(true);
       await askAi();
-    } catch (e) { setError((saved ? "Tin nhắn đã lưu. Chọn Thử lại để tiếp tục xử lý. " : "") + friendlyError(e)); }
+    } catch (e) { setMessageSaved(saved); setError(friendlyError(e)); }
     finally { setBusy(false); }
   }
 
@@ -120,7 +125,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
     finally { setBusy(false); }
   }
 
-  if (!ticket) return <div className="support-loading">{error ?? "Đang mở cuộc trò chuyện…"}{error && <button onClick={() => void load()}>Thử lại</button>}</div>;
+  if (!ticket) return <div className="support-loading">{error ? tx(error) : tx("Đang mở cuộc trò chuyện…")}{error && <button onClick={() => void load()}>{tx("Thử lại")}</button>}</div>;
 
   const timeline = [
     ...ticket.messages.map((item) => ({ kind: "message" as const, item, at: item.created_at })),
@@ -128,6 +133,9 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
   ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const messages = ticket.messages;
   const approvals = ticket.approvals.filter((item) => item.status === "pending");
+  const workflowError = ticket.aiWorkflow?.status === "failed" ? "ai.failed" :
+    ["execution_timeout", "step_limit", "rejected"].includes(ticket.aiWorkflow?.stoppedBecause ?? "") ? "ai.incomplete" : null;
+  const displayError = error ?? workflowError;
   const isWorking = busy || (!!sessionId && !paused && approvals.length === 0);
 
   return (
@@ -135,48 +143,48 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
       <header className="support-chat-header">
         <div>
           <h1>{ticket.title}</h1>
-          <p><span className={`support-status-dot ${isWorking ? "working" : ""}`} />{isWorking ? "Đang xử lý yêu cầu…" : (statusText[ticket.status] ?? "Đang hỗ trợ")}</p>
+          <p><span className={`support-status-dot ${isWorking ? "working" : ""}`} />{isWorking ? tx("Đang xử lý yêu cầu…") : tx(statusText[ticket.status] ?? "Đang hỗ trợ")}</p>
         </div>
       </header>
 
       <main className="support-chat-messages" aria-live="polite">
-        {messages.length === 0 && <div className="support-welcome"><span>✦</span><h2>Xin chào, tôi có thể giúp gì cho bạn?</h2><p>Hãy mô tả vấn đề bằng lời bình thường. Tôi sẽ tự kiểm tra và chọn cách xử lý phù hợp.</p></div>}
+        {messages.length === 0 && <div className="support-welcome"><span>✦</span><h2>{tx("Xin chào, tôi có thể giúp gì cho bạn?")}</h2><p>{tx("Hãy mô tả vấn đề bằng lời bình thường. Tôi sẽ tự kiểm tra và chọn cách xử lý phù hợp.")}</p></div>}
         {timeline.map((event) => {
           if (event.kind === "tool") return <ToolActivity key={event.item.id} call={event.item} />;
           const item = event.item;
           return (
           <div key={item.id} className={`support-message ${item.author_type === "user" ? "from-user" : "from-support"}`}>
             {item.author_type !== "user" && <span className="support-avatar">✦</span>}
-            <div><p>{item.body}</p>{item.attachments?.map((attachment, index) => <details key={index}><summary>📎 {attachment.name} · {Math.ceil(attachment.size / 1024)} KB</summary><pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{attachment.text}</pre></details>)}<time>{new Date(item.created_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time></div>
+            <div><p>{item.body}</p>{item.attachments?.map((attachment, index) => <details key={index}><summary>📎 {attachment.name} · {Math.ceil(attachment.size / 1024)} {tx("KB")}</summary><pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{attachment.text}</pre></details>)}<time>{new Date(item.created_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</time></div>
           </div>
         ); })}
         {approvals.map((approval) => (
           <div key={approval.id} className="support-message from-support support-confirmation">
             <span className="support-avatar">✦</span>
-            <div><p>{approvalQuestion(approval)}</p>{approval.reasoning && <p>{approval.reasoning}</p>}<details><summary>Xem thao tác cụ thể: {approval.tool}</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(Object.fromEntries(Object.entries(approval.params).filter(([key]) => !key.startsWith("__"))), null, 2)}</pre></details><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>Đồng ý, tiếp tục</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>Không đồng ý</button></div></div>
+            <div><p>{tx(approvalQuestion(approval))}</p>{approval.reasoning && <p>{approval.reasoning}</p>}<details><summary>{tx("Xem thao tác cụ thể:")} {approval.tool}</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(Object.fromEntries(Object.entries(approval.params).filter(([key]) => !key.startsWith("__"))), null, 2)}</pre></details><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>{tx("Đồng ý, tiếp tục")}</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>{tx("Không đồng ý")}</button></div></div>
           </div>
         ))}
-        {isWorking && <div className="support-message from-support support-typing"><span className="support-avatar">✦</span><div><i /><i /><i /><span>Đang kiểm tra và xử lý…</span></div></div>}
+        {isWorking && <div className="support-message from-support support-typing"><span className="support-avatar">✦</span><div><i /><i /><i /><span>{tx("Đang kiểm tra và xử lý…")}</span></div></div>}
         <div ref={endRef} />
       </main>
 
-      {error && <div className="support-error">{error} <button disabled={busy} onClick={() => { setError(null); setPaused(false); setBusy(true); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>Thử lại</button></div>}
-      <details className="support-options"><summary>Tùy chọn · đính kèm & thao tác màn hình</summary><div className="support-chat-controls">
-        {sessionId ? <><span>{ticket.computerUseSession?.stop_requested ? "Đang dừng phiên…" : paused ? "Phiên màn hình đang tạm dừng do lỗi" : "Phiên web/màn hình đang mở"}</span><button type="button" onClick={() => void stopScreen()}>Dừng phiên</button><small>Thao tác đã gửi xuống máy có thể hoàn tất. Đóng trang sẽ tạm ngừng gửi bước tiếp theo.</small></> : <label><input type="checkbox" checked={screenMode} disabled={busy} onChange={(e) => setScreenMode(e.target.checked)} /> Thao tác web/màn hình trên máy đã kết nối</label>}
-        {!sessionId && <button type="button" disabled={busy || approvals.length > 0} onClick={() => { setBusy(true); setError(null); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>Tiếp tục hỗ trợ</button>}
-        <label>Đính kèm tài liệu <input ref={fileInput} type="file" accept=".pdf,.docx,.txt,.md" disabled={busy || !!sessionId} onChange={(e) => {
+      {displayError && <div className="support-error">{messageSaved && tx("Tin nhắn đã lưu. Chọn Thử lại để tiếp tục xử lý. ")}{tx(displayError)} <button disabled={busy} onClick={() => { setError(null); setPaused(false); setBusy(true); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>{tx("Thử lại")}</button></div>}
+      <details className="support-options"><summary>{tx("Tùy chọn · đính kèm & thao tác màn hình")}</summary><div className="support-chat-controls">
+        {sessionId ? <><span>{ticket.computerUseSession?.stop_requested ? tx("Đang dừng phiên…") : paused ? tx("Phiên màn hình đang tạm dừng do lỗi") : tx("Phiên web/màn hình đang mở")}</span><button type="button" onClick={() => void stopScreen()}>{tx("Dừng phiên")}</button><small>{tx("Thao tác đã gửi xuống máy có thể hoàn tất. Đóng trang sẽ tạm ngừng gửi bước tiếp theo.")}</small></> : <label><input type="checkbox" checked={screenMode} disabled={busy} onChange={(e) => setScreenMode(e.target.checked)} /> {tx("Thao tác web/màn hình trên máy đã kết nối")}</label>}
+        {!sessionId && <button type="button" disabled={busy || approvals.length > 0} onClick={() => { setBusy(true); setError(null); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>{tx("Tiếp tục hỗ trợ")}</button>}
+        <label>{tx("Đính kèm tài liệu")} <input ref={fileInput} type="file" accept=".pdf,.docx,.txt,.md" disabled={busy || !!sessionId} onChange={(e) => {
           const selected = e.target.files?.[0] ?? null;
           if (selected && selected.size > 5 * 1024 * 1024) { setError("Tệp không được vượt quá 5 MB."); e.target.value = ""; setFile(null); return; }
           setFile(selected);
         }} /></label>
-        {file && <button type="button" onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = ""; }}>Bỏ tệp</button>}
-        <small>PDF có chữ, DOCX, TXT, MD · tối đa 5 MB và 60.000 ký tự/tệp · nội dung được gửi cho AI để xử lý yêu cầu.</small>
+        {file && <button type="button" onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = ""; }}>{tx("Bỏ tệp")}</button>}
+        <small>{tx("PDF có chữ, DOCX, TXT, MD · tối đa 5 MB và 60.000 ký tự/tệp · nội dung được gửi cho AI để xử lý yêu cầu.")}</small>
       </div></details>
       <form className="support-composer" onSubmit={sendMessage}>
-        <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder="Nhập vấn đề bạn đang gặp…" rows={1} disabled={busy || approvals.length > 0 || !!sessionId} aria-label="Tin nhắn hỗ trợ" />
-        <button className="primary" type="submit" disabled={busy || approvals.length > 0 || !!sessionId || (!message.trim() && !file)} aria-label="Gửi tin nhắn">Gửi</button>
+        <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={tx("Nhập vấn đề bạn đang gặp…")} rows={1} disabled={busy || approvals.length > 0 || !!sessionId} aria-label={tx("Tin nhắn hỗ trợ")} />
+        <button className="primary" type="submit" disabled={busy || approvals.length > 0 || !!sessionId || (!message.trim() && !file)} aria-label={tx("Gửi tin nhắn")}>{tx("Gửi")}</button>
       </form>
-      <p className="support-hint">Nhấn Enter để gửi · Thao tác tuân theo quyền hỗ trợ của đơn vị · Không tự nhập mật khẩu hoặc mã OTP vào chat</p>
+      <p className="support-hint">{tx("Nhấn Enter để gửi · Thao tác tuân theo quyền hỗ trợ của đơn vị · Không tự nhập mật khẩu hoặc mã OTP vào chat")}</p>
     </section>
   );
 }

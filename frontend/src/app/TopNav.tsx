@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage, LanguageSwitcher } from "@/lib/i18n";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -13,8 +15,10 @@ import { auth } from "@/lib/firebase";
 // list). There's only one root layout in this app (no route-group split), so
 // this is a client-side pathname check rather than two separate layouts.
 export function TopNav() {
+  const { tx } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
+  if (pathname === "/devices" || pathname.endsWith("/customer")) return <div className="locale-toolbar"><LanguageSwitcher /></div>;
   if (pathname.startsWith("/tickets") || pathname === "/devices" || pathname === "/" || pathname === "/login" || pathname?.endsWith("/customer")) return null;
 
   async function logout() {
@@ -25,17 +29,18 @@ export function TopNav() {
 
   return (
     <nav className="topnav">
-      <Link href="/tickets" aria-current={pathname.startsWith("/tickets") ? "page" : undefined}>Hỗ trợ</Link>
-      <Link href="/devices" aria-current={pathname === "/devices" ? "page" : undefined}>Thiết bị</Link>
+      <Link href="/tickets" aria-current={pathname.startsWith("/tickets") ? "page" : undefined}>{tx("Hỗ trợ")}</Link>
+      <Link href="/devices" aria-current={pathname === "/devices" ? "page" : undefined}>{tx("Thiết bị")}</Link>
       <details className="nav-more" key={pathname}>
-        <summary>Thêm</summary>
+        <summary>{tx("Thêm")}</summary>
         <div className="nav-more-menu">
-          <Link href="/dashboard">Tổng quan</Link>
-          <Link href="/connections">Kết nối dịch vụ</Link>
-          <Link href="/metrics">Thống kê</Link>
+          <Link href="/dashboard">{tx("Tổng quan")}</Link>
+          <Link href="/connections">{tx("Kết nối dịch vụ")}</Link>
+          <Link href="/metrics">{tx("Thống kê")}</Link>
         </div>
       </details>
-      <button className="topnav-logout" onClick={logout}>Đăng xuất</button>
+      <LanguageSwitcher />
+      <button className="topnav-logout" onClick={logout}>{tx("Đăng xuất")}</button>
     </nav>
   );
 }
