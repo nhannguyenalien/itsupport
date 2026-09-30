@@ -15,7 +15,7 @@ import { auth } from "@/lib/firebase";
 export function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  if (pathname === "/" || pathname === "/login" || pathname?.endsWith("/customer")) return null;
+  if (pathname.startsWith("/tickets") || pathname === "/devices" || pathname === "/" || pathname === "/login" || pathname?.endsWith("/customer")) return null;
 
   async function logout() {
     await signOut(auth);
