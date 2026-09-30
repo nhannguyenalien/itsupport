@@ -17,7 +17,7 @@ export function startWorkflowJob(ticketId: string, run: () => Promise<AiWorkflow
   jobs.set(ticketId, state);
   void (async () => {
     try {
-      const deadline = Date.now() + 120_000;
+      const deadline = Date.now() + 15 * 60_000;
       let result: AiWorkflowResult;
       do { result = await run(); }
       while (result.stoppedBecause === "execution_timeout" && Date.now() < deadline);

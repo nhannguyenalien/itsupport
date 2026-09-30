@@ -34,3 +34,19 @@ for (const state of ['RUNNING', 'STOPPED']) {
     } finally { mock.restoreAll(); }
   });
 }
+
+for (const installed of [true, false]) {
+  test(`package verification checks installed state: ${installed}`, async () => {
+    let verdict: unknown;
+    mock.method(pool, 'query', async (sql: string, params?: unknown[]) => {
+      if (sql.startsWith('SELECT *')) return { rowCount: 1, rows: [{ tool: 'package.status', parent_tool_call_id: 'parent' }] };
+      if (sql.startsWith('SELECT tool, result')) return { rowCount: 1, rows: [{ tool: 'package.status', result: 'success', result_data: { installed } }] };
+      if (sql.includes('SET verification_status = $1')) verdict = params?.[0];
+      return { rowCount: 1, rows: [] };
+    });
+    try {
+      await recordToolCallResult('child', { result: 'success', resultData: { installed } }, 'tenant');
+      assert.equal(verdict, installed ? 'passed' : 'failed');
+    } finally { mock.restoreAll(); }
+  });
+}

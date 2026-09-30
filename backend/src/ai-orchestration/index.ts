@@ -28,8 +28,10 @@ function getClient(): OpenAI {
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
-const SYSTEM_PROMPT = `You are an AI operations agent — either an AI Windows, macOS or Linux support agent diagnosing a
-real Windows machine, or an AI marketing operations agent diagnosing an ads/tracking/analytics/CRM
+const SYSTEM_PROMPT = `
+Linux package and temperature tools: system.temperature reads real CPU/hardware sensors without installing dependencies. Use it for CPU temperature requests, not system.info. package.status checks package_name on Debian/Ubuntu/Proxmox. When the user requests installing a package, check status then call package.install with one exact repository package_name (e.g. lm-sensors). Installation ALWAYS requires human approval; explain the package purpose and that dependencies may also be installed. Never claim installation is unsupported on these Linux systems. Do not repeat pending installation proposals. After approval wait for installation and verification, then call system.temperature for a temperature request. No arbitrary shell, URLs, package removal, or system upgrade. If sensors are unavailable, report that explicitly; installing a package does not guarantee hardware sensor support.
+You are an AI operations agent — either an AI Windows, macOS or Linux support agent diagnosing a
+real client machine, or an AI marketing operations agent diagnosing an ads/tracking/analytics/CRM
 account — using ONLY the tools provided to you for this ticket's target (shown below). You have no other
 way to observe or affect it. Never claim something is fixed without verifying it: after any
 state-changing tool call succeeds, the platform automatically re-checks the result via that tool's
@@ -69,7 +71,7 @@ Rules:
 
 const DARWIN_AGENT_TOOLS = new Set(["disk.usage", "process.list", "temp.scan"]);
 
-const LINUX_AGENT_TOOLS = new Set(["disk.usage", "system.info", "process.list", "service.status", "service.restart"]);
+const LINUX_AGENT_TOOLS = new Set(["disk.usage", "system.info", "process.list", "service.status", "service.restart", "package.status", "package.install", "system.temperature"]);
 
 function deviceSupportsTool(platform: string, tool: string): boolean {
   const normalizedPlatform = platform.toLowerCase();
@@ -78,7 +80,7 @@ function deviceSupportsTool(platform: string, tool: string): boolean {
   // Unknown/legacy Windows version strings are intentionally treated as Windows
   // so an older enrolled device is not silently stripped of its capabilities.
   if (normalizedPlatform === "linux") return LINUX_AGENT_TOOLS.has(tool);
-  return true;
+  return !["package.status", "package.install", "system.temperature"].includes(tool);
 }
 
 // Either a Windows device or a v0.2 marketing platform connection — exactly
@@ -370,6 +372,7 @@ async function queueExplicitReadChecks(ticketId: string): Promise<void> {
   if (!ctx?.target.device) return;
   const latestUserMessage = [...ctx.messages].reverse().find((message) => message.author_type === "user")?.body ?? "";
   const requested = [
+    { tool: "system.temperature", pattern: /nhiệt\s*độ|nhiet\s*do|temperature|thermal/i },
     { tool: "disk.usage", pattern: /dung\s*lượng|ổ\s*đĩa|disk\s*(?:space|usage)/i },
     { tool: "system.info", pattern: /quá\s*tải|qua\s*tai|\bcpu\b|\bram\b|bộ\s*nhớ|overload|memory|system\s*(?:load|info)|load\s*average/i },
     { tool: "process.list", pattern: /tiến\s*trình|process(?:es)?/i },

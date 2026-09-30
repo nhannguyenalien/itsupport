@@ -2,6 +2,9 @@
   "_comment": "Executable source of truth for allowlisted tools. Both backend policy engine and agent executor must treat this file (or the agent's compiled equivalent, see agent/internal/tools) as authoritative. Only `service.restart` risk level came directly from the spec message (given as a literal example); every other risk assignment below is inferred and should be confirmed, not assumed correct. See docs/v0.1-spec.md for the 11-vs-12 read-only tool discrepancy still open. MARKETING OPS (v0.2, below the windows tools) — docs/v0.2-marketing-ops-spec.md, MVP ~39-tool cut not the full 12-group list. ads.budget.update's risk is NOT looked up statically like every other tool here — policy-engine/index.ts special-cases it and computes risk from the requested %/absolute change against the tenant's budget_auto_pct_limit/budget_approval_pct_limit (see schema.sql tenants columns). Payment/billing/add-card/delete-account are deliberately absent from this file entirely — spec section 12 says those must never be offered to the AI at all, not even as a rejectable tool call.",
   "version": 1,
   "tools": [
+    { "tool": "package.status", "risk": "read", "params": ["package_name"], "verification": [], "domain": "linux" },
+    { "tool": "package.install", "risk": "high", "params": ["package_name"], "verification": ["package.status"], "domain": "linux" },
+    { "tool": "system.temperature", "risk": "read", "params": [], "verification": [], "domain": "linux" },
     { "tool": "service.status",        "risk": "read", "params": ["service_name"], "verification": [] },
     { "tool": "process.list",          "risk": "read", "params": [], "verification": [] },
     { "tool": "network.ping",          "risk": "read", "params": ["target"], "verification": [] },

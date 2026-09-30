@@ -41,7 +41,8 @@ async function maybeFinalizeVerification(parentId: string) {
   if (!allReported) return;
 
   const allPassed = children.rows.every((r) => r.result === "success" &&
-    (r.tool !== "service.status" || r.result_data?.state === "RUNNING"));
+    (r.tool !== "service.status" || r.result_data?.state === "RUNNING") &&
+    (r.tool !== "package.status" || r.result_data?.installed === true));
   await pool.query(`UPDATE tool_calls SET verification_status = $1 WHERE id = $2`, [allPassed ? "passed" : "failed", parentId]);
 }
 

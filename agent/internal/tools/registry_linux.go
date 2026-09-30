@@ -4,6 +4,9 @@ package tools
 
 // Linux diagnostics use native read-only interfaces; desktop entries remain legacy.
 var Allowlist = map[string]Definition{
+	"package.status":       {Fn: PackageStatus, Risk: RiskRead},
+	"package.install":      {Fn: PackageInstall, Risk: RiskHigh},
+	"system.temperature":   {Fn: SystemTemperature, Risk: RiskRead},
 	"process.list":         {Fn: ProcessList, Risk: RiskRead},
 	"service.status":       {Fn: ServiceStatus, Risk: RiskRead},
 	"service.restart":      {Fn: ServiceRestart, Risk: RiskMedium},

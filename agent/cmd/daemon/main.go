@@ -139,7 +139,11 @@ func callExecutor(httpClient *http.Client, addr, secret string, call transport.P
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Signature", ipc.Sign([]byte(secret), body))
 
-	resp, err := httpClient.Do(httpReq)
+	client := *httpClient
+	if call.Tool == "package.install" {
+		client.Timeout = 12 * time.Minute
+	}
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		return ipc.ExecuteResponse{ToolCallID: call.ID, Success: false, Error: "executor unreachable: " + err.Error()}
 	}

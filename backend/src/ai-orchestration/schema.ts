@@ -45,7 +45,7 @@ export function toolToOpenAiFunction(tool: ToolDefinition): OpenAI.Chat.Completi
     type: "function",
     function: {
       name: toOpenAiToolName(tool.tool),
-      description: `Risk level: ${tool.risk}. ${
+      description: `${tool.tool === "package.install" ? "Install one named package and dependencies from configured apt repositories on Debian/Ubuntu/Proxmox. ALWAYS requires explicit human approval, including with autonomy enabled. " : tool.tool === "system.temperature" ? "Read actual Linux hardware sensor temperatures in Celsius, identifying CPU sensors. No package installation required. " : tool.tool === "package.status" ? "Check whether a named Debian/Ubuntu/Proxmox package is installed and its version. " : ""}Risk level: ${tool.risk}. ${
         tool.risk === "read"
           ? "Read-only, executes immediately."
           : "State-changing — will be held for human approval before running unless the tenant has opted into autonomous low-risk remediation."

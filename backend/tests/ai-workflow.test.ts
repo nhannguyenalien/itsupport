@@ -68,7 +68,7 @@ test('completed read tools are excluded for this request, but a new user request
     assert.equal(requests[1].tools.length, requests[0].tools.length + 1);
     platform = 'linux';
     await runAiStep('ticket');
-    assert.deepEqual(names(requests[2]).sort(), ['disk-usage', 'system-info', 'process-list', 'service-status', 'service-restart'].sort());
+    assert.deepEqual(names(requests[2]).sort(), ['disk-usage', 'system-info', 'process-list', 'service-status', 'service-restart', 'package-status', 'package-install', 'system-temperature'].sort());
     assert.match(requests[2].messages[0].content, /Load average is not CPU percent/);
   } finally {
     mock.restoreAll();

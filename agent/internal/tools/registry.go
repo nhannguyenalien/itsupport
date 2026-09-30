@@ -8,6 +8,9 @@ package tools
 // two registries in sync by hand for v0.1; consider codegen from registry.json
 // once both sides stabilize.
 var KnownTools = map[string]Risk{
+	"package.status":     RiskRead,
+	"package.install":    RiskHigh,
+	"system.temperature": RiskRead,
 	"service.status":     RiskRead,
 	"process.list":       RiskRead,
 	"network.ping":       RiskRead,
