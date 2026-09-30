@@ -332,5 +332,6 @@
   "remote.loading": "Chargement…",
   "remote.notReady": "Cet appareil n’est pas prêt. Relancez le programme d’installation pour le connecter automatiquement.",
   "remote.enabledHint": "Un technicien peut demander le contrôle du bureau et exécuter des commandes pendant 60 minutes. Désactivez pour révoquer cet accès.",
-  "remote.disabledHint": "Activez pour une assistance sur le bureau ou le terminal. Vous devez aussi accepter l’accès sur votre appareil."
+  "remote.disabledHint": "Activez pour une assistance sur le bureau ou le terminal. Vous devez aussi accepter l’accès sur votre appareil.",
+  "linux.installHint": "Linux x64/ARM64 avec systemd. Nécessite bash, curl, Python 3 et sudo. Le bureau distant dépend de l’environnement graphique ; les outils IA prennent uniquement en charge X11."
 }

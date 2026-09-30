@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $(uname -s) == Linux ]] || { echo 'This installer requires Linux.' >&2; exit 1; }
+TOKEN="${1:-${SUPPORT_ENROLL_TOKEN:-}}"
+[[ -n "$TOKEN" ]] || { echo 'Create a new installation command in Devices.' >&2; exit 1; }
+REENROLL_ARGS=()
+case "${2:-}" in --force-re-enroll) REENROLL_ARGS=(--force-re-enroll);; '') ;; *) exit 2;; esac
+for tool in curl python3 systemctl; do command -v "$tool" >/dev/null || { echo "Install $tool first." >&2; exit 1; }; done
+[[ -d /run/systemd/system ]] || { echo 'A running systemd installation is required.' >&2; exit 1; }
+case "$(uname -m)" in x86_64) ARCH=amd64;; aarch64|arm64) ARCH=arm64;; *) echo 'Supported architectures: x64, ARM64.' >&2; exit 1;; esac
+if (( EUID != 0 )); then sudo -v; fi
+BASE=https://itsupport.schoolsai.work/downloads/agent
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+for binary in enroll daemon telemetry executor; do
+  curl --proto '=https' --tlsv1.2 -fsSL "$BASE/linux-$ARCH/$binary" -o "$WORK_DIR/$binary"
+  chmod 700 "$WORK_DIR/$binary"
+done
+curl --proto '=https' --tlsv1.2 -fsSL "$BASE/install-linux-service" -o "$WORK_DIR/install-linux.sh"
+if (( EUID == 0 )); then
+  bash "$WORK_DIR/install-linux.sh" --backend https://itsupport.schoolsai.work/api --token "$TOKEN" "${REENROLL_ARGS[@]}"
+else
+  sudo bash "$WORK_DIR/install-linux.sh" --backend https://itsupport.schoolsai.work/api --token "$TOKEN" "${REENROLL_ARGS[@]}"
+fi

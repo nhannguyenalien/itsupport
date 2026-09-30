@@ -62,3 +62,9 @@ jobs:
       - run: go test ./...
       - name: build + vet for the real target (windows/amd64)
         run: GOOS=windows GOARCH=amd64 go build ./... && GOOS=windows GOARCH=amd64 go vet ./...
+      - name: Linux ARM64 build and installer checks
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
+          bash -n install/install-linux.sh ../frontend/public/downloads/agent/install-linux
+          cmp install/install-linux.sh ../frontend/public/downloads/agent/install-linux-service
+          python3 -m unittest discover -s install/tests -v

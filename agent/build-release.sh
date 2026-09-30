@@ -16,6 +16,13 @@ for command in enroll daemon telemetry executor; do
   (cd "$AGENT_DIR" && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$OUTPUT_DIR/windows-amd64/$command.exe" "./cmd/$command")
 done
 
+for arch in amd64 arm64; do
+  mkdir -p "$OUTPUT_DIR/linux-$arch"
+  for command in enroll daemon telemetry executor; do
+    (cd "$AGENT_DIR" && CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath -ldflags="-s -w" -o "$OUTPUT_DIR/linux-$arch/$command" "./cmd/$command")
+  done
+done
+cp "$AGENT_DIR/install/install-linux.sh" "$OUTPUT_DIR/install-linux-service"
 cp "$AGENT_DIR/install/install-macos.sh" "$OUTPUT_DIR/install-macos-service"
 cp "$AGENT_DIR/install/install.ps1" "$OUTPUT_DIR/install-windows-service"
 chmod 755 "$OUTPUT_DIR/install-macos" "$OUTPUT_DIR/install-macos-service" "$OUTPUT_DIR/darwin-"*/{enroll,daemon,telemetry,executor}

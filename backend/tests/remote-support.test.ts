@@ -129,3 +129,18 @@ for (const role of ['member', 'technician', 'admin']) test(`${role} can enable a
     assert.equal((await toggle(false)).statusCode, 200); assert.equal(removes, 1);
   } finally { await app.close(); mock.restoreAll(); }
 });
+
+test('Linux downloads select the correct architecture and tenant settings', () => {
+  process.env.MESHCENTRAL_URL = 'https://mesh.example.test';
+  const group = '@$' + 'A'.repeat(62);
+  process.env.MESHCENTRAL_TENANT_GROUPS = JSON.stringify({ [tenant]: group });
+  for (const [arch, id] of [['amd64', '6'], ['arm64', '26']] as const) {
+    const config = remoteInstall(tenant, 'linux', arch)!;
+    assert.equal(new URL(config.url).searchParams.get('id'), id);
+    assert.equal(new URL(config.settingsUrl).searchParams.get('id'), group);
+    assert.equal(new URL(config.settingsUrl).origin, 'https://mesh.example.test');
+    assert.equal(remoteInstall(device, 'linux', arch), null);
+  }
+  assert.throws(() => remoteInstall(tenant, 'linux'), /architecture/);
+  assert.throws(() => remoteInstall(tenant, 'unknown'), /Unsupported/);
+});

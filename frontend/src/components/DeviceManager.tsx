@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
 import { api, type Device, type EnrollmentToken } from "@/lib/api";
 
-type Platform = "windows" | "mac";
+type Platform = "windows" | "mac" | "linux";
 
 const PUBLIC_URL = "https://itsupport.schoolsai.work";
 
@@ -29,6 +29,9 @@ export default function DevicesPage() {
 
   const installCommand = useMemo(() => {
     if (!enrollment) return "";
+    if (platform === "linux") {
+      return `curl -fsSL ${PUBLIC_URL}/downloads/agent/install-linux | bash -s -- '${enrollment.token}'${reconnect ? ' --force-re-enroll' : ''}`;
+    }
     if (platform === "mac") {
       return `curl -fsSL ${PUBLIC_URL}/downloads/agent/install-macos | /bin/zsh -s -- '${enrollment.token}'${reconnect ? ' --force-re-enroll' : ''}`;
     }
@@ -47,6 +50,7 @@ export default function DevicesPage() {
 
   useEffect(() => {
     if (/Mac/i.test(navigator.platform)) setPlatform("mac");
+    else if (/Linux/i.test(navigator.platform)) setPlatform("linux");
     load();
     // Poll — no push/websocket layer yet, matches the agent's own poll-based
     // pending-call model (see agent/README.md known gaps).
@@ -112,8 +116,10 @@ export default function DevicesPage() {
           <div className="platform-tabs">
             <button className={platform === "windows" ? "active" : ""} onClick={() => { setPlatform("windows"); setEnrollment(null); }}>Windows</button>
             <button className={platform === "mac" ? "active" : ""} onClick={() => { setPlatform("mac"); setEnrollment(null); }}>macOS</button>
+            <button className={platform === "linux" ? "active" : ""} onClick={() => { setPlatform("linux"); setEnrollment(null); }}>Linux</button>
           </div>
-          {platform === "mac" && <label className="reconnect-option"><input type="checkbox" checked={reconnect} onChange={(e) => setReconnect(e.target.checked)} /> {tx("Máy đã cài nhưng không xuất hiện? Đăng ký lại vào workspace này.")}</label>}
+          {platform === "linux" && <p className="muted">{tx("linux.installHint")}</p>}
+          {platform !== "windows" && <label className="reconnect-option"><input type="checkbox" checked={reconnect} onChange={(e) => setReconnect(e.target.checked)} /> {tx("Máy đã cài nhưng không xuất hiện? Đăng ký lại vào workspace này.")}</label>}
           {!enrollment ? (
             <div className="installer-start">
               <p>{tx("Nhấn nút dưới đây để tạo lệnh cài dùng một lần. Mã tự hết hạn sau 10 phút.")}</p>

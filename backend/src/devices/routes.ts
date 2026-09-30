@@ -21,8 +21,10 @@ export async function deviceRoutes(app: FastifyInstance) {
       `SELECT platform FROM devices WHERE id = $1 AND cert_revoked_at IS NULL`, [deviceId]);
     const platform = result.rows[0]?.platform;
     if (!platform) return reply.code(404).send({ error: "device unavailable" });
-    if (!["mac", "windows"].includes(platform)) return reply.code(400).send({ error: "unsupported platform" });
-    const config = remoteInstall(req.agentTenantId, platform);
+    if (!["mac", "windows", "linux"].includes(platform)) return reply.code(400).send({ error: "unsupported platform" });
+    const { arch } = z.object({ arch: z.enum(["amd64", "arm64"]).optional() }).parse(req.query);
+    if (platform === "linux" && !arch) return reply.code(400).send({ error: "Linux architecture required" });
+    const config = remoteInstall(req.agentTenantId, platform, arch);
     if (!config) return reply.code(503).send({ error: "Remote support is not configured for this workspace" });
     return reply.header("Cache-Control", "no-store").send(config);
   });

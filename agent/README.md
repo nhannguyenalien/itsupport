@@ -140,3 +140,33 @@ export AGENT_IPC_SECRET="<shared secret, same value for daemon and executor>"
   interactive-mode smoke test, never against a real Windows SCM (no Windows
   machine available in this environment). The IPC secret being machine-wide
   rather than per-service is a known, flagged simplification, not an oversight.
+
+### Linux installation
+
+In **Devices → Add device → Linux**, generate the one-time command and run it
+on the Linux machine. Supports x86-64 and ARM64 distributions with systemd,
+`bash`, `curl`, Python 3, CA certificates and root/sudo access. Containers without
+systemd, 32-bit systems and non-systemd distributions are not supported.
+
+The installer enrolls the machine, starts the executor/daemon/telemetry systemd
+services, installs the official Mesh Agent for the matching architecture, and
+registers its node with the authenticated workspace. Re-running preserves device
+identity; select re-enrollment only when deliberately changing the registration.
+An existing Mesh Agent belonging to another group/server is rejected.
+
+Support Agent binaries: `/opt/itsupport-agent`; credentials and IPC environment:
+`/etc/itsupport-agent` (root only). Services: `itsupport-executor`,
+`itsupport-daemon`, `itsupport-telemetry`. Agent application logs are also written
+under `/etc/itsupport-agent`. Mesh Agent uses `meshagent.service`.
+
+Remote access uses the existing chat support ON/OFF and session consent controls.
+An unattended/headless machine may not be able to display the local consent
+prompt; this installer does not bypass consent. Desktop control depends on the
+Linux desktop/session. The existing AI X11 tools require a user graphical session
+and are not enabled by this root system service; Wayland automation and Linux IT
+repair tools are not implemented by this onboarding change.
+
+Build both Linux architectures with `agent/build-release.sh`. Publish the ignored
+`frontend/public/downloads/agent/linux-{amd64,arm64}` directories to the deployment
+checkout before rebuilding the frontend image; bootstrap and service scripts are
+tracked in Git. Verify public downloads before directing customers to install.
