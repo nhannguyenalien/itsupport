@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
 import { api, type Device, type EnrollmentToken } from "@/lib/api";
@@ -9,6 +10,10 @@ type Platform = "windows" | "mac";
 const PUBLIC_URL = "https://itsupport.schoolsai.work";
 
 export default function DevicesPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [chatDevice, setChatDevice] = useState<string | null>(null);
+  const [reconnect, setReconnect] = useState(false);
   const { tenantId, ready } = useTenant();
   const [devices, setDevices] = useState<Device[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -21,21 +26,23 @@ export default function DevicesPage() {
   const installCommand = useMemo(() => {
     if (!enrollment) return "";
     if (platform === "mac") {
-      return `curl -fsSL ${PUBLIC_URL}/downloads/agent/install-macos | /bin/zsh -s -- '${enrollment.token}'`;
+      return `curl -fsSL ${PUBLIC_URL}/downloads/agent/install-macos | /bin/zsh -s -- '${enrollment.token}'${reconnect ? ' --force-re-enroll' : ''}`;
     }
     return `$env:SUPPORT_ENROLL_TOKEN='${enrollment.token}'; irm '${PUBLIC_URL}/downloads/agent/install-windows' | iex`;
-  }, [enrollment, platform]);
+  }, [enrollment, platform, reconnect]);
 
   async function load() {
     if (!tenantId) return;
     try {
       setDevices(await api.listDevices(tenantId));
+      setError(null);
     } catch (e) {
       setError(String(e));
-    }
+    } finally { setLoading(false); }
   }
 
   useEffect(() => {
+    if (/Mac/i.test(navigator.platform)) setPlatform("mac");
     load();
     // Poll — no push/websocket layer yet, matches the agent's own poll-based
     // pending-call model (see agent/README.md known gaps).
@@ -44,8 +51,8 @@ export default function DevicesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  if (!ready) return null;
-  if (!tenantId) return <p>Select a tenant on the Home page first.</p>;
+  if (!ready) return <p>Đang tải thiết bị…</p>;
+  if (!tenantId) return <p>Vui lòng đăng nhập để xem thiết bị.</p>;
 
   async function act(action: () => Promise<unknown>) {
     setError(null);
@@ -71,6 +78,15 @@ export default function DevicesPage() {
     }
   }
 
+  async function openChat(device: Device) {
+    if (!tenantId || chatDevice) return;
+    setChatDevice(device.id); setError(null);
+    try {
+      const ticket = await api.createTicket({ tenantId, deviceId: device.id, title: `Hỗ trợ ${device.hostname}` });
+      router.push(`/tickets/${ticket.id}`);
+    } catch (e) { setError(String(e)); setChatDevice(null); }
+  }
+
   async function copyCommand() {
     await navigator.clipboard.writeText(installCommand);
     setCopied(true);
@@ -93,6 +109,7 @@ export default function DevicesPage() {
             <button className={platform === "windows" ? "active" : ""} onClick={() => { setPlatform("windows"); setEnrollment(null); }}>Windows</button>
             <button className={platform === "mac" ? "active" : ""} onClick={() => { setPlatform("mac"); setEnrollment(null); }}>macOS</button>
           </div>
+          {platform === "mac" && <label className="reconnect-option"><input type="checkbox" checked={reconnect} onChange={(e) => setReconnect(e.target.checked)} /> Máy đã cài nhưng không xuất hiện? Đăng ký lại vào workspace này.</label>}
           {!enrollment ? (
             <div className="installer-start">
               <p>Nhấn nút dưới đây để tạo lệnh cài dùng một lần. Mã tự hết hạn sau 10 phút.</p>
@@ -115,22 +132,25 @@ export default function DevicesPage() {
           )}
         </div>
       )}
-      {devices.length === 0 && <p className="muted">Chưa có thiết bị. Nhấn “Thêm máy” để bắt đầu.</p>}
+      {loading && <p className="muted">Đang kiểm tra kết nối…</p>}
+      {!loading && !error && devices.length === 0 && <p className="muted">Chưa có thiết bị. Nhấn “Thêm máy” để bắt đầu.</p>}
       {devices.map((d) => (
         <div className="card" key={d.id}>
           <div className="row">
             <div>
               <strong>{d.hostname}</strong>{" "}
-              <span className={d.status === "online" ? "badge badge-online" : "badge badge-offline"}>{d.status}</span>
-              {d.actions_paused && <span className="badge badge-risk-medium" style={{ marginLeft: 6 }}>paused</span>}
-              {d.revoked && <span className="badge badge-risk-high" style={{ marginLeft: 6 }}>revoked</span>}
+              <span className={d.status === "online" ? "badge badge-online" : "badge badge-offline"}>{d.status === "online" ? "Đang kết nối" : "Ngoại tuyến"}</span>
+              {d.actions_paused && <span className="badge badge-risk-medium" style={{ marginLeft: 6 }}>Tạm dừng</span>}
+              {d.revoked && <span className="badge badge-risk-high" style={{ marginLeft: 6 }}>Đã thu hồi</span>}
               <div className="muted">
                 {d.os_version ?? "Không rõ hệ điều hành"} · agent {d.agent_version ?? "không rõ"} · hoạt động lần cuối{" "}
                 {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString() : "chưa có"}
               </div>
-              <div className="muted">{d.id}</div>
+
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="primary" disabled={d.revoked || d.status !== "online" || !!chatDevice} onClick={() => void openChat(d)}>{chatDevice === d.id ? "Đang mở…" : "Chat hỗ trợ"}</button>
+              <details><summary>Quản lý</summary>
               {!d.actions_paused ? (
                 <button onClick={() => act(() => api.pauseDevice(d.id))}>Tạm dừng</button>
               ) : (
@@ -139,6 +159,7 @@ export default function DevicesPage() {
               <button className="danger" disabled={d.revoked} onClick={() => act(() => api.revokeDevice(d.id))}>
                 Thu hồi
               </button>
+              </details>
             </div>
           </div>
         </div>

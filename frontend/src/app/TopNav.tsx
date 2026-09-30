@@ -25,11 +25,16 @@ export function TopNav() {
 
   return (
     <nav className="topnav">
-      <Link href="/dashboard">Dashboard</Link>
-      <Link href="/devices">Devices</Link>
-      <Link href="/connections">Connections</Link>
-      <Link href="/tickets">Tickets</Link>
-      <Link href="/metrics">Metrics</Link>
+      <Link href="/tickets" aria-current={pathname.startsWith("/tickets") ? "page" : undefined}>Hỗ trợ</Link>
+      <Link href="/devices" aria-current={pathname === "/devices" ? "page" : undefined}>Thiết bị</Link>
+      <details className="nav-more" key={pathname}>
+        <summary>Thêm</summary>
+        <div className="nav-more-menu">
+          <Link href="/dashboard">Tổng quan</Link>
+          <Link href="/connections">Kết nối dịch vụ</Link>
+          <Link href="/metrics">Thống kê</Link>
+        </div>
+      </details>
       <button className="topnav-logout" onClick={logout}>Đăng xuất</button>
     </nav>
   );

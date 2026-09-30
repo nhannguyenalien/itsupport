@@ -7,6 +7,7 @@ body {
 }
 .topnav {
   display: flex;
+  align-items: center;
   gap: 1.5rem;
   padding: 1rem 1.5rem;
   background: #111827;
@@ -315,3 +316,13 @@ input, select {
 .support-chat-controls small { flex-basis: 100%; color: #64748b; }
 .support-message details { margin: .5rem 0; max-width: 100%; }
 .support-message summary { cursor: pointer; overflow-wrap: anywhere; }
+
+.topnav a[aria-current="page"] { color: #93c5fd; font-weight: 700; }
+.nav-more { position: relative; }
+.nav-more summary { cursor: pointer; padding: .5rem; }
+.nav-more-menu { position: absolute; top: 100%; left: 0; min-width: 180px; padding: .5rem; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px #0f172a18; z-index: 30; }
+.topnav .nav-more-menu a { color: #1f2937; display: block; padding: .65rem; }
+.reconnect-option { display: flex; align-items: center; gap: .6rem; margin: 1rem 0; font-size: .9rem; }
+.reconnect-option input { width: auto; }
+
+@media (max-width: 620px) { .topnav { gap: .8rem; padding: .75rem; } .row { flex-wrap: wrap; } }

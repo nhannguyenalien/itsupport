@@ -4,6 +4,13 @@ set -euo pipefail
 TOKEN="${1:-${SUPPORT_ENROLL_TOKEN:-}}"
 [[ -n "$TOKEN" ]] || { echo "Lệnh cài không hợp lệ hoặc đã thiếu mã. Hãy tạo lại trong trang Thiết bị." >&2; exit 1; }
 
+REENROLL_ARGS=()
+case "${2:-}" in
+  --force-re-enroll) REENROLL_ARGS=(--force-re-enroll) ;;
+  "") ;;
+  *) echo "Tùy chọn không hợp lệ." >&2; exit 2 ;;
+esac
+
 BASE_URL="https://itsupport.schoolsai.work/downloads/agent"
 case "$(uname -m)" in
   arm64) PACKAGE="darwin-arm64" ;;
@@ -20,5 +27,5 @@ for file in enroll daemon telemetry executor; do
 done
 curl -fsSL "$BASE_URL/install-macos-service" -o "$WORK_DIR/install-macos.sh"
 chmod 700 "$WORK_DIR/install-macos.sh"
-"$WORK_DIR/install-macos.sh" --backend "https://itsupport.schoolsai.work/api" --token "$TOKEN"
+"$WORK_DIR/install-macos.sh" --backend "https://itsupport.schoolsai.work/api" --token "$TOKEN" "${REENROLL_ARGS[@]}"
 echo "Hoàn tất. Bạn có thể đóng Terminal."

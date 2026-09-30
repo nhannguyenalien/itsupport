@@ -48,9 +48,13 @@ fi
 
 if (( needs_enrollment )); then
   [[ -n "$BACKEND_URL" && -n "$ENROLLMENT_TOKEN" ]] || { echo "Enrollment required: pass --backend and --token" >&2; exit 1; }
+  if [[ -f "$CONFIG_PATH" ]]; then
+    cp "$CONFIG_PATH" "$CONFIG_PATH.before-reenroll.bak"
+    chmod 600 "$CONFIG_PATH.before-reenroll.bak"
+  fi
   "$INSTALL_DIR/enroll" -backend "$BACKEND_URL" -token "$ENROLLMENT_TOKEN" -config "$CONFIG_PATH"
 else
-  echo "Current config contains an agent token; keeping device identity."
+  echo "Giữ đăng ký máy hiện có. Nếu máy không xuất hiện trên web, chọn Đăng ký lại trong trang Thiết bị để liên kết đúng workspace."
 fi
 
 IPC_SECRET_FILE="$INSTALL_DIR/ipc-secret"
@@ -85,4 +89,20 @@ write_plist work.schoolsai.itsupport.daemon daemon
 write_plist work.schoolsai.itsupport.telemetry telemetry
 
 echo "Installed. Check with: launchctl print gui/$(id -u)/work.schoolsai.itsupport.telemetry"
-echo "Logs: $LOG_DIR"
+echo "Logs: $HOME/Library/Application Support/support-agent"
+echo "Đang xác minh kết nối…"
+/usr/bin/python3 - "$CONFIG_PATH" <<'PYTHON'
+import json, subprocess, sys
+with open(sys.argv[1]) as f:
+    config = json.load(f)
+result = subprocess.run([
+    '/usr/bin/curl', '-sS', '--max-time', '20', '--fail-with-body',
+    '-H', 'Authorization: Bearer ' + config['agentToken'],
+    '-H', 'Content-Type: application/json', '-d', '{}',
+    config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId'] + '/heartbeat',
+], capture_output=True, text=True)
+if result.returncode:
+    print('Đã cài nhưng chưa kết nối được. Kiểm tra mạng và nhật ký agent rồi thử lại.', file=sys.stderr)
+    sys.exit(1)
+print('Đã xác minh máy gửi heartbeat thành công.')
+PYTHON

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTenant } from "@/lib/useTenant";
 import { api, type Ticket, type Device, type PlatformConnection } from "@/lib/api";
 
@@ -17,6 +18,9 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function TicketsPage() {
+  const router = useRouter();
+  const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { tenantId, ready } = useTenant();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -30,15 +34,15 @@ export default function TicketsPage() {
   async function load() {
     if (!tenantId) return;
     try {
-      const [t, d, c] = await Promise.all([api.listTickets(tenantId), api.listDevices(tenantId), api.listPlatformConnections(tenantId)]);
+      const [t, d] = await Promise.all([api.listTickets(tenantId), api.listDevices(tenantId)]);
       setTickets(t);
-      setDevices(d);
-      setConnections(c);
-      if (!deviceId && d[0]) setDeviceId(d[0].id);
-      if (!platformConnectionId && c[0]) setPlatformConnectionId(c[0].id);
+      const available = d.filter((item) => !item.revoked);
+      setDevices(available);
+      if (!deviceId && available[0]) setDeviceId((available.find((item) => item.status === "online") ?? available[0]).id);
+      setError(null);
     } catch (e) {
       setError(String(e));
-    }
+    } finally { setLoading(false); }
   }
 
   useEffect(() => {
@@ -46,43 +50,52 @@ export default function TicketsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  if (!ready) return null;
-  if (!tenantId) return <p>Select a tenant on the Home page first.</p>;
+  useEffect(() => {
+    if (!tenantId || targetType !== "platform") return;
+    api.listPlatformConnections(tenantId).then((items) => {
+      setConnections(items);
+      if (items[0]) setPlatformConnectionId(items[0].id);
+    }).catch((e) => setError(String(e)));
+  }, [tenantId, targetType]);
+
+  if (!ready) return <p>Đang mở hỗ trợ…</p>;
+  if (!tenantId) return <p>Vui lòng đăng nhập để bắt đầu.</p>;
 
   async function createTicket() {
     const targetId = targetType === "device" ? deviceId : platformConnectionId;
-    if (!targetId || !title) return;
+    if (!targetId || creating) return;
+    setCreating(true);
     setError(null);
     try {
-      await api.createTicket(
+      const ticket = await api.createTicket(
         targetType === "device"
-          ? { tenantId: tenantId!, deviceId, title }
-          : { tenantId: tenantId!, platformConnectionId, title },
+          ? { tenantId: tenantId!, deviceId, title: title.trim() || "Hỗ trợ máy tính" }
+          : { tenantId: tenantId!, platformConnectionId, title: title.trim() || "Hỗ trợ dịch vụ" },
       );
-      setTitle("");
-      await load();
+      router.push(`/tickets/${ticket.id}`);
     } catch (e) {
       setError(String(e));
+      setCreating(false);
     }
   }
 
   return (
     <div>
-      <h1>Tickets</h1>
+      <h1>Hỗ trợ</h1><p className="muted">Chọn máy, mở chat và mô tả điều bạn cần. Trợ lý sẽ kiểm tra cùng bạn.</p>
       {error && <div className="card" style={{ color: "#b91c1c" }}>{error}</div>}
 
       <div className="card">
-        <h3>New ticket</h3>
+        <h3>Bắt đầu trò chuyện</h3>
         <div className="row" style={{ marginBottom: "0.5rem" }}>
-          <select value={targetType} onChange={(e) => setTargetType(e.target.value as "device" | "platform")}>
-            <option value="device">Windows device</option>
-            <option value="platform">Marketing platform</option>
-          </select>
+          <details><summary>Hỗ trợ dịch vụ khác</summary><select aria-label="Loại hỗ trợ" value={targetType} onChange={(e) => setTargetType(e.target.value as "device" | "platform")}>
+            <option value="device">Máy tính</option>
+            <option value="platform">Dịch vụ đã kết nối</option>
+          </select></details>
           {targetType === "device" ? (
-            <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
+            <select aria-label="Máy cần hỗ trợ" value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.hostname}
+                  {d.hostname} · {d.status === "online" ? "Đang kết nối" : "Ngoại tuyến"}
                 </option>
               ))}
             </select>
@@ -97,21 +110,24 @@ export default function TicketsPage() {
           )}
         </div>
         <div className="row">
-          <input placeholder="What's wrong?" value={title} onChange={(e) => setTitle(e.target.value)} style={{ flex: 1 }} />
-          <button className="primary" onClick={createTicket} disabled={targetType === "device" ? !deviceId : !platformConnectionId}>
-            Create
+          <input placeholder="Tên cuộc trò chuyện (không bắt buộc)" value={title} onChange={(e) => setTitle(e.target.value)} style={{ flex: 1 }} />
+          <button className="primary" onClick={createTicket} disabled={creating || loading || (targetType === "device" ? !deviceId : !platformConnectionId)}>
+            {creating ? "Đang mở…" : "Mở chat"}
           </button>
         </div>
-        {targetType === "device" && devices.length === 0 && (
-          <p className="muted">No devices enrolled — enroll one before creating a ticket.</p>
+        {!loading && targetType === "device" && devices.length === 0 && (
+          <p className="muted">Chưa có máy kết nối. <Link href="/devices">Thêm máy để bắt đầu</Link>.</p>
         )}
         {targetType === "platform" && connections.length === 0 && (
           <p className="muted">
-            No platform accounts connected — <a href="/connections">connect one</a> before creating a ticket.
+            Chưa có dịch vụ nào. <Link href="/connections">Kết nối dịch vụ</Link> để bắt đầu.
           </p>
         )}
       </div>
 
+      <h2>Trò chuyện gần đây</h2>
+      {loading && <p className="muted">Đang tải…</p>}
+      {!loading && tickets.length === 0 && <p className="muted">Cuộc trò chuyện của bạn sẽ xuất hiện ở đây.</p>}
       {tickets.map((t) => (
         <Link key={t.id} href={`/tickets/${t.id}`} style={{ textDecoration: "none", color: "inherit" }}>
           <div className="card">

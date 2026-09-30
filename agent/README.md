@@ -90,6 +90,13 @@ chmod +x install/install-macos.sh
 install/install-macos.sh --backend https://itsupport.schoolsai.work/api --token '<token>'
 ```
 
+The macOS installer preserves an existing device registration by default. If the
+machine is online but absent from your workspace, open **Thiết bị → Thêm máy**,
+select macOS and **Đăng ký lại vào workspace này**, then generate a fresh one-time
+command. This passes `--force-re-enroll` and backs up the previous configuration
+before registering again. The installer verifies a heartbeat before reporting
+success. Agent logs are in `~/Library/Application Support/support-agent`.
+
 Process separation carries into the service accounts: `SupportAgentExecutor`
 runs as `LocalSystem` (the only one that touches privileged Win32 APIs),
 `SupportAgentDaemon`/`SupportAgentTelemetry` run as `NT AUTHORITY\NetworkService`

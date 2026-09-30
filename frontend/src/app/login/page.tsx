@@ -40,7 +40,7 @@ function LoginForm() {
   function enterWorkspace() {
     const next = search.get("next");
     // Backslashes are normalized by browsers and can turn a path into an external URL.
-    router.replace(next?.startsWith("/") && !next.startsWith("//") && !/[\\\x00-\x1f]/.test(next) ? next : "/dashboard");
+    router.replace(next?.startsWith("/") && !next.startsWith("//") && !/[\\\x00-\x1f]/.test(next) ? next : "/tickets");
     router.refresh();
   }
 
