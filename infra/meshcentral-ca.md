@@ -76,7 +76,8 @@ Linux group membership is checked separately before issuing a share. The API acc
 needs the same limited rights 525320 on the Linux group. Independent MeshCentral
 administrator access is still privileged and separate from the application switch.
 When migrating a Linux agent, move only that node to the tenant's Linux group;
-MeshCentral updates its local group configuration. Keep the previous group mapping
+also update its local `meshagent.msh` MeshID to the new group's hex ID after backing
+up the settings, then restart only the Mesh Agent service. Keep the previous group mapping
 and domain config backup for rollback. Without the Linux mapping, legacy group
 selection remains compatible, but a group with terminal prompts cannot support
 headless Terminal sessions.
