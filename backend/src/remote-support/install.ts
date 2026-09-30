@@ -7,7 +7,8 @@ export function remoteInstall(tenantId: string, platform: string, arch?: 'amd64'
   if (platform === 'linux' && !arch) throw new Error('Linux architecture required');
   const base = remoteConsoleUrl();
   const groups = z.record(z.string().uuid(), meshNodeId).parse(JSON.parse(process.env.MESHCENTRAL_TENANT_GROUPS || '{}'));
-  const group = groups[tenantId];
+  const linuxGroups = z.record(z.string().uuid(), meshNodeId).parse(JSON.parse(process.env.MESHCENTRAL_LINUX_TENANT_GROUPS || '{}'));
+  const group = (platform === 'linux' ? linuxGroups[tenantId] : undefined) || groups[tenantId];
   if (!base || !group) return null;
   const url = new URL(platform === 'mac' ? '/meshosxagent' : '/meshagents', base);
   url.searchParams.set('id', platform === 'mac' ? '10005' : platform === 'linux' ? (arch === 'arm64' ? '26' : '6') : '4');

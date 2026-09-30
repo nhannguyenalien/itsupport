@@ -145,3 +145,23 @@ test('Linux downloads select the correct architecture and tenant settings', () =
   assert.throws(() => remoteInstall(tenant, 'linux'), /architecture/);
   assert.throws(() => remoteInstall(tenant, 'unknown'), /Unsupported/);
 });
+
+ test('Linux group assignment stays tenant scoped and separate from desktop groups', async () => {
+  process.env.MESHCENTRAL_URL = 'https://mesh.example.test';
+  process.env.MESHCENTRAL_TENANT_GROUPS = JSON.stringify({ [tenant]: 'A'.repeat(64) });
+  process.env.MESHCENTRAL_LINUX_TENANT_GROUPS = JSON.stringify({ [tenant]: 'B'.repeat(64) });
+  const { meshTransport } = await import('../src/remote-support/client.js');
+  mock.method(meshTransport, 'command', async (cmd: any) => {
+    assert.equal(cmd.meshid, 'mesh//' + 'B'.repeat(64));
+    return { nodes: { [cmd.meshid]: [{ _id: 'node//' + 'C'.repeat(64) }] } };
+  });
+  try {
+    assert.equal(remoteInstall(tenant, 'linux', 'amd64')!.group, 'B'.repeat(64));
+    assert.equal(remoteInstall(tenant, 'linux', 'arm64')!.group, 'B'.repeat(64));
+    assert.equal(remoteInstall(tenant, 'mac')!.group, 'A'.repeat(64));
+    assert.equal(remoteInstall(tenant, 'windows')!.group, 'A'.repeat(64));
+    assert.equal(remoteInstall(device, 'linux', 'amd64'), null);
+    await verifyNode(tenant, 'C'.repeat(64), 'linux');
+    await assert.rejects(verifyNode(tenant, 'D'.repeat(64), 'linux'), /not registered/);
+  } finally { delete process.env.MESHCENTRAL_LINUX_TENANT_GROUPS; mock.restoreAll(); }
+});

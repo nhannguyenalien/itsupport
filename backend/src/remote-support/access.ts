@@ -7,8 +7,8 @@ export function normalizeNodeId(value: string): string {
   const id = meshNodeId.parse(value);
   return /^[a-fA-F0-9]{96}$/.test(id) ? Buffer.from(id, 'hex').toString('base64').replaceAll('+', '@').replaceAll('/', '$') : id;
 }
-export async function verifyNode(tenantId: string, nodeId: string): Promise<void> {
-  const group = remoteInstall(tenantId, 'mac')?.group;
+export async function verifyNode(tenantId: string, nodeId: string, platform = 'mac'): Promise<void> {
+  const group = remoteInstall(tenantId, platform, platform === 'linux' ? 'amd64' : undefined)?.group;
   if (!group) throw Object.assign(new Error('Remote support unavailable'), { statusCode: 503 });
   const result = await meshTransport.command({ action: 'nodes', meshid: 'mesh//' + group });
   const nodes = result.nodes?.['mesh//' + group];
@@ -16,6 +16,7 @@ export async function verifyNode(tenantId: string, nodeId: string): Promise<void
     throw Object.assign(new Error('Remote agent is not registered in this workspace'), { statusCode: 409 });
   }
 }
+
 export async function withRemoteLock<T>(deviceId: string, run: () => Promise<T>): Promise<T> {
   const client = await adminPool.connect();
   try {
@@ -48,7 +49,7 @@ export async function remoteStatus(tenantId: string, deviceId: string, technicia
   const mode = device.platform === 'linux' ? 'terminal' : 'desktop-terminal';
   const ready = meshConfigured() && !!device.meshcentral_device_id && !device.cert_revoked_at;
   if (!ready) return { mode, ready: false, enabled: false, expiresAt: null, url: null };
-  await verifyNode(tenantId, normalizeNodeId(device.meshcentral_device_id));
+  await verifyNode(tenantId, normalizeNodeId(device.meshcentral_device_id), device.platform);
   const share = activeShare(await supportShares(normalizeNodeId(device.meshcentral_device_id), deviceId));
   return { mode, ready: true, enabled: !!share, expiresAt: share ? new Date(share.expireTime).toISOString() : null,
     url: share && technician ? shareUrl(share.url) : null };

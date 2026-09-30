@@ -37,7 +37,7 @@ export async function deviceRoutes(app: FastifyInstance) {
       if (device.cert_revoked_at) return reply.code(404).send({ error: "device unavailable" });
       // Never silently rebind an existing device while a support session may exist.
       if (device.meshcentral_device_id && normalizeNodeId(device.meshcentral_device_id) !== nodeId) return reply.code(409).send({ error: "device already linked" });
-      await verifyNode(req.agentTenantId!, nodeId);
+      await verifyNode(req.agentTenantId!, nodeId, device.platform);
       const duplicate = await queryTenantScoped(req.agentTenantId!, 'SELECT id FROM devices WHERE meshcentral_device_id = $1 AND id <> $2', [nodeId, deviceId]);
       if (duplicate.rowCount) return reply.code(409).send({ error: "remote agent already linked" });
       await queryTenantScoped(req.agentTenantId!, 'UPDATE devices SET meshcentral_device_id = $2 WHERE id = $1 AND cert_revoked_at IS NULL', [deviceId, nodeId]);
@@ -59,7 +59,7 @@ export async function deviceRoutes(app: FastifyInstance) {
       const device = await remoteDevice(user.tenantId, deviceId);
       if (!device.meshcentral_device_id || device.cert_revoked_at) return reply.code(409).send({ error: "remote agent not ready" });
       const nodeId = normalizeNodeId(device.meshcentral_device_id);
-      await verifyNode(user.tenantId, nodeId);
+      await verifyNode(user.tenantId, nodeId, device.platform);
       const shares = await supportShares(nodeId, deviceId);
       if (enabled && !activeShare(shares)) {
         await meshTransport.command({ action: "createDeviceShareLink", nodeid: nodeId,

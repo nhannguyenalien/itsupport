@@ -36,8 +36,9 @@ groups, with files denied (group rights 524288 | 8 | 1024 = 525320) and no site 
 credential is stored in `/root/itsupport-meshcentral-api.json` (mode 600).
 Never expose it to browsers or logs.
 
-The chat shows one On/Off switch. On creates a desktop and Terminal share for 60 minutes,
-requiring device consent for both protocols and showing a desktop privacy bar. Repeated On reuses the active
+The chat shows one On/Off switch. On creates a 60-minute share. Windows/macOS
+share desktop and Terminal with local consent prompts and a desktop privacy bar.
+Linux shares Terminal only; the explicit On toggle grants access without a GUI prompt. Repeated On reuses the active
 share. Off revokes all application-issued shares for that device. Only IT Support
 technicians/admins receive the share URL; members can grant/revoke access without
 receiving the URL. Independent MeshCentral administrator access is separate.
@@ -59,11 +60,26 @@ Real screen capture, keyboard/mouse and consent UI still need an on-device test.
 
 ## Bundled customer installation
 
-The original macOS/Windows CLI now installs Mesh Agent after Support Agent enrollment.
+The macOS/Windows/Linux CLI installs Mesh Agent after Support Agent enrollment.
 It requests `/devices/:deviceId/remote-install` with the device credential.
 Set `MESHCENTRAL_TENANT_GROUPS` to a JSON object mapping tenant UUIDs to the
 64-character MeshCentral group IDs (without `mesh//`). Create a separate
-agent group per customer with consent 127; grant technicians only their groups.
+desktop agent group per customer with consent 127; grant technicians only their groups.
+For headless Linux, create a separate group per tenant with consent 109 (127 minus
+terminal notify 2 and terminal prompt 16), and configure its ID in
+`MESHCENTRAL_LINUX_TENANT_GROUPS` using the same JSON format. Set domain
+`userConsentFlags.terminalnotify` and `terminalprompt` to false: MeshCentral ORs
+domain/group/share policies, so mandatory global prompts otherwise block headless
+hosts. Keep all other domain consent flags and existing desktop group consent 127.
+Windows/macOS retain Terminal prompts through their group and share consent 88.
+Linux group membership is checked separately before issuing a share. The API account
+needs the same limited rights 525320 on the Linux group. Independent MeshCentral
+administrator access is still privileged and separate from the application switch.
+When migrating a Linux agent, move only that node to the tenant's Linux group;
+MeshCentral updates its local group configuration. Keep the previous group mapping
+and domain config backup for rollback. Without the Linux mapping, legacy group
+selection remains compatible, but a group with terminal prompts cannot support
+headless Terminal sessions.
 Unconfigured tenants receive 503 rather than joining a shared customer group.
 Keep the JSON single-quoted in Compose's `.env` to preserve `$` in IDs.
 
@@ -84,7 +100,7 @@ Cloudflare Access login in front of the Mesh agent endpoints.
 
 ## Terminal support
 
-New shares use protocol flags 3 (desktop + Terminal), consent 88 (desktop and
+Windows/macOS shares use protocol flags 3 (desktop + Terminal), consent 88 (desktop and
 Terminal prompts + desktop privacy bar), and a 60-minute expiry. Existing shares
 keep their original permissions: turn support Off and On to create a new link.
 In the shared Mesh page, select Terminal in the left menu and Connect. The
@@ -95,3 +111,10 @@ root); this is privileged support access. File transfer remains disabled.
 To roll back, revert the app change and restore the API account group rights to
 525832 (adds NoTerminal). Revoke active application shares with the support switch;
 changing the application alone does not downgrade already-issued links.
+
+Linux shares use protocol 1 and consent 0; On is the customer's explicit grant of
+root Terminal access for up to 60 minutes, and Off revokes active connections.
+No desktop permission dialog or desktop session is used. Linux x64 was verified
+on Debian 13 / Proxmox host `pve`: CLI enrollment and repeated installation,
+Mesh Terminal running `id -u`, `uname -s`, `hostname`, and disconnect on share
+revocation. No VM configuration or host reboot was performed.
