@@ -1,6 +1,9 @@
 package executor
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 // This is the single most important test in the agent: it proves that a
 // backend bug (or a compromised backend) asking the agent to run something
@@ -33,14 +36,15 @@ func TestExecute_RejectsUnknownDesktopTool(t *testing.T) {
 }
 
 func TestExecute_KnownToolReachesDispatch(t *testing.T) {
-	// On non-Windows this still exercises the full Execute() path up to
-	// dispatch(), which on this platform always returns a clean "windows only"
-	// error rather than panicking or silently doing nothing.
 	result := Execute(Request{ToolCallID: "test-2", Tool: "system.info", Params: map[string]any{}})
-	if result.Success {
-		t.Fatal("system.info should not report success on a non-Windows build")
+	if result.ToolCallID != "test-2" {
+		t.Fatal("dispatch lost tool call ID")
 	}
-	if result.Error == "" {
-		t.Fatal("expected a non-empty error explaining why it didn't run")
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		if !result.Success || len(result.Data) == 0 {
+			t.Fatalf("system.info must return actual diagnostics: %+v", result)
+		}
+	} else if result.Success || result.Error == "" {
+		t.Fatal("unsupported platform must return an explicit error")
 	}
 }
