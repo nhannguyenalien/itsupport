@@ -113,12 +113,16 @@ echo "macOS có thể yêu cầu mật khẩu quản trị để cài dịch v�
 REMOTE_DIR="$(mktemp -d)"
 trap 'rm -rf "$REMOTE_DIR"' EXIT
 /usr/bin/python3 - "$CONFIG_PATH" "$REMOTE_DIR" <<'PYTHON'
-import json, pathlib, sys, urllib.request, urllib.parse
+import json, pathlib, subprocess, sys, urllib.parse
 config = json.load(open(sys.argv[1]))
-request = urllib.request.Request(config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId'] + '/remote-install', headers={'Authorization': 'Bearer ' + config['agentToken']})
+endpoint = config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId'] + '/remote-install'
+def download(url, timeout, headers=()):
+    result = subprocess.run(['/usr/bin/curl', '--fail', '--silent', '--show-error', '--proto', '=https', '--max-time', str(timeout), *headers, url], capture_output=True)
+    if result.returncode:
+        raise RuntimeError('HTTPS download failed: ' + result.stderr.decode(errors='replace').strip())
+    return result.stdout
 try:
-    with urllib.request.urlopen(request, timeout=30) as response:
-        remote = json.load(response)
+    remote = json.loads(download(endpoint, 30, ['-H', 'Authorization: Bearer ' + config['agentToken']]))
     url = urllib.parse.urlparse(remote['url'])
     if url.scheme != 'https' or url.netloc != urllib.parse.urlparse(remote['server']).netloc:
         raise ValueError('Invalid remote installer URL')
@@ -131,8 +135,7 @@ try:
             raise ValueError('An existing Mesh Agent belongs to another server or group; contact your administrator')
         pathlib.Path(sys.argv[2], 'already-installed').touch()
     else:
-        with urllib.request.urlopen(remote['url'], timeout=120) as response:
-            pathlib.Path(sys.argv[2], 'MeshAgent.zip').write_bytes(response.read())
+        pathlib.Path(sys.argv[2], 'MeshAgent.zip').write_bytes(download(remote['url'], 120))
 except Exception as error:
     print('Support Agent đã cài. Mesh Agent chưa sẵn sàng: ' + str(error), file=sys.stderr)
     sys.exit(1)
