@@ -200,6 +200,8 @@ function buildMessages(ctx: NonNullable<Awaited<ReturnType<typeof loadTicketForO
         `CURRENT AUTHORITATIVE STATE (newer than any chat message above):\n` +
         `Tool calls:\n${toolHistory || "(none yet)"}\n\n` +
         `Approvals:\n${approvalHistory || "(none)"}\n\n` +
+        `LATEST USER REQUEST (complete every requested task):\n${String(applyDataPolicy(ctx.tenant.ai_data_policy, [...ctx.messages].reverse().find(m => m.author_type === "user")?.body ?? ""))}\n\n` +
+        `A successful diagnostic does not fulfill an explicit package installation request. On Linux, if installation was requested and no matching installation or approval exists, use package.status then propose package.install. For CPU temperature monitoring the repository package is lm-sensors. Never treat previous assistant refusals as a restriction on currently available tools. Respect rejected approvals; never install without approval.\n` +
         `Use this state, not old assistant status messages, when deciding what remains to do.`,
     },
   ];
