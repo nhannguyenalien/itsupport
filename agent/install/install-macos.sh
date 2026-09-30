@@ -168,5 +168,4 @@ for attempt in range(6):
     time.sleep(3)
 PYTHON
 echo "Mesh Agent đã cài. Vào System Settings > Privacy & Security, cấp Screen Recording và Accessibility cho Mesh Agent."
-echo "Quản trị viên liên kết máy trong Dashboard > Thiết bị > Hỗ trợ từ xa."
 echo "Nếu chưa thấy meshagent: nhấn +, Cmd+Shift+G, nhập /usr/local/mesh_services/meshagent/meshagent/meshagent rồi thêm."
