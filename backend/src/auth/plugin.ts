@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { adminPool, pool, runWithRequestContext, setTenantContext } from "../db/pool.js";
 import { firebaseAuth } from "./firebase.js";
 
-const PUBLIC_EXACT = new Set(["/health", "/enrollment/register", "/auth/attempt"]);
+const PUBLIC_EXACT = new Set(["/health", "/enrollment/register", "/auth/attempt", "/support-chat/status", "/support-chat/system"]);
 
 function isPublicRoute(req: FastifyRequest): boolean {
   const path = req.url.split("?")[0];
@@ -61,6 +61,8 @@ function requiredRole(req: FastifyRequest): "admin" | "technician" | null {
   const path = req.url.split("?")[0];
   if (req.method === "PUT" && /^\/devices\/[^/]+\/remote-support$/.test(path)) return null;
   if (req.method === "GET" || path.startsWith("/auth/")) return null;
+  // Read-only advice for every role; proposed writes go through the normal endpoints.
+  if (path === "/support-chat/account") return null;
   if (/^\/tenants\/[^/]+\/(?:enable|disable)-/.test(path)) return "admin";
   if (/^\/devices\/[^/]+\/(?:revoke|pause|unpause)$/.test(path)) return "admin";
   if (path === "/enrollment-tokens" || /^\/oauth\/[^/]+\/connect$/.test(path)) return "admin";

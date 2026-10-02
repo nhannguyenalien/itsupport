@@ -337,5 +337,22 @@
   "remote.terminalTitle": "Linux ターミナルサポート",
   "remote.terminalEnabledHint": "技術者は60分間、root 権限でコマンドを実行できます。OFF にするとアクセスを取り消します。",
   "remote.terminalDisabledHint": "ON にすると、技術者に60分間の root コマンド実行を許可します。デスクトップは不要です。",
-  "remote.openTerminal": "ターミナルを開く"
+  "remote.openTerminal": "ターミナルを開く",
+  "Trợ lý hỗ trợ gặp lỗi, vui lòng thử lại.": "サポートアシスタントでエラーが発生しました。もう一度お試しください。",
+  "Đã tạo ticket. Đang mở…": "チケットを作成しました。開いています…",
+  "Đã bắt đầu chẩn đoán. Đang mở ticket…": "診断を開始しました。チケットを開いています…",
+  "Không thực hiện được thao tác.": "操作を実行できませんでした。",
+  "Mở trợ lý hỗ trợ": "サポートアシスタントを開く",
+  "Trợ lý": "アシスタント",
+  "Trợ lý hỗ trợ": "サポートアシスタント",
+  "Hệ thống": "システム",
+  "Tài khoản của tôi": "マイアカウント",
+  "Cuộc trò chuyện mới": "新しい会話",
+  "Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…": "システムの使い方を質問できます：端末の追加、チケット、承認、リモートサポート…",
+  "Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…": "ご自身のアカウントについて質問できます：オフラインの端末、保留中のチケット、新規チケット作成…",
+  "Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.": "技術者の対応が必要です — サポートからチケットを作成してください。",
+  "Đang thực hiện…": "実行中…",
+  "Xác nhận": "確認",
+  "Đang trả lời…": "回答中…",
+  "Nhập câu hỏi…": "質問を入力…"
 }

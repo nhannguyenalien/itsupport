@@ -173,12 +173,32 @@ export interface Metrics {
   by_tool: ToolMetric[];
 }
 
+export type SupportTier = "system" | "account";
+
+export interface SupportProposal {
+  action: "create_ticket" | "run_diagnosis";
+  label: string;
+  params: Record<string, string>;
+}
+
+export interface SupportChatReply {
+  reply: string;
+  needsHuman?: boolean;
+  toolsUsed?: string[];
+  proposals?: SupportProposal[];
+}
+
 export const api = {
   authAttempt: (action: "login" | "register" | "password-reset") =>
     request<void>("/auth/attempt", { method: "POST", body: JSON.stringify({ action }) }),
   me: () => request<{ user: AuthUser }>(`/auth/me`),
   registerWorkspace: (body: { companyName: string }) =>
     request<{ user: AuthUser }>(`/auth/register`, { method: "POST", body: JSON.stringify(body) }),
+  // Two-tier support chatbot (backend/src/support-chat): "system" works before
+  // login; "account" answers from the signed-in workspace via scoped tools.
+  supportChatStatus: () => request<{ enabled: boolean }>(`/support-chat/status`),
+  supportChat: (tier: SupportTier, body: { conversationId: string; message: string; language?: string }) =>
+    request<SupportChatReply>(`/support-chat/${tier}`, { method: "POST", body: JSON.stringify(body) }),
   listTools: () => request<{ version: number; tools: ToolDefinition[] }>(`/tool-registry`),
 
   getTenant: (tenantId: string) => request<Tenant>(`/tenants/${tenantId}`),

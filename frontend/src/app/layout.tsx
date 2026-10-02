@@ -4,6 +4,7 @@ import "./globals.css";
 import { TopNav } from "./TopNav";
 import { LanguageProvider } from "@/lib/i18n";
 import { AuthGate } from "./AuthGate";
+import { SupportChat } from "@/components/SupportChat";
 
 export const metadata: Metadata = {
   title: "AI IT Support — Intelligent IT operations",
@@ -17,7 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <LanguageProvider><AuthGate>
           <TopNav />
           <div className="main">{children}</div>
-        </AuthGate></LanguageProvider>
+        </AuthGate><SupportChat /></LanguageProvider>
       </body>
     </html>
   );

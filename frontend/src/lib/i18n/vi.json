@@ -337,5 +337,22 @@
   "remote.terminalTitle": "Hỗ trợ Terminal Linux",
   "remote.terminalEnabledHint": "Kỹ thuật có thể chạy lệnh với quyền root trong 60 phút. Tắt OFF để thu hồi quyền.",
   "remote.terminalDisabledHint": "Bật ON cho phép kỹ thuật chạy lệnh với quyền root trong 60 phút. Không cần desktop.",
-  "remote.openTerminal": "Mở Terminal"
+  "remote.openTerminal": "Mở Terminal",
+  "Trợ lý hỗ trợ gặp lỗi, vui lòng thử lại.": "Trợ lý hỗ trợ gặp lỗi, vui lòng thử lại.",
+  "Đã tạo ticket. Đang mở…": "Đã tạo ticket. Đang mở…",
+  "Đã bắt đầu chẩn đoán. Đang mở ticket…": "Đã bắt đầu chẩn đoán. Đang mở ticket…",
+  "Không thực hiện được thao tác.": "Không thực hiện được thao tác.",
+  "Mở trợ lý hỗ trợ": "Mở trợ lý hỗ trợ",
+  "Trợ lý": "Trợ lý",
+  "Trợ lý hỗ trợ": "Trợ lý hỗ trợ",
+  "Hệ thống": "Hệ thống",
+  "Tài khoản của tôi": "Tài khoản của tôi",
+  "Cuộc trò chuyện mới": "Cuộc trò chuyện mới",
+  "Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…": "Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…",
+  "Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…": "Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…",
+  "Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.": "Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.",
+  "Đang thực hiện…": "Đang thực hiện…",
+  "Xác nhận": "Xác nhận",
+  "Đang trả lời…": "Đang trả lời…",
+  "Nhập câu hỏi…": "Nhập câu hỏi…"
 }

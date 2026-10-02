@@ -337,5 +337,22 @@
   "remote.terminalTitle": "Linux terminal support",
   "remote.terminalEnabledHint": "Technicians can run commands as root for 60 minutes. Switch OFF to revoke access.",
   "remote.terminalDisabledHint": "Switch ON to allow technicians to run commands as root for 60 minutes. No desktop required.",
-  "remote.openTerminal": "Open terminal"
+  "remote.openTerminal": "Open terminal",
+  "Trợ lý hỗ trợ gặp lỗi, vui lòng thử lại.": "Support assistant hit an error, please try again.",
+  "Đã tạo ticket. Đang mở…": "Ticket created. Opening…",
+  "Đã bắt đầu chẩn đoán. Đang mở ticket…": "Diagnosis started. Opening ticket…",
+  "Không thực hiện được thao tác.": "The action could not be completed.",
+  "Mở trợ lý hỗ trợ": "Open support assistant",
+  "Trợ lý": "Assistant",
+  "Trợ lý hỗ trợ": "Support assistant",
+  "Hệ thống": "System",
+  "Tài khoản của tôi": "My account",
+  "Cuộc trò chuyện mới": "New conversation",
+  "Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…": "Ask how the system works: adding devices, tickets, approvals, remote support…",
+  "Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…": "Ask about your own account: which devices are offline, which tickets are waiting, create a new ticket…",
+  "Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.": "A technician is needed — please create a ticket under Support.",
+  "Đang thực hiện…": "Working…",
+  "Xác nhận": "Confirm",
+  "Đang trả lời…": "Replying…",
+  "Nhập câu hỏi…": "Type a question…"
 }

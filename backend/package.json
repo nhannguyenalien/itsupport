@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "support-chat:sync": "tsx src/support-chat/sync.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",

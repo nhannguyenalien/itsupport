@@ -337,5 +337,22 @@
   "remote.terminalTitle": "Linux 터미널 지원",
   "remote.terminalEnabledHint": "기술자가 60분 동안 root 권한으로 명령을 실행할 수 있습니다. OFF로 전환하면 접근 권한이 해제됩니다.",
   "remote.terminalDisabledHint": "ON으로 전환하면 기술자에게 60분 동안 root 명령 실행을 허용합니다. 데스크톱이 필요하지 않습니다.",
-  "remote.openTerminal": "터미널 열기"
+  "remote.openTerminal": "터미널 열기",
+  "Trợ lý hỗ trợ gặp lỗi, vui lòng thử lại.": "지원 도우미에 오류가 발생했습니다. 다시 시도하세요.",
+  "Đã tạo ticket. Đang mở…": "티켓이 생성되었습니다. 여는 중…",
+  "Đã bắt đầu chẩn đoán. Đang mở ticket…": "진단을 시작했습니다. 티켓을 여는 중…",
+  "Không thực hiện được thao tác.": "작업을 수행할 수 없습니다.",
+  "Mở trợ lý hỗ trợ": "지원 도우미 열기",
+  "Trợ lý": "도우미",
+  "Trợ lý hỗ trợ": "지원 도우미",
+  "Hệ thống": "시스템",
+  "Tài khoản của tôi": "내 계정",
+  "Cuộc trò chuyện mới": "새 대화",
+  "Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…": "시스템 사용법을 물어보세요: 기기 추가, 티켓, 승인, 원격 지원…",
+  "Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…": "내 계정에 대해 물어보세요: 오프라인 기기, 대기 중인 티켓, 새 티켓 만들기…",
+  "Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.": "기술자의 도움이 필요합니다 — 지원 메뉴에서 티켓을 만드세요.",
+  "Đang thực hiện…": "처리 중…",
+  "Xác nhận": "확인",
+  "Đang trả lời…": "답변 중…",
+  "Nhập câu hỏi…": "질문을 입력하세요…"
 }

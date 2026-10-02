@@ -51,6 +51,8 @@ services:
       AGENT_CA_CERT_PATH: /run/secrets/agent_ca_cert
       AGENT_CA_KEY_PATH: /run/secrets/agent_ca_key
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SCHOOLSAI_API_URL: ${SCHOOLSAI_API_URL:-https://apic.schoolsai.work}
+      SCHOOLSAI_API_KEY: ${SCHOOLSAI_API_KEY:-}
       OAUTH_TOKEN_ENC_KEY: ${OAUTH_TOKEN_ENC_KEY:-}
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-}
       OAUTH_REDIRECT_BASE_URL: ${APP_PUBLIC_URL:-http://127.0.0.1:18080}/api

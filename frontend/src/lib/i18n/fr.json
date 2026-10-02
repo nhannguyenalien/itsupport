@@ -337,5 +337,22 @@
   "remote.terminalTitle": "Assistance terminal Linux",
   "remote.terminalEnabledHint": "Les techniciens peuvent exécuter des commandes en tant que root pendant 60 minutes. Désactivez pour révoquer l’accès.",
   "remote.terminalDisabledHint": "Activez pour autoriser les techniciens à exécuter des commandes en tant que root pendant 60 minutes. Aucun bureau nécessaire.",
-  "remote.openTerminal": "Ouvrir le terminal"
+  "remote.openTerminal": "Ouvrir le terminal",
+  "Trợ lý hỗ trợ gặp lỗi, vui lòng thử lại.": "L’assistant a rencontré une erreur, veuillez réessayer.",
+  "Đã tạo ticket. Đang mở…": "Ticket créé. Ouverture…",
+  "Đã bắt đầu chẩn đoán. Đang mở ticket…": "Diagnostic lancé. Ouverture du ticket…",
+  "Không thực hiện được thao tác.": "Impossible d’effectuer l’action.",
+  "Mở trợ lý hỗ trợ": "Ouvrir l’assistant",
+  "Trợ lý": "Assistant",
+  "Trợ lý hỗ trợ": "Assistant d’assistance",
+  "Hệ thống": "Système",
+  "Tài khoản của tôi": "Mon compte",
+  "Cuộc trò chuyện mới": "Nouvelle conversation",
+  "Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…": "Posez vos questions sur le système : ajout d’appareils, tickets, approbations, assistance à distance…",
+  "Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…": "Posez vos questions sur votre compte : appareils hors ligne, tickets en attente, nouveau ticket…",
+  "Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.": "Un technicien est nécessaire — créez un ticket dans Assistance.",
+  "Đang thực hiện…": "En cours…",
+  "Xác nhận": "Confirmer",
+  "Đang trả lời…": "Réponse en cours…",
+  "Nhập câu hỏi…": "Saisissez une question…"
 }

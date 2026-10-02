@@ -13,6 +13,7 @@ import { aiOrchestrationRoutes } from "./ai-orchestration/routes.js";
 import { computerUseRoutes } from "./computer-use/routes.js";
 import { oauthRoutes } from "./oauth/routes.js";
 import { metricsRoutes } from "./metrics/routes.js";
+import { supportChatRoutes } from "./support-chat/routes.js";
 import { registryVersion, registryHash, allTools } from "./tool-registry/index.js";
 import { authRoutes } from "./auth/routes.js";
 import { registerAuth } from "./auth/plugin.js";
@@ -69,6 +70,7 @@ await app.register(aiOrchestrationRoutes);
 await app.register(computerUseRoutes);
 await app.register(oauthRoutes);
 await app.register(metricsRoutes);
+await app.register(supportChatRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the
