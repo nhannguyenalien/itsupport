@@ -18,6 +18,11 @@ import { runSupportTool, toolCatalog, type Proposal } from "./tools.js";
 
 export const MAX_TOOL_ROUNDS = 4;
 const MAX_TOOL_RESULT_CHARS = 6000;
+const ROLE_PERMISSIONS: Record<AuthUser["role"], string> = {
+  admin: "toàn quyền: tạo mã thêm máy, thu hồi/tạm dừng thiết bị, bật/tắt AI, tạo ticket, chạy chẩn đoán, phê duyệt thao tác",
+  technician: "tạo ticket, chạy chẩn đoán, phê duyệt/từ chối thao tác, mở hỗ trợ từ xa; không thu hồi/tạm dừng thiết bị hay bật/tắt AI",
+  member: "xem thông tin và trao đổi trong ticket; KHÔNG tạo ticket, chạy chẩn đoán hay phê duyệt thao tác — cần nhờ technician/admin",
+};
 const LANGUAGE_NAMES: Record<string, string> = {
   vi: "tiếng Việt", en: "English", fr: "Français", ko: "한국어", ja: "日本語", es: "Español",
 };
@@ -73,9 +78,9 @@ export function parseToolDirective(reply: string): { tool: string; args: unknown
 
 function accountPrompt(user: AuthUser, input: ChatTurnInput): string {
   return `${languageLine(input.language)}[TRỢ LÝ TÀI KHOẢN — CẤP 2]
-Bạn đang hỗ trợ riêng workspace "${user.tenantName}" (vai trò người hỏi: ${user.role}). Chỉ nói về dữ liệu của workspace này, lấy qua công cụ bên dưới (backend chạy giúp bạn, dữ liệu luôn mới). Không bịa số liệu, hostname hay mã ticket.
+Bạn đang hỗ trợ riêng workspace "${user.tenantName}". Vai trò người hỏi: ${user.role} — quyền: ${ROLE_PERMISSIONS[user.role]}. Chỉ nói về dữ liệu của workspace này, lấy qua công cụ bên dưới (backend chạy giúp bạn, dữ liệu luôn mới). Không bịa số liệu, hostname hay mã ticket.
 Công cụ:
-${toolCatalog()}
+${toolCatalog(user.role)}
 Quy tắc:
 - Khi cần dữ liệu, trả lời DUY NHẤT 1 dòng: TOOL {"tool":"<tên>","args":{...}}
 - Hành động ghi (tạo ticket, chạy chẩn đoán) chỉ được ĐỀ XUẤT qua công cụ propose_*; người dùng tự bấm xác nhận trên giao diện. Không bao giờ nói là đã làm xong.
@@ -113,7 +118,7 @@ export async function runAccountChat(user: AuthUser, input: ChatTurnInput): Prom
       data = { error: `Lệnh TOOL không hợp lệ (${directive.invalid}). Viết lại đúng 1 dòng TOOL {"tool":"...","args":{...}}.` };
     } else {
       name = directive.tool;
-      const output = await runSupportTool(user.tenantId, name, directive.args);
+      const output = await runSupportTool(user.tenantId, name, directive.args, user.role);
       toolsUsed.push(name);
       if (output.proposal && !proposals.some((p) => p.action === output.proposal!.action && JSON.stringify(p.params) === JSON.stringify(output.proposal!.params))) {
         proposals.push(output.proposal);

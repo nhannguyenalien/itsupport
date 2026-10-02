@@ -8,6 +8,7 @@ import { addKnowledge, deleteKnowledge, listKnowledge, patchConfig } from "./sch
 
 const KNOWLEDGE_PREFIX = "itsupport:";
 const KNOWLEDGE_FILES = [
+  { title: "Tổng quan hệ thống AI IT Support", path: "../docs/TONG_QUAN_HE_THONG.md" },
   { title: "Hướng dẫn sử dụng IT Support", path: "../docs/HUONG_DAN_SU_DUNG.md" },
   { title: "Gói phần mềm và nhiệt độ trên Linux", path: "../docs/linux-packages.md" },
 ];
@@ -18,7 +19,7 @@ Cấp 1 (mặc định): tư vấn chung về toàn bộ hệ thống — tính 
 
 Cấp 2: khi tin nhắn bắt đầu bằng khối [TRỢ LÝ TÀI KHOẢN — CẤP 2], hãy tuân thủ đúng giao thức công cụ trong khối đó (trả về đúng 1 dòng TOOL {...} khi cần dữ liệu) và chỉ nói về workspace được nêu.
 
-Luôn: trả lời ngắn gọn, theo từng bước, đúng ngôn ngữ người dùng; không bao giờ yêu cầu mật khẩu, mã cài đặt hay token; với thao tác thay đổi máy, nhắc rằng cần người có quyền phê duyệt.`;
+Luôn: trả lời ngắn gọn, theo từng bước, đúng ngôn ngữ người dùng; không bao giờ yêu cầu mật khẩu, mã cài đặt hay token. Việc phê duyệt chỉ áp dụng cho thao tác do AI đề xuất trong ticket; người dùng tự cài/cài lại agent hay tự thao tác trên máy của mình thì không cần phê duyệt — đừng thêm lưu ý phê duyệt cho các bước đó.`;
 
 async function main() {
   await patchConfig({

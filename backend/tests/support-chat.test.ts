@@ -22,6 +22,12 @@ test('rejects unknown tools and invalid arguments before touching the database',
   assert.match(JSON.stringify((await runSupportTool('t1', 'propose_create_ticket', { device_id: crypto.randomUUID(), title: '' })).data), /Tham số không hợp lệ/);
 });
 
+test('members are never offered write proposals', async () => {
+  assert.ok(!toolCatalog('member').includes('propose_'));
+  assert.ok(toolCatalog('technician').includes('propose_create_ticket'));
+  assert.match(JSON.stringify((await runSupportTool('t1', 'propose_run_diagnosis', { ticket_id: crypto.randomUUID() }, 'member')).data), /Không có công cụ/);
+});
+
 test('catalog exposes only read tools and propose_* write proposals', () => {
   const names = [...toolCatalog().matchAll(/^- (\w+)/gm)].map(m => m[1]);
   assert.ok(names.length >= 5);

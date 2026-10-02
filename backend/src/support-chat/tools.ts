@@ -181,14 +181,21 @@ export const supportTools: Record<string, ToolDefinition> = {
   },
 };
 
-export function toolCatalog(): string {
+// Members cannot create tickets or start diagnosis (auth/plugin.ts requiredRole),
+// so they are never offered a proposal they could not confirm.
+export function toolsForRole(role: string): string[] {
+  return Object.keys(supportTools).filter((name) => role !== "member" || !name.startsWith("propose_"));
+}
+
+export function toolCatalog(role = "admin"): string {
   return Object.entries(supportTools)
+    .filter(([name]) => toolsForRole(role).includes(name))
     .map(([name, tool]) => `- ${name} ${tool.argsHint}: ${tool.description}`)
     .join("\n");
 }
 
-export async function runSupportTool(tenantId: string, name: string, rawArgs: unknown): Promise<ToolOutput> {
-  const tool = supportTools[name];
+export async function runSupportTool(tenantId: string, name: string, rawArgs: unknown, role = "admin"): Promise<ToolOutput> {
+  const tool = toolsForRole(role).includes(name) ? supportTools[name] : undefined;
   if (!tool) return { data: { error: `Không có công cụ "${name}". Chỉ dùng các công cụ trong danh sách.` } };
   const parsed = tool.args.safeParse(rawArgs ?? {});
   if (!parsed.success) return { data: { error: "Tham số không hợp lệ", details: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) } };
