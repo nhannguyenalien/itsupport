@@ -56,8 +56,31 @@ foreach ($bin in @("daemon.exe", "telemetry.exe", "executor.exe", "enroll.exe"))
 
 Write-Host "Installing to $InstallDir ..."
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+# Reinstall/upgrade: a running agent keeps its .exe files locked, so stop the
+# services before replacing them (they are re-created and started below).
+foreach ($svc in @("SupportAgentTelemetry", "SupportAgentDaemon", "SupportAgentExecutor")) {
+    if (Get-Service -Name $svc -ErrorAction SilentlyContinue) {
+        Stop-Service -Name $svc -Force -ErrorAction SilentlyContinue
+    }
+}
 foreach ($bin in @("daemon.exe", "telemetry.exe", "executor.exe", "enroll.exe")) {
-    Copy-Item (Join-Path $here $bin) (Join-Path $InstallDir $bin) -Force
+    $target = Join-Path $InstallDir $bin
+    $copied = $false
+    for ($attempt = 0; $attempt -lt 10 -and -not $copied; $attempt++) {
+        try {
+            Copy-Item (Join-Path $here $bin) $target -Force
+            $copied = $true
+        } catch {
+            Start-Sleep -Seconds 1
+        }
+    }
+    if (-not $copied) {
+        # Still locked (process slow to exit): Windows allows renaming a running
+        # executable, so move it aside and install the new file in its place.
+        Remove-Item "$target.old" -Force -ErrorAction SilentlyContinue
+        Move-Item $target "$target.old" -Force
+        Copy-Item (Join-Path $here $bin) $target -Force
+    }
 }
 
 # --- Enrollment ---
