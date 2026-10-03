@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
+import { getTool } from "../tool-registry/index.js";
+import { isVersion, withUpdateInfo } from "./agent-updates.js";
 
 import { meshNodeId } from "../remote-support/links.js";
 import { meshTransport } from "../remote-support/client.js";
@@ -89,9 +91,12 @@ export async function deviceRoutes(app: FastifyInstance) {
   app.post("/devices/:deviceId/heartbeat", async (req, reply) => {
     const { deviceId } = deviceParams.parse(req.params);
     if (!req.agentTenantId) return reply.code(401).send({ error: "agent tenant context required" });
+    // Agents from 0.3.0 report their running version; older ones send {}.
+    const reported = (req.body as { agentVersion?: unknown } | null)?.agentVersion;
     const result = await queryTenantScoped(req.agentTenantId,
-      `UPDATE devices SET last_seen_at = now(), status = 'online' WHERE id = $1 RETURNING id`,
-      [deviceId],
+      `UPDATE devices SET last_seen_at = now(), status = 'online', agent_version = COALESCE($2, agent_version)
+       WHERE id = $1 RETURNING id`,
+      [deviceId, isVersion(reported) ? reported : null],
     );
     if (result.rowCount === 0) return reply.code(404).send({ error: "device not found" });
     reply.send({ ok: true });
@@ -105,7 +110,30 @@ export async function deviceRoutes(app: FastifyInstance) {
        FROM devices WHERE tenant_id = $1 ORDER BY hostname`,
       [tenantId],
     );
-    reply.send(result.rows);
+    reply.send(await withUpdateInfo(req.authUser!.tenantId, result.rows as Array<{ id: string; platform: string; agent_version: string | null; revoked: boolean }>));
+  });
+
+  // Click-to-update: queue agent.update for one device. Nothing installs
+  // until the agent has verified the signed release (agent/internal/update).
+  app.post("/devices/:deviceId/agent-update", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req, reply) => {
+    const { deviceId } = deviceParams.parse(req.params);
+    const user = req.authUser!;
+    const rows = await queryTenantScoped(user.tenantId,
+      `SELECT id, platform, agent_version, status, cert_revoked_at IS NOT NULL AS revoked FROM devices WHERE id = $1`, [deviceId]);
+    if (!rows.rowCount) return reply.code(404).send({ error: "device not found" });
+    const [device] = await withUpdateInfo(user.tenantId, rows.rows as Array<{ id: string; platform: string; agent_version: string | null; revoked: boolean; status: string }>);
+    if (!device.update_supported) return reply.code(409).send({ error: "Agent trên máy này cần chạy lại lệnh cài một lần để dùng cập nhật bằng nút bấm." });
+    if (!device.update_available || !device.latest_agent_version) return reply.code(409).send({ error: "Máy đã dùng phiên bản mới nhất." });
+    if (device.update_state === "queued" || device.update_state === "installing") return reply.code(409).send({ error: "Máy đang cập nhật." });
+    if (device.status !== "online") return reply.code(409).send({ error: "Máy đang ngoại tuyến. Hãy bật máy rồi thử lại." });
+
+    const tool = getTool("agent.update")!;
+    await queryTenantScoped(user.tenantId,
+      `INSERT INTO tool_calls (device_id, tool, risk, params) VALUES ($1, 'agent.update', $2, $3)`,
+      [deviceId, tool.risk, JSON.stringify({ version: device.latest_agent_version })]);
+    await recordAudit({ tenantId: user.tenantId, actorType: "user", actorId: user.id, eventType: "device.agent_update_requested",
+      eventData: { from: device.agent_version, to: device.latest_agent_version }, deviceId });
+    reply.code(202).send({ version: device.latest_agent_version });
   });
 
   // Day-one control #1: Revoke Device. Kills mTLS trust — cert_revoked_at set,

@@ -33,7 +33,7 @@ async function enqueueVerification(
   }
 }
 
-/** Wait for every verification result; service restarts also require a running service. */
+/** Wait for every verification result; service restarts and spooler resets also require a running service. */
 async function maybeFinalizeVerification(parentId: string) {
   const children = await pool.query(`SELECT tool, result, result_data FROM tool_calls WHERE parent_tool_call_id = $1`, [parentId]);
   if (children.rowCount === 0) return;
@@ -42,7 +42,8 @@ async function maybeFinalizeVerification(parentId: string) {
 
   const allPassed = children.rows.every((r) => r.result === "success" &&
     (r.tool !== "service.status" || r.result_data?.state === "RUNNING") &&
-    (r.tool !== "package.status" || r.result_data?.installed === true));
+    (r.tool !== "package.status" || r.result_data?.installed === true) &&
+    (r.tool !== "printer.details" || r.result_data?.spooler_state === "RUNNING"));
   await pool.query(`UPDATE tool_calls SET verification_status = $1 WHERE id = $2`, [allPassed ? "passed" : "failed", parentId]);
 }
 

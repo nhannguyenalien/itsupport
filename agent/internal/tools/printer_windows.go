@@ -355,11 +355,10 @@ func PrinterClearQueue(params map[string]any) (map[string]any, error) {
 	return map[string]any{"printer_name": name, "purged": true}, nil
 }
 
-// PrinterTest submits a minimal RAW job to confirm the spooler and this queue
+// PrinterTest prints a test page to confirm the driver, spooler and queue
 // accept work end to end — the terminal verification step in scenario A.
-// RAW bytes go straight to the device, so on a PostScript-only printer the
-// page may print as literal text rather than formatted; the point here is
-// proving the spool path is alive, not the rendering.
+// It renders through GDI first (works for v4/XPS drivers that reject RAW),
+// then falls back to a minimal RAW job for drivers without a usable GDI path.
 func PrinterTest(params map[string]any) (map[string]any, error) {
 	name := ""
 	if v, ok := params["printer_name"].(string); ok {
@@ -368,13 +367,34 @@ func PrinterTest(params map[string]any) (map[string]any, error) {
 	if name == "" {
 		var err error
 		if name, err = defaultPrinterName(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w; pass printer_name from printer.details", err)
 		}
 	}
 
+	jobID, gdiErr := gdiTestPage(name)
+	if gdiErr == nil {
+		return map[string]any{"printer_name": name, "job_id": jobID, "method": "gdi", "submitted": true}, nil
+	}
+	rawJobID, written, rawErr := rawTestPage(name)
+	if rawErr != nil {
+		return nil, fmt.Errorf("GDI test page failed (%v); RAW test page failed (%v)", gdiErr, rawErr)
+	}
+	return map[string]any{
+		"printer_name":  name,
+		"job_id":        rawJobID,
+		"bytes_written": written,
+		"method":        "raw",
+		"gdi_error":     gdiErr.Error(),
+		"submitted":     true,
+	}, nil
+}
+
+// rawTestPage sends bytes straight to the device, so on a PostScript-only
+// printer the page may print as literal text; it proves the spool path only.
+func rawTestPage(name string) (uintptr, uint32, error) {
 	h, err := openPrinter(name, false)
 	if err != nil {
-		return nil, err
+		return 0, 0, err
 	}
 	defer procClosePrinter.Call(uintptr(h))
 
@@ -384,11 +404,11 @@ func PrinterTest(params map[string]any) (map[string]any, error) {
 
 	jobID, _, callErr := procStartDocPrinterW.Call(uintptr(h), 1, uintptr(unsafe.Pointer(&doc)))
 	if jobID == 0 {
-		return nil, fmt.Errorf("StartDocPrinter(%q): %w", name, callErr)
+		return 0, 0, fmt.Errorf("StartDocPrinter(%q): %w", name, callErr)
 	}
 	if ret, _, e := procStartPagePrinter.Call(uintptr(h)); ret == 0 {
 		procEndDocPrinter.Call(uintptr(h))
-		return nil, fmt.Errorf("StartPagePrinter(%q): %w", name, e)
+		return 0, 0, fmt.Errorf("StartPagePrinter(%q): %w", name, e)
 	}
 
 	page := []byte("\r\n  Support Agent - printer test page\r\n" +
@@ -403,13 +423,7 @@ func PrinterTest(params map[string]any) (map[string]any, error) {
 	procEndPagePrinter.Call(uintptr(h))
 	procEndDocPrinter.Call(uintptr(h))
 	if ret == 0 {
-		return nil, fmt.Errorf("WritePrinter(%q): %w", name, e)
+		return 0, 0, fmt.Errorf("WritePrinter(%q): %w", name, e)
 	}
-
-	return map[string]any{
-		"printer_name":  name,
-		"job_id":        jobID,
-		"bytes_written": written,
-		"submitted":     true,
-	}, nil
+	return jobID, written, nil
 }

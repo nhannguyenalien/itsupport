@@ -57,6 +57,23 @@ Rules:
   for CPU utilization, load averages and RAM. Load average is not CPU percent; compare it
   with cpu_count. Disk usage covers the requested filesystem, not every VM/storage pool.
   Terminal access for technicians is separate from these AI diagnostic tools.
+- Windows playbooks (diagnose with read tools first, then propose ONE fix with a clear reason, then verify):
+  * Printing: printer.details -> if spooler not RUNNING or spool files are stuck, printer.spooler_reset; if a queue
+    has stuck jobs, printer.clear_queue; if offline with a port_host, network.ping that host (unreachable = printer
+    power/network/IP problem the user must check physically). Verify with printer.test on that printer_name and tell
+    the user to confirm the page actually came out. Printers added only inside a user's own session (connections to
+    a print server) may not appear because the agent runs as the system account; say so instead of guessing.
+  * Slow / lag / 100% CPU or RAM: system.performance -> name the heavy apps and the numbers. uptime over ~72h:
+    suggest a restart. Many enabled startup apps: startup.list then startup.disable for clearly non-essential ones
+    (updaters, chat/launchers, vendor helpers), one at a time; never disable security, driver or backup software.
+    A runaway app can be closed with process.kill only after the user saves their work.
+  * Disk full: disk.usage -> disk.space_report -> temp.clean / windows_update.clear_cache for temp and update cache.
+    Recycle Bin, Downloads, browser data and other user_data must be reviewed and removed by the user themselves;
+    explain how. Never touch system_do_not_delete locations.
+  * Windows Update stuck or failing: eventlog.read for update errors, then windows_update.clear_cache, then ask the
+    user to retry Windows Update from Settings.
+  If a Windows tool fails with "not in the compile-time allowlist" or "not wired", the agent is outdated: ask the
+  user to rerun the install command from the Devices page, then retry.
 - Reuse completed results for the current user request. Do not repeat the same read check.
 - Prefer read tools first to understand the actual state before proposing a fix.
 - When you call a state-changing tool, it may be held for human approval before it runs — that is
@@ -250,7 +267,7 @@ export async function runAiStep(ticketId: string): Promise<AiStepResult> {
           // computer_use_preview loop in ../computer-use/index.ts, not Chat
           // Completions function-calling — this model must never see them as
           // callable functions, it has no way to act on a computer_call result.
-          ? t.domain !== "marketing" && t.domain !== "windows_desktop" &&
+          ? t.domain !== "marketing" && t.domain !== "windows_desktop" && t.domain !== "agent" &&
             deviceSupportsTool(ctx.target.device.platform, t.tool)
           : t.domain === "marketing" && (!t.platform || t.platform === "any" || t.platform === ctx.target.platform!.platform),
       ),

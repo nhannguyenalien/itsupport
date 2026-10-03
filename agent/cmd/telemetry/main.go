@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"support-agent/agent/internal/version"
 	"time"
 
 	"support-agent/agent/internal/config"
@@ -18,6 +19,7 @@ import (
 )
 
 func main() {
+	version.PrintIfRequested()
 	configureFileLogging("telemetry.log")
 	if err := winsvc.RunAsService("SupportAgentTelemetry", run); err != nil {
 		log.Fatal(err)

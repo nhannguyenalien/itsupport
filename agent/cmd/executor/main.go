@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"support-agent/agent/internal/version"
 	"time"
 
 	"support-agent/agent/internal/executor"
@@ -22,6 +23,7 @@ import (
 )
 
 func main() {
+	version.PrintIfRequested()
 	if err := winsvc.RunAsService("SupportAgentExecutor", run); err != nil {
 		log.Fatal(err)
 	}

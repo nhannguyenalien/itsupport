@@ -30,6 +30,10 @@ call — no shelling out to PowerShell or `ipconfig`/`ping`/`nslookup`:
 | printer | `printer.status`, `printer.queue`, `printer.test`, `printer.clear_queue` | `winspool.drv` (`EnumPrinters`, `GetPrinter` L6, `EnumJobs`, `StartDocPrinter`, `SetPrinter` PURGE) |
 | eventlog| `eventlog.read` | `wevtapi` `EvtQuery`/`EvtNext`/`EvtRender` (XML) |
 | browser | `browser.open_url` (v0.2 OAuth-assist) | `cmd /c start` |
+| printer (Đợt 1) | `printer.details`, `printer.spooler_reset`; `printer.test` now renders through GDI first | `EnumPrinters` L2, TCP/IP port registry, SCM, `CreateDC`/`StartDoc`/`TextOut` |
+| performance (Đợt 1) | `system.performance` | `GetSystemTimes`, `GetProcessTimes`, `K32GetProcessMemoryInfo` |
+| startup (Đợt 1) | `startup.list`, `startup.disable`, `startup.enable` | Run keys, Startup folders, `Explorer\StartupApproved` flag (Task Manager compatible) |
+| disk (Đợt 1) | `disk.space_report`, `windows_update.clear_cache` | bounded `WalkDir` over a fixed location list; SCM + fixed `SoftwareDistribution\Download` |
 
 `registry_windows_test.go` fails the build if the name allowlist
 (`registry.go`) and the implementation table (`registry_windows.go`) drift.
@@ -40,6 +44,22 @@ argument order have **not** been exercised against a real Windows host yet — n
 Windows machine available here; flagged, not assumed correct from compilation
 alone. `notImplemented()` stays in `registry_windows.go` as the wiring for any
 future tool added to the name list before its Win32 code lands.
+
+## Click-to-update (Windows, 0.3.0+)
+
+`agent.update` is queued only when a user clicks "Cập nhật" on the Devices
+page (`POST /devices/:id/agent-update`); it is never offered to the AI. The
+executor downloads `/downloads/agent/windows-amd64/manifest.json` + `manifest.sig`
+from the enrolled origin, verifies the Ed25519 signature against
+`internal/update.ReleasePublicKey`, checks every SHA-256, runs each staged
+binary with `-version`, swaps the files (keeping `*.old`), restarts telemetry
+and daemon, restores the old files if they fail, then exits so SCM recovery
+starts the new executor. Telemetry reports `version.Version` in every heartbeat.
+
+Release: bump `internal/version.Version`, run `build-release.sh` (it signs each
+platform with the key from `go run ./cmd/releasesign keygen`, kept outside the
+repo at `~/.config/itsupport/agent-release-ed25519.key`), then publish the
+downloads directory.
 
 ## Build
 

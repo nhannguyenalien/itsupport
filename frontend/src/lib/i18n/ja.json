@@ -354,5 +354,17 @@
   "Đang thực hiện…": "実行中…",
   "Xác nhận": "確認",
   "Đang trả lời…": "回答中…",
-  "Nhập câu hỏi…": "質問を入力…"
+  "Nhập câu hỏi…": "質問を入力…",
+  "Tôi đề xuất khởi động lại dịch vụ in và xóa các lệnh in bị kẹt. Các lệnh in đang chờ sẽ bị hủy. Bạn có đồng ý không?": "印刷サービスを再起動し、詰まった印刷ジョブを削除することをお勧めします。待機中の印刷ジョブは取り消されます。よろしいですか?",
+  "Tôi đề xuất tắt một ứng dụng tự chạy khi khởi động để máy nhanh hơn. Có thể bật lại bất cứ lúc nào. Bạn có đồng ý không?": "PCを速くするため、起動時に自動実行されるアプリを1つ無効にすることをお勧めします。いつでも元に戻せます。よろしいですか?",
+  "Tôi đề xuất bật lại ứng dụng tự chạy khi khởi động. Bạn có đồng ý không?": "スタートアップアプリを再度有効にすることをお勧めします。よろしいですか?",
+  "Tôi đề xuất xóa bộ nhớ đệm tải về của Windows Update để sửa lỗi cập nhật và giải phóng dung lượng. Windows sẽ tự tải lại phần cần thiết. Bạn có đồng ý không?": "更新エラーの修正と空き容量の確保のため、Windows Update のダウンロードキャッシュを削除することをお勧めします。必要なファイルは Windows が再ダウンロードします。よろしいですか?",
+  "Có bản cập nhật agent mới ({version})": "エージェントの新しい更新があります ({version})",
+  "{count} máy có thể cập nhật. Máy chỉ cập nhật khi bạn bấm nút; dịch vụ hỗ trợ sẽ khởi động lại trong vài giây.": "{count} 台のデバイスを更新できます。ボタンを押したときだけ更新され、サポートサービスは数秒で再起動します。",
+  "Cập nhật tất cả": "すべて更新",
+  "Đang cập nhật lên {version}…": "{version} に更新中…",
+  "Cập nhật chưa thành công.": "更新が完了しませんでした。",
+  "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "古いエージェント：インストールコマンドを一度再実行すると（+ 端末を追加）、ボタンで更新できるようになります。",
+  "Máy đang ngoại tuyến": "端末はオフラインです",
+  "Cập nhật lên {version}": "{version} に更新"
 }

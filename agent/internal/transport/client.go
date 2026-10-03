@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"support-agent/agent/internal/version"
 	"time"
 )
 
@@ -64,9 +65,9 @@ type PendingCall struct {
 }
 
 func (c *Client) Heartbeat() error {
-	// Fastify rejects an empty body when Content-Type is application/json.
-	// Send an explicit empty object so the heartbeat reaches the route handler.
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/devices/%s/heartbeat", c.BaseURL, c.DeviceID), bytes.NewReader([]byte("{}")))
+	// Reporting the running version lets the dashboard offer one-click updates.
+	body, _ := json.Marshal(map[string]string{"agentVersion": version.Version})
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/devices/%s/heartbeat", c.BaseURL, c.DeviceID), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

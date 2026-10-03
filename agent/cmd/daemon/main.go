@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"support-agent/agent/internal/version"
 	"time"
 
 	"support-agent/agent/internal/config"
@@ -23,6 +24,7 @@ import (
 )
 
 func main() {
+	version.PrintIfRequested()
 	configureFileLogging("daemon.log")
 	if err := winsvc.RunAsService("SupportAgentDaemon", run); err != nil {
 		log.Fatal(err)
@@ -140,8 +142,14 @@ func callExecutor(httpClient *http.Client, addr, secret string, call transport.P
 	httpReq.Header.Set("X-Signature", ipc.Sign([]byte(secret), body))
 
 	client := *httpClient
-	if call.Tool == "package.install" {
+	switch call.Tool {
+	case "package.install":
 		client.Timeout = 12 * time.Minute
+	case "disk.space_report", "windows_update.clear_cache", "agent.update":
+		// Bounded scans/deletes that legitimately run past the default.
+		client.Timeout = 6 * time.Minute
+	case "printer.spooler_reset", "startup.disable", "startup.enable":
+		client.Timeout = 2 * time.Minute
 	}
 	resp, err := client.Do(httpReq)
 	if err != nil {

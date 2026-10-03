@@ -29,6 +29,20 @@ var KnownTools = map[string]Risk{
 	"temp.clean":          RiskLow,
 	"printer.clear_queue": RiskLow,
 
+	// Đợt 1 (Windows Tier A): printer, performance, startup apps, disk space.
+	"printer.details":            RiskRead,
+	"system.performance":         RiskRead,
+	"startup.list":               RiskRead,
+	"disk.space_report":          RiskRead,
+	"printer.spooler_reset":      RiskMedium,
+	"startup.disable":            RiskLow,
+	"startup.enable":             RiskLow,
+	"windows_update.clear_cache": RiskMedium,
+
+	// Click-to-update (internal/update). Only ever created by a user clicking
+	// "Cập nhật" in the dashboard, never offered to the AI.
+	"agent.update": RiskMedium,
+
 	// v0.2 marketing-ops — opens the default browser at a backend-constructed
 	// /oauth/*/connect link so a human on this machine can complete OAuth
 	// consent themselves (see browser_windows.go for why this doesn't

@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"support-agent/agent/internal/version"
 
 	"support-agent/agent/internal/config"
 )
@@ -65,6 +66,7 @@ type registerResponse struct {
 }
 
 func main() {
+	version.PrintIfRequested()
 	backendURL := flag.String("backend", os.Getenv("AGENT_BACKEND_URL"), "backend base URL, e.g. https://support.example.com")
 	token := flag.String("token", "", "one-time enrollment token from an admin (10 minute TTL, see docs/v0.1-spec.md)")
 	configPath := flag.String("config", config.DefaultPath(), "where to write the resulting device config")
@@ -105,7 +107,7 @@ func main() {
 		Token:        *token,
 		Hostname:     hostname,
 		PublicKey:    pubPEM,
-		AgentVersion: "0.2.0",
+		AgentVersion: version.Version,
 		Platform:     platform,
 	})
 	if err != nil {

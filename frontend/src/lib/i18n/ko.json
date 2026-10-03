@@ -354,5 +354,17 @@
   "Đang thực hiện…": "처리 중…",
   "Xác nhận": "확인",
   "Đang trả lời…": "답변 중…",
-  "Nhập câu hỏi…": "질문을 입력하세요…"
+  "Nhập câu hỏi…": "질문을 입력하세요…",
+  "Tôi đề xuất khởi động lại dịch vụ in và xóa các lệnh in bị kẹt. Các lệnh in đang chờ sẽ bị hủy. Bạn có đồng ý không?": "인쇄 서비스를 다시 시작하고 멈춘 인쇄 작업을 삭제할 것을 권장합니다. 대기 중인 인쇄 작업은 취소됩니다. 동의하시겠습니까?",
+  "Tôi đề xuất tắt một ứng dụng tự chạy khi khởi động để máy nhanh hơn. Có thể bật lại bất cứ lúc nào. Bạn có đồng ý không?": "컴퓨터 속도를 높이기 위해 시작 시 자동 실행되는 앱 하나를 끌 것을 권장합니다. 언제든지 다시 켤 수 있습니다. 동의하시겠습니까?",
+  "Tôi đề xuất bật lại ứng dụng tự chạy khi khởi động. Bạn có đồng ý không?": "시작 앱을 다시 켤 것을 권장합니다. 동의하시겠습니까?",
+  "Tôi đề xuất xóa bộ nhớ đệm tải về của Windows Update để sửa lỗi cập nhật và giải phóng dung lượng. Windows sẽ tự tải lại phần cần thiết. Bạn có đồng ý không?": "업데이트 오류를 해결하고 공간을 확보하기 위해 Windows 업데이트 다운로드 캐시를 지울 것을 권장합니다. 필요한 파일은 Windows가 다시 다운로드합니다. 동의하시겠습니까?",
+  "Có bản cập nhật agent mới ({version})": "새 에이전트 업데이트가 있습니다 ({version})",
+  "{count} máy có thể cập nhật. Máy chỉ cập nhật khi bạn bấm nút; dịch vụ hỗ trợ sẽ khởi động lại trong vài giây.": "{count}대의 기기를 업데이트할 수 있습니다. 버튼을 눌러야만 업데이트되며, 지원 서비스는 몇 초 안에 다시 시작됩니다.",
+  "Cập nhật tất cả": "모두 업데이트",
+  "Đang cập nhật lên {version}…": "{version}(으)로 업데이트 중…",
+  "Cập nhật chưa thành công.": "업데이트가 완료되지 않았습니다.",
+  "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "이전 에이전트: 설치 명령을 한 번 다시 실행하면(+ 기기 추가) 버튼 업데이트가 활성화됩니다.",
+  "Máy đang ngoại tuyến": "기기가 오프라인입니다",
+  "Cập nhật lên {version}": "{version}(으)로 업데이트"
 }

@@ -20,6 +20,10 @@ function approvalQuestion(approval: Approval): string {
     "service.restart": "Tôi đề xuất khởi động lại dịch vụ đang gặp lỗi. Máy có thể gián đoạn trong chốc lát. Bạn có đồng ý không?",
     "network.flush_dns": "Tôi đề xuất làm mới kết nối tên miền trên máy. Bạn có đồng ý không?",
     "printer.clear_queue": "Tôi đề xuất xóa các lệnh in đang bị kẹt. Bạn có đồng ý không?",
+    "printer.spooler_reset": "Tôi đề xuất khởi động lại dịch vụ in và xóa các lệnh in bị kẹt. Các lệnh in đang chờ sẽ bị hủy. Bạn có đồng ý không?",
+    "startup.disable": "Tôi đề xuất tắt một ứng dụng tự chạy khi khởi động để máy nhanh hơn. Có thể bật lại bất cứ lúc nào. Bạn có đồng ý không?",
+    "startup.enable": "Tôi đề xuất bật lại ứng dụng tự chạy khi khởi động. Bạn có đồng ý không?",
+    "windows_update.clear_cache": "Tôi đề xuất xóa bộ nhớ đệm tải về của Windows Update để sửa lỗi cập nhật và giải phóng dung lượng. Windows sẽ tự tải lại phần cần thiết. Bạn có đồng ý không?",
   };
   if (approval.tool.startsWith("desktop.")) return "Tôi cần thao tác trên màn hình máy để tiếp tục xử lý. Bạn có đồng ý không?";
   return questions[approval.tool] ?? "Tôi đã tìm thấy một bước có thể thay đổi máy của bạn. Bạn có đồng ý để tôi tiếp tục không?";

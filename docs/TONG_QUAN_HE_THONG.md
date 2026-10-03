@@ -37,8 +37,8 @@ Vào **Thiết bị → + Thêm máy**, chọn hệ điều hành, sao chép l�
 ## 5. Luồng xử lý một sự cố
 
 1. Tạo **ticket** cho một máy và mô tả lỗi (có thể đính kèm 1 tài liệu PDF dạng chữ, DOCX, TXT hoặc MD, tối đa 5 MB).
-2. Bấm chạy **chẩn đoán AI**. AI dùng các công cụ đọc: trạng thái dịch vụ, tiến trình, ping, tra DNS, dung lượng ổ đĩa, file tạm, máy in và hàng đợi in, thông tin hệ thống, event log, nhiệt độ phần cứng, trạng thái gói phần mềm (Linux).
-3. AI **đề xuất** cách khắc phục, ví dụ: khởi động lại dịch vụ, tắt tiến trình treo, xóa cache DNS, dọn file tạm, xóa hàng đợi in, cài gói phần mềm (Linux).
+2. Bấm chạy **chẩn đoán AI**. AI dùng các công cụ đọc: trạng thái dịch vụ, tiến trình, ping, tra DNS, dung lượng ổ đĩa, file tạm, máy in và hàng đợi in, thông tin hệ thống, event log, nhiệt độ phần cứng, trạng thái gói phần mềm (Linux). Trên Windows có thêm: chi tiết máy in (driver, cổng, IP máy in, trạng thái dịch vụ in), hiệu năng máy (CPU, RAM, thời gian chạy, ứng dụng nặng nhất), danh sách ứng dụng tự chạy khi khởi động, và báo cáo thứ gì đang chiếm dung lượng ổ C.
+3. AI **đề xuất** cách khắc phục, ví dụ: khởi động lại dịch vụ, tắt tiến trình treo, xóa cache DNS, dọn file tạm, xóa hàng đợi in, cài gói phần mềm (Linux). Trên Windows có thêm: khởi động lại dịch vụ in và xóa lệnh in kẹt, tắt/bật lại ứng dụng tự chạy khi khởi động (giống Task Manager, bật lại được), xóa bộ nhớ đệm tải về của Windows Update.
 4. Kỹ thuật viên/admin **duyệt hoặc từ chối** trên trang ticket.
 5. Agent thực hiện, hệ thống **tự xác minh**. Đạt thì ticket chuyển sang *đã xử lý*; không đạt thì *khắc phục thất bại*, AI có thể thử cách khác hoặc chuyển cho kỹ thuật viên.
 
@@ -49,8 +49,8 @@ Các trạng thái ticket: mở, đang chẩn đoán, chờ phê duyệt, đang 
 | Mức | Ví dụ | Cách xử lý |
 |---|---|---|
 | Đọc (read) | xem dịch vụ, ổ đĩa, ping, nhiệt độ, chụp màn hình | Tự chạy, không cần duyệt |
-| Thấp (low) | xóa cache DNS, dọn file tạm, xóa hàng đợi in | Cần duyệt; admin có thể bật tự động riêng cho mức này |
-| Trung bình (medium) | khởi động lại dịch vụ | Luôn cần duyệt |
+| Thấp (low) | xóa cache DNS, dọn file tạm, xóa hàng đợi in, tắt/bật app khởi động | Cần duyệt; admin có thể bật tự động riêng cho mức này |
+| Trung bình (medium) | khởi động lại dịch vụ, khởi động lại dịch vụ in, xóa cache Windows Update | Luôn cần duyệt |
 | Cao (high) | tắt tiến trình, cài gói phần mềm, click/gõ phím trên màn hình | Luôn cần duyệt (trừ chế độ điều khiển màn hình tự động, xem mục 7) |
 
 Khi thiết bị bị **tạm dừng thao tác (Pause actions)**, mọi thao tác ghi bị chặn nhưng vẫn chẩn đoán đọc được.
@@ -103,7 +103,13 @@ Nút **Trợ lý** ở góc phải màn hình có 2 cấp:
 
 **AI có chạy được mọi lệnh không?** Không. Chỉ các công cụ có sẵn trong hệ thống; không có lệnh shell tùy ý, không gỡ gói, không nâng cấp toàn hệ thống.
 
-**Cập nhật agent thế nào?** Chạy lại đúng lệnh cài đặt; danh tính thiết bị được giữ nguyên.
+**Cập nhật agent thế nào?** Trên Windows (agent từ bản 0.3.0): trang **Thiết bị** báo khi có bản mới, bấm **Cập nhật** ở từng máy hoặc **Cập nhật tất cả** — không cần mở terminal, máy chỉ cập nhật khi bạn bấm. Agent chỉ cài bản có chữ ký số hợp lệ của nhà phát hành và tự quay về bản cũ nếu bản mới lỗi. Máy cài bản cũ hơn hoặc macOS/Linux: chạy lại đúng lệnh cài đặt một lần; danh tính thiết bị được giữ nguyên.
+
+**Máy in không in được thì AI làm gì?** (Windows) AI xem chi tiết máy in và dịch vụ in, ping tới IP máy in, đề xuất xóa lệnh in kẹt hoặc khởi động lại dịch vụ in, rồi in thử một trang để xác nhận. Máy in người dùng tự thêm riêng trong tài khoản của họ (kết nối tới máy chủ in) có thể không hiện với agent.
+
+**Máy chậm thì AI làm gì?** (Windows) AI đo CPU/RAM, tìm ứng dụng nặng nhất, kiểm tra thời gian máy chưa khởi động lại và các ứng dụng tự chạy khi khởi động; có thể đề xuất tắt bớt ứng dụng tự chạy không cần thiết.
+
+**Ổ C đầy thì AI làm gì?** (Windows) AI báo cáo thư mục nào đang chiếm dung lượng (Thùng rác, Downloads, dữ liệu trình duyệt, cache cập nhật…), tự dọn file tạm và cache Windows Update khi được duyệt. Dữ liệu cá nhân (Downloads, Desktop, Thùng rác) người dùng tự xem và xóa.
 
 **Có xem được nhiệt độ CPU không?** Có, công cụ đọc cảm biến phần cứng. Nếu máy không có cảm biến, hệ thống báo rõ là không đọc được.
 

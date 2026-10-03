@@ -22,6 +22,12 @@ for arch in amd64 arm64; do
     (cd "$AGENT_DIR" && CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath -ldflags="-s -w" -o "$OUTPUT_DIR/linux-$arch/$command" "./cmd/$command")
   done
 done
+# Sign every platform's manifest with the offline release key (see
+# cmd/releasesign). Agents refuse click-to-update without a valid signature.
+for platform in darwin-arm64 darwin-amd64 windows-amd64 linux-amd64 linux-arm64; do
+  (cd "$AGENT_DIR" && go run ./cmd/releasesign sign -dir "$OUTPUT_DIR/$platform" -platform "$platform")
+done
+
 cp "$AGENT_DIR/install/install-linux.sh" "$OUTPUT_DIR/install-linux-service"
 cp "$AGENT_DIR/install/install-macos.sh" "$OUTPUT_DIR/install-macos-service"
 cp "$AGENT_DIR/install/install.ps1" "$OUTPUT_DIR/install-windows-service"

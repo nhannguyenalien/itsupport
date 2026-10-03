@@ -92,6 +92,10 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
     return { outcome: "rejected", reason: `unknown tool "${input.tool}"` };
   }
   const tool = getTool(input.tool)!;
+  if (tool.domain === "agent") {
+    // Agent updates only come from the device page's update button.
+    return { outcome: "rejected", reason: "Agent updates are started from the Devices page" };
+  }
   if (input.tool.startsWith("package.") &&
       (typeof input.params.package_name !== "string" || !/^[a-z0-9][a-z0-9+.-]{1,127}$/.test(input.params.package_name))) {
     return { outcome: "rejected", reason: "package_name must be one exact Linux repository package name" };
@@ -101,6 +105,9 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   if (!ctx) return { outcome: "not_found" };
   if (tool.domain === "linux" && ctx.device_platform?.toLowerCase() !== "linux") {
     return { outcome: "rejected", reason: "This tool requires a Linux device" };
+  }
+  if (tool.domain === "windows" && ["mac", "linux"].includes(ctx.device_platform?.toLowerCase() ?? "")) {
+    return { outcome: "rejected", reason: "This tool requires a Windows device" };
   }
   if (ctx.target_blocked) {
     return { outcome: "rejected", reason: ctx.target_device_id ? "device is revoked" : "platform connection is not active" };

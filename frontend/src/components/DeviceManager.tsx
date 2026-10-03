@@ -72,6 +72,21 @@ export default function DevicesPage() {
     }
   }
 
+  const updatable = devices.filter((d) => d.update_supported && d.update_available && d.status === "online" &&
+    (d.update_state === "none" || d.update_state === "failed"));
+  const latestVersion = devices.find((d) => d.latest_agent_version)?.latest_agent_version;
+
+  async function updateAgents(targets: Device[]) {
+    setError(null);
+    const failures: string[] = [];
+    for (const d of targets) {
+      try { await api.requestAgentUpdate(d.id); }
+      catch (e) { failures.push(`${d.hostname}: ${e instanceof Error ? e.message : String(e)}`); }
+    }
+    if (failures.length) setError(failures.join("; "));
+    await load();
+  }
+
   async function createInstaller() {
     if (!tenantId) return;
     setError(null);
@@ -142,6 +157,13 @@ export default function DevicesPage() {
           )}
         </div>
       )}
+      {updatable.length > 0 && latestVersion && (
+        <div className="card update-banner">
+          <div><strong>{tx("Có bản cập nhật agent mới ({version})", { version: latestVersion })}</strong>
+            <p className="muted">{tx("{count} máy có thể cập nhật. Máy chỉ cập nhật khi bạn bấm nút; dịch vụ hỗ trợ sẽ khởi động lại trong vài giây.", { count: updatable.length })}</p></div>
+          <button className="primary" onClick={() => void updateAgents(updatable)}>{tx("Cập nhật tất cả")}</button>
+        </div>
+      )}
       {loading && <p className="muted">{tx("Đang kiểm tra kết nối…")}</p>}
       {!loading && !error && devices.length === 0 && <p className="muted">{tx("Chưa có thiết bị. Nhấn “Thêm máy” để bắt đầu.")}</p>}
       {devices.map((d) => (
@@ -156,9 +178,23 @@ export default function DevicesPage() {
                 {d.os_version ?? tx("Không rõ hệ điều hành")} {tx("· agent")} {d.agent_version ?? tx("không rõ")} {tx("· hoạt động lần cuối")}{" "}
                 {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString(locale) : tx("chưa có")}
               </div>
+              {(d.update_state === "queued" || d.update_state === "installing") && (
+                <div className="update-status">{tx("Đang cập nhật lên {version}…", { version: d.latest_agent_version ?? "" })}</div>
+              )}
+              {d.update_state === "failed" && (
+                <div className="update-status update-failed">{tx("Cập nhật chưa thành công.")} {d.update_error}</div>
+              )}
+              {d.update_available && !d.update_supported && !d.revoked && (
+                <div className="update-status">{tx("Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.")}</div>
+              )}
 
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
+              {d.update_supported && d.update_available && (d.update_state === "none" || d.update_state === "failed") && (
+                <button disabled={d.status !== "online"} title={d.status !== "online" ? tx("Máy đang ngoại tuyến") : undefined} onClick={() => void updateAgents([d])}>
+                  {tx("Cập nhật lên {version}", { version: d.latest_agent_version ?? "" })}
+                </button>
+              )}
               <button className="primary" disabled={d.revoked || d.status !== "online" || !!chatDevice} onClick={() => void openChat(d)}>{chatDevice === d.id ? tx("Đang mở…") : tx("Chat hỗ trợ")}</button>
               <details><summary>{tx("Quản lý")}</summary>
               {!d.actions_paused ? (

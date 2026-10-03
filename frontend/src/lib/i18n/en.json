@@ -354,5 +354,17 @@
   "Đang thực hiện…": "Working…",
   "Xác nhận": "Confirm",
   "Đang trả lời…": "Replying…",
-  "Nhập câu hỏi…": "Type a question…"
+  "Nhập câu hỏi…": "Type a question…",
+  "Tôi đề xuất khởi động lại dịch vụ in và xóa các lệnh in bị kẹt. Các lệnh in đang chờ sẽ bị hủy. Bạn có đồng ý không?": "I recommend restarting the print service and removing stuck print jobs. Pending print jobs will be cancelled. Do you approve?",
+  "Tôi đề xuất tắt một ứng dụng tự chạy khi khởi động để máy nhanh hơn. Có thể bật lại bất cứ lúc nào. Bạn có đồng ý không?": "I recommend turning off an app that starts with Windows to speed up the computer. It can be turned back on at any time. Do you approve?",
+  "Tôi đề xuất bật lại ứng dụng tự chạy khi khởi động. Bạn có đồng ý không?": "I recommend turning the startup app back on. Do you approve?",
+  "Tôi đề xuất xóa bộ nhớ đệm tải về của Windows Update để sửa lỗi cập nhật và giải phóng dung lượng. Windows sẽ tự tải lại phần cần thiết. Bạn có đồng ý không?": "I recommend clearing the Windows Update download cache to fix update errors and free up space. Windows will re-download what it needs. Do you approve?",
+  "Có bản cập nhật agent mới ({version})": "New agent update available ({version})",
+  "{count} máy có thể cập nhật. Máy chỉ cập nhật khi bạn bấm nút; dịch vụ hỗ trợ sẽ khởi động lại trong vài giây.": "{count} device(s) can be updated. Devices only update when you click; the support service restarts within a few seconds.",
+  "Cập nhật tất cả": "Update all",
+  "Đang cập nhật lên {version}…": "Updating to {version}…",
+  "Cập nhật chưa thành công.": "The update did not complete.",
+  "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "Older agent: rerun the install command once (+ Add device) to enable one-click updates.",
+  "Máy đang ngoại tuyến": "Device is offline",
+  "Cập nhật lên {version}": "Update to {version}"
 }

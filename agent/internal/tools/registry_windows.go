@@ -2,7 +2,11 @@
 
 package tools
 
-import "fmt"
+import (
+	"fmt"
+
+	"support-agent/agent/internal/update"
+)
 
 func notImplemented(tool string) Func {
 	return func(params map[string]any) (map[string]any, error) {
@@ -41,6 +45,17 @@ var Allowlist = map[string]Definition{
 	"printer.clear_queue": {Fn: PrinterClearQueue, Risk: RiskLow},
 
 	"browser.open_url": {Fn: OpenURL, Risk: RiskLow},
+
+	"printer.details":            {Fn: PrinterDetails, Risk: RiskRead},
+	"system.performance":         {Fn: SystemPerformance, Risk: RiskRead},
+	"startup.list":               {Fn: StartupList, Risk: RiskRead},
+	"disk.space_report":          {Fn: DiskSpaceReport, Risk: RiskRead},
+	"printer.spooler_reset":      {Fn: PrinterSpoolerReset, Risk: RiskMedium},
+	"startup.disable":            {Fn: StartupDisable, Risk: RiskLow},
+	"startup.enable":             {Fn: StartupEnable, Risk: RiskLow},
+	"windows_update.clear_cache": {Fn: WindowsUpdateClearCache, Risk: RiskMedium},
+
+	"agent.update": {Fn: update.Apply, Risk: RiskMedium},
 
 	"desktop.screenshot":   {Fn: DesktopScreenshot, Risk: RiskRead},
 	"desktop.move":         {Fn: DesktopMove, Risk: RiskRead},

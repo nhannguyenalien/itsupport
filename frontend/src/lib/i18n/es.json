@@ -354,5 +354,17 @@
   "Đang thực hiện…": "Procesando…",
   "Xác nhận": "Confirmar",
   "Đang trả lời…": "Respondiendo…",
-  "Nhập câu hỏi…": "Escribe una pregunta…"
+  "Nhập câu hỏi…": "Escribe una pregunta…",
+  "Tôi đề xuất khởi động lại dịch vụ in và xóa các lệnh in bị kẹt. Các lệnh in đang chờ sẽ bị hủy. Bạn có đồng ý không?": "Recomiendo reiniciar el servicio de impresión y eliminar los trabajos atascados. Los trabajos pendientes se cancelarán. ¿Estás de acuerdo?",
+  "Tôi đề xuất tắt một ứng dụng tự chạy khi khởi động để máy nhanh hơn. Có thể bật lại bất cứ lúc nào. Bạn có đồng ý không?": "Recomiendo desactivar una aplicación que se inicia con Windows para acelerar el equipo. Se puede volver a activar en cualquier momento. ¿Estás de acuerdo?",
+  "Tôi đề xuất bật lại ứng dụng tự chạy khi khởi động. Bạn có đồng ý không?": "Recomiendo volver a activar la aplicación de inicio. ¿Estás de acuerdo?",
+  "Tôi đề xuất xóa bộ nhớ đệm tải về của Windows Update để sửa lỗi cập nhật và giải phóng dung lượng. Windows sẽ tự tải lại phần cần thiết. Bạn có đồng ý không?": "Recomiendo borrar la caché de descargas de Windows Update para corregir errores de actualización y liberar espacio. Windows volverá a descargar lo necesario. ¿Estás de acuerdo?",
+  "Có bản cập nhật agent mới ({version})": "Hay una nueva actualización del agente ({version})",
+  "{count} máy có thể cập nhật. Máy chỉ cập nhật khi bạn bấm nút; dịch vụ hỗ trợ sẽ khởi động lại trong vài giây.": "Se pueden actualizar {count} equipo(s). Solo se actualizan cuando haces clic; el servicio se reinicia en unos segundos.",
+  "Cập nhật tất cả": "Actualizar todo",
+  "Đang cập nhật lên {version}…": "Actualizando a {version}…",
+  "Cập nhật chưa thành công.": "La actualización no se completó.",
+  "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "Agente antiguo: vuelve a ejecutar el comando de instalación una vez (+ Añadir equipo) para activar las actualizaciones con un clic.",
+  "Máy đang ngoại tuyến": "El equipo está sin conexión",
+  "Cập nhật lên {version}": "Actualizar a {version}"
 }

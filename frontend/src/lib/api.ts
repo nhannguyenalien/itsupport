@@ -43,6 +43,13 @@ export interface Device {
   last_seen_at: string | null;
   actions_paused: boolean;
   revoked: boolean;
+  platform?: "windows" | "mac" | "linux";
+  // Click-to-update (backend/src/devices/agent-updates.ts).
+  update_supported?: boolean;
+  latest_agent_version?: string | null;
+  update_available?: boolean;
+  update_state?: "none" | "queued" | "installing" | "failed";
+  update_error?: string | null;
 }
 
 export interface EnrollmentToken {
@@ -218,6 +225,8 @@ export const api = {
   listDevices: (tenantId: string) => request<Device[]>(`/devices?tenantId=${tenantId}`),
   createEnrollmentToken: (tenantId: string) =>
     request<EnrollmentToken>(`/enrollment-tokens`, { method: "POST", body: JSON.stringify({ tenantId }) }),
+  requestAgentUpdate: (deviceId: string) =>
+    request<{ version: string }>(`/devices/${deviceId}/agent-update`, { method: "POST", body: "{}" }),
   revokeDevice: (deviceId: string) => request(`/devices/${deviceId}/revoke`, { method: "POST", body: "{}" }),
   pauseDevice: (deviceId: string) => request(`/devices/${deviceId}/pause`, { method: "POST", body: "{}" }),
   unpauseDevice: (deviceId: string) => request(`/devices/${deviceId}/unpause`, { method: "POST", body: "{}" }),

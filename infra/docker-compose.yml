@@ -53,6 +53,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SCHOOLSAI_API_URL: ${SCHOOLSAI_API_URL:-https://apic.schoolsai.work}
       SCHOOLSAI_API_KEY: ${SCHOOLSAI_API_KEY:-}
+      # Where the backend reads the published agent manifest version (in-network).
+      AGENT_DOWNLOADS_URL: ${AGENT_DOWNLOADS_URL:-http://frontend:3000/downloads/agent}
       OAUTH_TOKEN_ENC_KEY: ${OAUTH_TOKEN_ENC_KEY:-}
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-}
       OAUTH_REDIRECT_BASE_URL: ${APP_PUBLIC_URL:-http://127.0.0.1:18080}/api
