@@ -45,16 +45,17 @@ Windows machine available here; flagged, not assumed correct from compilation
 alone. `notImplemented()` stays in `registry_windows.go` as the wiring for any
 future tool added to the name list before its Win32 code lands.
 
-## Click-to-update (Windows, 0.3.0+)
+## Click-to-update (Windows, macOS, Linux; 0.3.0+)
 
 `agent.update` is queued only when a user clicks "Cập nhật" on the Devices
 page (`POST /devices/:id/agent-update`); it is never offered to the AI. The
-executor downloads `/downloads/agent/windows-amd64/manifest.json` + `manifest.sig`
+executor downloads `/downloads/agent/<GOOS>-<GOARCH>/manifest.json` + `manifest.sig`
 from the enrolled origin, verifies the Ed25519 signature against
 `internal/update.ReleasePublicKey`, checks every SHA-256, runs each staged
 binary with `-version`, swaps the files (keeping `*.old`), restarts telemetry
-and daemon, restores the old files if they fail, then exits so SCM recovery
-starts the new executor. Telemetry reports `version.Version` in every heartbeat.
+and daemon (SCM / `launchctl kickstart` / `systemctl restart`), restores the
+old files if they do not stay up, then exits so the service manager (SCM
+recovery, launchd KeepAlive, systemd Restart=always) starts the new executor. Telemetry reports `version.Version` in every heartbeat.
 
 Release: bump `internal/version.Version`, run `build-release.sh` (it signs each
 platform with the key from `go run ./cmd/releasesign keygen`, kept outside the

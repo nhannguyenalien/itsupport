@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const Version = "0.3.0"
+const Version = "0.3.1"
 
 // PrintIfRequested handles `<binary> -version`. The updater runs every staged
 // binary this way before swapping it in, so a binary that cannot even start

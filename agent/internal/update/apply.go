@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin || linux
 
 package update
 
@@ -14,32 +14,31 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
-
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 
 	"support-agent/agent/internal/config"
 	"support-agent/agent/internal/version"
 )
 
-// Apply runs inside the executor service (LocalSystem) when a user clicks
-// "Cập nhật" for this device. It downloads the signed release for this
-// platform from the same origin the agent was enrolled against, verifies the
-// signature and every hash, checks each staged binary starts and reports the
-// requested version, then swaps the files in place (keeping *.old copies) and
-// schedules the service restarts. If the new daemon/telemetry services do not
-// reach RUNNING, the previous binaries are restored.
+// Apply runs inside the executor when a user clicks "Cập nhật" for this
+// device. It downloads the signed release for this platform from the same
+// origin the agent was enrolled against, verifies the signature and every
+// hash, checks each staged binary starts and reports the requested version,
+// then swaps the files in place (keeping *.old copies) and schedules the
+// service restarts (restart_<os>.go). If the new daemon/telemetry services do
+// not come back, the previous binaries are restored.
 
-const platform = "windows-amd64"
+func platformKey() string { return runtime.GOOS + "-" + runtime.GOARCH }
 
-var releaseFiles = []string{"daemon.exe", "enroll.exe", "executor.exe", "telemetry.exe"}
-
-// Service names as registered by install/install.ps1.
-var restartOrder = []string{"SupportAgentTelemetry", "SupportAgentDaemon"}
-
-const executorService = "SupportAgentExecutor"
+func releaseFiles() []string {
+	ext := ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
+	return []string{"daemon" + ext, "enroll" + ext, "executor" + ext, "telemetry" + ext}
+}
 
 // restartDelay leaves the daemon time to report this call's result before it
 // is restarted onto the new binary.
@@ -67,7 +66,7 @@ func downloadBase() (string, error) {
 	if u.Scheme != "https" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" {
 		return "", fmt.Errorf("updates require an https backend")
 	}
-	return u.Scheme + "://" + u.Host + "/downloads/agent/" + platform + "/", nil
+	return u.Scheme + "://" + u.Host + "/downloads/agent/" + platformKey() + "/", nil
 }
 
 func fetch(u string, limit int64) ([]byte, error) {
@@ -122,7 +121,7 @@ func Apply(params map[string]any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := VerifyManifest(manifestBytes, string(signature), ReleasePublicKey, platform, want, releaseFiles)
+	m, err := VerifyManifest(manifestBytes, string(signature), ReleasePublicKey, platformKey(), want, releaseFiles())
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +147,7 @@ func Apply(params map[string]any) (map[string]any, error) {
 			return nil, fmt.Errorf("%s does not match the signed manifest", f.Name)
 		}
 		path := filepath.Join(stage, f.Name)
-		if err := os.WriteFile(path, data, 0o755); err != nil {
+		if err := os.WriteFile(path, data, 0o700); err != nil {
 			os.RemoveAll(stage)
 			return nil, fmt.Errorf("stage %s: %w", f.Name, err)
 		}
@@ -158,8 +157,8 @@ func Apply(params map[string]any) (map[string]any, error) {
 		}
 	}
 
-	// Windows allows renaming a running executable, so swap every file and
-	// keep the previous one as *.old for rollback.
+	// Windows allows renaming a running executable and Unix keeps the running
+	// inode, so swap every file and keep the previous one as *.old.
 	swapped := make([]string, 0, len(m.Files))
 	for _, f := range m.Files {
 		current := filepath.Join(dir, f.Name)
@@ -190,54 +189,19 @@ func restore(dir string, names []string) {
 	}
 }
 
-func restartService(m *mgr.Mgr, name string) error {
-	s, err := m.OpenService(name)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-	if status, err := s.Query(); err == nil && status.State != svc.Stopped {
-		s.Control(svc.Stop)
-		waitFor(s, svc.Stopped, 30*time.Second)
-	}
-	if err := s.Start(); err != nil {
-		return err
-	}
-	return waitFor(s, svc.Running, 30*time.Second)
-}
-
-func waitFor(s *mgr.Service, want svc.State, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if status, err := s.Query(); err == nil && status.State == want {
-			return nil
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	return fmt.Errorf("service did not reach the expected state")
-}
-
 func restartOntoNewVersion(dir string, swapped []string, to string) {
 	time.Sleep(restartDelay)
-	m, err := mgr.Connect()
-	if err != nil {
-		log.Printf("update %s: connect to service manager: %v", to, err)
+	if err := restartPeers(); err != nil {
+		log.Printf("update %s: new daemon/telemetry did not start (%v); restoring previous binaries", to, err)
+		restore(dir, swapped)
+		if err := restartPeers(); err != nil {
+			log.Printf("update %s: restarting previous binaries also failed: %v", to, err)
+		}
 		return
 	}
-	defer m.Disconnect()
-	for _, name := range restartOrder {
-		if err := restartService(m, name); err != nil {
-			log.Printf("update %s: %s failed on the new version (%v); restoring previous binaries", to, name, err)
-			restore(dir, swapped)
-			for _, n := range restartOrder {
-				restartService(m, n)
-			}
-			return
-		}
-	}
-	// The executor cannot restart itself through the SCM while running. Exit
-	// so the service recovery action configured by install.ps1 starts the new
-	// executor binary.
-	log.Printf("update %s: daemon and telemetry running; restarting %s", to, executorService)
+	// The executor cannot restart itself through its own service manager while
+	// handling this call. Exiting lets the service manager (SCM recovery,
+	// launchd KeepAlive, systemd Restart=always) start the new binary.
+	log.Printf("update %s: daemon and telemetry running; restarting executor", to)
 	os.Exit(3)
 }

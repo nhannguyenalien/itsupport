@@ -33,6 +33,8 @@ function loadConversations(): Record<SupportTier, Conversation> {
   return { system: freshConversation(), account: freshConversation() };
 }
 
+export const OPEN_ASSISTANT_EVENT = "itsupport:open-assistant";
+
 // Floating two-tier support assistant. Tier "system" answers how the product
 // works (also before login); tier "account" answers about the signed-in
 // workspace. Account proposals (create ticket, run diagnosis) only execute
@@ -63,6 +65,12 @@ export function SupportChat() {
   }, [conversations, tier, open]);
 
   useEffect(() => { if (!signedIn) setTier("system"); }, [signedIn]);
+
+  useEffect(() => {
+    const openAssistant = () => setOpen(true);
+    window.addEventListener(OPEN_ASSISTANT_EVENT, openAssistant);
+    return () => window.removeEventListener(OPEN_ASSISTANT_EVENT, openAssistant);
+  }, []);
 
   // Never shown on the customer's own machine view (see TopNav for the same rule).
   if (!enabled || pathname?.endsWith("/customer")) return null;
@@ -114,43 +122,46 @@ export function SupportChat() {
     setConversations((current) => ({ ...current, [tier]: freshConversation() }));
   }
 
+  // The ticket workspace has its own composer in that corner; it opens the
+  // assistant from the sidebar instead of a floating button.
   if (!open) {
-    return <button type="button" className="support-chat-launcher" onClick={() => setOpen(true)} aria-label={tx("Mở trợ lý hỗ trợ")}>
+    if (pathname?.startsWith("/tickets")) return null;
+    return <button type="button" className="assistant-launcher" onClick={() => setOpen(true)} aria-label={tx("Mở trợ lý hỗ trợ")}>
       <span aria-hidden="true">?</span> {tx("Trợ lý")}
     </button>;
   }
 
   return (
-    <section className="support-chat" aria-label={tx("Trợ lý hỗ trợ")}>
-      <header className="support-chat-header">
-        <div className="support-chat-tabs" role="tablist">
+    <section className="assistant-panel" aria-label={tx("Trợ lý hỗ trợ")}>
+      <header className="assistant-header">
+        <div className="assistant-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={tier === "system"} onClick={() => setTier("system")}>{tx("Hệ thống")}</button>
           {signedIn && <button type="button" role="tab" aria-selected={tier === "account"} onClick={() => setTier("account")}>{tx("Tài khoản của tôi")}</button>}
         </div>
-        <button type="button" className="support-chat-icon" onClick={reset} title={tx("Cuộc trò chuyện mới")} aria-label={tx("Cuộc trò chuyện mới")}>↺</button>
-        <button type="button" className="support-chat-icon" onClick={() => setOpen(false)} aria-label={tx("Đóng")}>×</button>
+        <button type="button" className="assistant-icon" onClick={reset} title={tx("Cuộc trò chuyện mới")} aria-label={tx("Cuộc trò chuyện mới")}>↺</button>
+        <button type="button" className="assistant-icon" onClick={() => setOpen(false)} aria-label={tx("Đóng")}>×</button>
       </header>
-      <div className="support-chat-messages" ref={listRef} aria-live="polite">
-        {conversation.entries.length === 0 && <p className="support-chat-hint">
+      <div className="assistant-messages" ref={listRef} aria-live="polite">
+        {conversation.entries.length === 0 && <p className="assistant-hint">
           {tier === "system"
             ? tx("Hỏi về cách dùng hệ thống: thêm máy, ticket, phê duyệt, hỗ trợ từ xa…")
             : tx("Hỏi về chính tài khoản của bạn: máy nào đang offline, ticket nào đang chờ, tạo ticket mới…")}
         </p>}
         {conversation.entries.map((entry, index) => (
-          <div key={index} className={`support-chat-entry support-chat-${entry.role}`}>
-            <div className="support-chat-bubble">{entry.text.replace(/\*\*/g, "")}</div>
-            {entry.needsHuman && <p className="support-chat-note">{tx("Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.")}</p>}
+          <div key={index} className={`assistant-entry assistant-${entry.role}`}>
+            <div className="assistant-bubble">{entry.text.replace(/\*\*/g, "")}</div>
+            {entry.needsHuman && <p className="assistant-note">{tx("Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.")}</p>}
             {entry.proposals?.map((proposal) => {
               const key = proposal.action + JSON.stringify(proposal.params);
-              return <button key={key} type="button" className="primary support-chat-action" disabled={acting !== null} onClick={() => runProposal(proposal)}>
+              return <button key={key} type="button" className="primary assistant-action" disabled={acting !== null} onClick={() => runProposal(proposal)}>
                 {acting === key ? tx("Đang thực hiện…") : `${tx("Xác nhận")}: ${proposal.label}`}
               </button>;
             })}
           </div>
         ))}
-        {busy && <div className="support-chat-entry support-chat-bot"><div className="support-chat-bubble support-chat-typing">{tx("Đang trả lời…")}</div></div>}
+        {busy && <div className="assistant-entry assistant-bot"><div className="assistant-bubble assistant-typing">{tx("Đang trả lời…")}</div></div>}
       </div>
-      <form className="support-chat-form" onSubmit={send}>
+      <form className="assistant-form" onSubmit={send}>
         <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} placeholder={tx("Nhập câu hỏi…")} aria-label={tx("Nhập câu hỏi…")} disabled={busy} />
         <button type="submit" className="primary" disabled={busy || !draft.trim()}>{tx("Gửi")}</button>
       </form>

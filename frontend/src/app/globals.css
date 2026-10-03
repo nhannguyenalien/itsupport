@@ -385,32 +385,31 @@ input, select {
   .conversation-toolbar > div, .conversation-actions select { max-width: 100%; }
 }
 
-/* Two-tier support assistant (components/SupportChat.tsx) */
-.support-chat-launcher { position: fixed; right: 20px; bottom: 20px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: #111827; color: #fff; border-color: #111827; box-shadow: 0 8px 24px rgba(17,24,39,.25); font-weight: 600; }
-.support-chat-launcher:hover { background: #1f2937; }
-.support-chat-launcher span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; color: #111827; font-size: 12px; font-weight: 800; }
-.support-chat { position: fixed; right: 20px; bottom: 20px; z-index: 50; display: flex; flex-direction: column; width: min(380px, calc(100vw - 32px)); height: min(560px, calc(100vh - 40px)); background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 16px 40px rgba(17,24,39,.2); overflow: hidden; }
-.support-chat-header { display: flex; align-items: center; gap: 4px; padding: 8px; background: #111827; }
-.support-chat-tabs { display: flex; gap: 4px; flex: 1; min-width: 0; }
-.support-chat-tabs button { border: 0; background: transparent; color: #d1d5db; padding: 6px 10px; }
-.support-chat-tabs button[aria-selected="true"] { background: #fff; color: #111827; }
-.support-chat-tabs button:hover { background: #374151; color: #fff; }
-.support-chat-tabs button[aria-selected="true"]:hover { background: #fff; color: #111827; }
-.support-chat-icon { border: 0; background: transparent; color: #fff; font-size: 18px; line-height: 1; padding: 4px 8px; }
-.support-chat-icon:hover { background: #374151; }
-.support-chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: #f9fafb; }
-.support-chat-hint { margin: auto 0; color: #6b7280; font-size: 0.85rem; text-align: center; }
-.support-chat-entry { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 88%; }
-.support-chat-user { align-self: flex-end; align-items: flex-end; }
-.support-chat-bubble { padding: 8px 12px; border-radius: 10px; background: #fff; border: 1px solid #e5e7eb; font-size: 0.9rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
-.support-chat-user .support-chat-bubble { background: #111827; color: #fff; border-color: #111827; }
-.support-chat-error .support-chat-bubble { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
-.support-chat-typing { color: #6b7280; font-style: italic; }
-.support-chat-note { margin: 0; font-size: 0.8rem; color: #92400e; }
-.support-chat-action { text-align: left; white-space: normal; }
-.support-chat-form { display: flex; gap: 6px; padding: 8px; border-top: 1px solid #e5e7eb; }
-.support-chat-form input { flex: 1; min-width: 0; }
-@media (max-width: 480px) { .support-chat { right: 16px; bottom: 16px; } .support-chat-launcher { right: 16px; bottom: 16px; } }
+/* Two-tier support assistant (components/SupportChat.tsx). Own "assistant-"
+   prefix: the ticket conversation already uses support-chat-* classes. */
+.assistant-launcher { position: fixed; right: 20px; bottom: 20px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 0; border-radius: 999px; background: #087a52; color: #fff; box-shadow: 0 10px 26px rgba(8,122,82,.28); font-weight: 600; }
+.assistant-launcher:hover { background: #066744; }
+.assistant-launcher span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; color: #087a52; font-size: 12px; font-weight: 800; }
+.assistant-panel { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: flex; flex-direction: column; width: min(390px, calc(100vw - 32px)); height: min(580px, calc(100dvh - 40px)); overflow: hidden; border: 1px solid #dce5e1; border-radius: 16px; background: #fff; box-shadow: 0 24px 60px rgba(16,35,30,.22); }
+.assistant-header { display: flex; align-items: center; gap: 4px; padding: 10px; border-bottom: 1px solid #e8eeeb; background: #f6faf8; }
+.assistant-tabs { display: flex; flex: 1; min-width: 0; gap: 4px; padding: 3px; border-radius: 10px; background: #e7efeb; }
+.assistant-tabs button { flex: 1; border: 0; border-radius: 8px; padding: 6px 10px; background: transparent; color: #4d6259; font-size: 13px; white-space: nowrap; }
+.assistant-tabs button[aria-selected="true"] { background: #fff; color: #087a52; font-weight: 600; box-shadow: 0 1px 3px rgba(16,35,30,.12); }
+.assistant-icon { border: 0; background: transparent; color: #4d6259; font-size: 18px; line-height: 1; padding: 6px 8px; border-radius: 8px; }
+.assistant-icon:hover { background: #e7efeb; }
+.assistant-messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px; background: linear-gradient(180deg, #fbfdfc, #fff 30%); }
+.assistant-hint { margin: auto 12px; color: #73817c; font-size: 13px; line-height: 1.5; text-align: center; }
+.assistant-entry { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 88%; }
+.assistant-user { align-self: flex-end; align-items: flex-end; }
+.assistant-bubble { padding: 9px 13px; border-radius: 4px 14px 14px; background: #f0f4f2; color: #10231e; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-user .assistant-bubble { border-radius: 14px 4px 14px 14px; background: #087a52; color: #fff; }
+.assistant-error .assistant-bubble { background: #fef2f2; color: #991b1b; }
+.assistant-typing { color: #73817c; font-style: italic; }
+.assistant-note { margin: 0; font-size: 12px; color: #92400e; }
+.assistant-action { text-align: left; white-space: normal; }
+.assistant-form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #e8eeeb; }
+.assistant-form input { flex: 1; min-width: 0; border-radius: 10px; }
+@media (max-width: 480px) { .assistant-panel { right: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100dvh - 16px); } .assistant-launcher { right: 16px; bottom: 16px; } }
 
 /* Click-to-update (DeviceManager) */
 .update-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-color: #bfdbfe; background: #eff6ff; }
@@ -418,3 +417,35 @@ input, select {
 .update-status { margin-top: 0.35rem; font-size: 0.85rem; color: #1d4ed8; }
 .update-failed { color: #b91c1c; }
 @media (max-width: 600px) { .update-banner { flex-direction: column; align-items: flex-start; } }
+
+/* Conversation layout: remote-support switch lives in the header and the
+   attachment/screen options open from the composer, so messages keep the space. */
+.support-chat-header { justify-content: space-between; flex-wrap: wrap; }
+.support-chat-title { min-width: 0; flex: 1; }
+.support-chat-title h1 { max-width: 100%; }
+.remote-compact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #4d6259; }
+.remote-compact a { color: #087a52; font-weight: 600; text-decoration: none; }
+.remote-compact small { color: #73817c; }
+.remote-compact .remote-error { color: #b91c1c; }
+.remote-switch { position: relative; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: #c5d2cc; transition: background .15s; }
+.remote-switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+.remote-switch.on { background: #15a66e; }
+.remote-switch.on i { transform: translateX(16px); }
+.remote-switch:hover { background: #b3c4bc; }
+.remote-switch.on:hover { background: #12935f; }
+.remote-switch:disabled { opacity: .5; cursor: default; }
+.support-options { margin: 0 20px 8px; padding: 4px 4px 0; border: 1px solid #dce5e1; border-radius: 12px; background: #f8faf9; font-size: 12px; color: #4d6259; }
+.support-workspace .support-options { margin-left: max(20px, calc((100% - 850px) / 2)); margin-right: max(20px, calc((100% - 850px) / 2)); }
+.support-options .support-chat-controls { border: 0; padding: 10px 12px; }
+.support-composer { align-items: center; }
+.support-workspace .support-composer { margin-left: max(20px, calc((100% - 850px) / 2)); margin-right: max(20px, calc((100% - 850px) / 2)); }
+.composer-more { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; min-width: 0 !important; min-height: 0 !important; padding: 0; border: 1px solid #dce5e1; border-radius: 50%; background: #fff; color: #4d6259; font-size: 18px; line-height: 1; }
+.composer-more.active { border-color: #15a66e; color: #087a52; background: #e9f8f1; }
+.composer-file { flex: 0 1 auto; max-width: 180px; overflow: hidden; padding: 4px 8px; border-radius: 999px; background: #e9f8f1; color: #087a52; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.support-hint { margin: 6px 20px 10px; }
+.sidebar-footer .sidebar-assistant { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 10px; padding: 9px 10px; background: #087a52; color: #fff; font-size: 13px; font-weight: 600; text-align: left; }
+.sidebar-footer .sidebar-assistant:hover { background: #066744; }
+.sidebar-footer .sidebar-assistant span { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: #087a52; font-size: 11px; font-weight: 800; }
+@media (max-width: 640px) { .remote-compact > span { display: none; } .composer-file { max-width: 110px; } }
+.support-chat-shell button.primary, .assistant-panel button.primary { border-color: #087a52; background: #087a52; color: #fff; }
+.support-chat-shell button.primary:hover:not(:disabled), .assistant-panel button.primary:hover:not(:disabled) { background: #066744; }

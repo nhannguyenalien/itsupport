@@ -48,9 +48,9 @@ Get-Content C:\ProgramData\support-agent\telemetry.log -Tail 50
 Get-Content C:\ProgramData\support-agent\daemon.log -Tail 50
 ```
 
-**Cập nhật agent (Windows, từ bản 0.3.0):** khi có bản mới, trang **Thiết bị** hiện thông báo "Có bản cập nhật agent mới". Bấm **Cập nhật lên x.y.z** ở từng máy hoặc **Cập nhật tất cả**. Máy chỉ cập nhật khi bạn bấm; agent tự kiểm tra chữ ký số của bản phát hành, cài và khởi động lại dịch vụ trong khoảng nửa phút, tự quay về bản cũ nếu bản mới không chạy được. Máy phải đang online.
+**Cập nhật agent (Windows, macOS, Linux, từ bản 0.3.0):** khi có bản mới, trang **Thiết bị** hiện thông báo "Có bản cập nhật agent mới". Bấm **Cập nhật lên x.y.z** ở từng máy hoặc **Cập nhật tất cả**. Máy chỉ cập nhật khi bạn bấm; agent tự kiểm tra chữ ký số của bản phát hành, cài và khởi động lại dịch vụ trong khoảng nửa phút, tự quay về bản cũ nếu bản mới không chạy được. Máy phải đang online.
 
-Máy cài agent trước bản 0.3.0, hoặc macOS/Linux: chạy lại chính lệnh cài đặt (một lần là bật được cập nhật bằng nút bấm trên Windows). Bộ cài giữ nguyên danh tính thiết bị và credential hiện có; chỉ enrollment lại nếu config quá cũ chưa có agent token hoặc credential đã bị thu hồi.
+Máy cài agent trước bản 0.3.0: chạy lại chính lệnh cài đặt một lần để bật cập nhật bằng nút bấm. Trên macOS, agent chạy theo tài khoản người dùng nên chỉ cập nhật được khi người đó đang đăng nhập. Bộ cài giữ nguyên danh tính thiết bị và credential hiện có; chỉ enrollment lại nếu config quá cũ chưa có agent token hoặc credential đã bị thu hồi.
 
 ```powershell
 $env:SUPPORT_ENROLL_TOKEN='<MA_CAI_DAT>'; irm 'https://itsupport.schoolsai.work/downloads/agent/install-windows' | iex

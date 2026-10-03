@@ -1,13 +1,17 @@
 import { queryTenantScoped } from "../db/pool.js";
 
-// Click-to-update for installed agents. The backend only reads the published
+// Click-to-update for installed agents (Windows, macOS, Linux). The backend only reads the published
 // manifest's version to tell the UI an update exists; the agent itself
 // verifies the Ed25519 signature and every hash before installing anything
 // (agent/internal/update), so nothing here is trusted for integrity.
 
-// Platforms whose agent build can update itself by click. Older agents and
-// other platforms need the install command rerun once.
-const UPDATABLE_PLATFORMS: Record<string, string> = { windows: "windows-amd64" };
+// Release directory for each device platform. Agents older than
+// FIRST_UPDATABLE_VERSION need the install command rerun once.
+const RELEASE_DIRS: Record<string, string[]> = {
+  windows: ["windows-amd64"],
+  mac: ["darwin-arm64", "darwin-amd64"],
+  linux: ["linux-amd64", "linux-arm64"],
+};
 export const FIRST_UPDATABLE_VERSION = "0.3.0";
 const CACHE_MS = 5 * 60_000;
 const VERSION_RE = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
@@ -63,8 +67,15 @@ interface DeviceRow {
 
 /** Adds update availability and the state of the latest update click to each device. */
 export async function withUpdateInfo<T extends DeviceRow>(tenantId: string, devices: T[]): Promise<Array<T & UpdateInfo>> {
+  // Every architecture of a platform is built and published together, so the
+  // first published manifest gives that platform's latest version; the agent
+  // itself downloads the build for its own architecture.
   const latestByPlatform = new Map<string, string | null>();
-  for (const key of new Set(Object.values(UPDATABLE_PLATFORMS))) latestByPlatform.set(key, await latestAgentVersion(key));
+  for (const [platform, dirs] of Object.entries(RELEASE_DIRS)) {
+    let latest: string | null = null;
+    for (const dir of dirs) if ((latest = await latestAgentVersion(dir))) break;
+    latestByPlatform.set(platform, latest);
+  }
 
   const recent = devices.length
     ? await queryTenantScoped(tenantId,
@@ -78,10 +89,9 @@ export async function withUpdateInfo<T extends DeviceRow>(tenantId: string, devi
   const lastClick = new Map(recent.rows.map((r) => [r.device_id, r]));
 
   return devices.map((d) => {
-    const platformKey = UPDATABLE_PLATFORMS[d.platform];
-    const supported = Boolean(platformKey) && isVersion(d.agent_version) &&
+    const supported = Object.hasOwn(RELEASE_DIRS, d.platform) && isVersion(d.agent_version) &&
       compareVersions(d.agent_version, FIRST_UPDATABLE_VERSION) >= 0 && !d.revoked;
-    const latest = platformKey ? latestByPlatform.get(platformKey) ?? null : null;
+    const latest = latestByPlatform.get(d.platform) ?? null;
     const available = Boolean(latest && (!isVersion(d.agent_version) || compareVersions(latest, d.agent_version) > 0));
 
     let state: UpdateInfo["update_state"] = "none";

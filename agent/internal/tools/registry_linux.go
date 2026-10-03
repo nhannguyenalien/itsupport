@@ -2,6 +2,8 @@
 
 package tools
 
+import "support-agent/agent/internal/update"
+
 // Linux diagnostics use native read-only interfaces; desktop entries remain legacy.
 var Allowlist = map[string]Definition{
 	"package.status":       {Fn: PackageStatus, Risk: RiskRead},
@@ -23,4 +25,6 @@ var Allowlist = map[string]Definition{
 	"desktop.scroll":       {Fn: DesktopScroll, Risk: RiskHigh},
 
 	"desktop.open_customer_view": {Fn: OpenCustomerView, Risk: RiskRead},
+
+	"agent.update": {Fn: update.Apply, Risk: RiskMedium},
 }

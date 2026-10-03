@@ -9,6 +9,7 @@ import { api, type Device, type Ticket } from "@/lib/api";
 import { useTenant } from "@/lib/useTenant";
 import TicketChat from "./TicketChat";
 import DeviceManager from "./DeviceManager";
+import { OPEN_ASSISTANT_EVENT } from "./SupportChat";
 
 export default function SupportWorkspace({ initialTicketId }: { initialTicketId?: string }) {
   const { tx, locale } = useLanguage();
@@ -77,7 +78,7 @@ export default function SupportWorkspace({ initialTicketId }: { initialTicketId?
         {!loading && devices.length === 0 && <p>{tx("Chưa có máy kết nối. Nhấn ＋ để thêm máy.")}</p>}
         {devices.map((d) => <button key={d.id} className={`machine-item ${selected === d.id ? "selected" : ""}`} aria-pressed={selected === d.id} onClick={() => selectDevice(d)}><span className="machine-icon">▣</span><span><strong>{d.hostname}</strong><small><i className={`machine-dot ${d.status === "online" && !d.revoked ? "online" : ""}`} />{d.revoked ? tx("Đã thu hồi") : d.actions_paused ? tx("Đã tạm dừng") : d.status === "online" ? tx("Đang kết nối") : tx("Ngoại tuyến")}</small></span></button>)}
       </div>
-      <div className="sidebar-footer"><LanguageSwitcher /><button onClick={() => setManage(true)}>{tx("Thêm / quản lý máy")}</button><a href="/account">{tx("Tài khoản")}</a><button onClick={() => void signOut(auth)}>{tx("Đăng xuất")}</button></div>
+      <div className="sidebar-footer"><button className="sidebar-assistant" onClick={() => window.dispatchEvent(new Event(OPEN_ASSISTANT_EVENT))}><span aria-hidden="true">?</span> {tx("Trợ lý hỗ trợ")}</button><LanguageSwitcher /><button onClick={() => setManage(true)}>{tx("Thêm / quản lý máy")}</button><a href="/account">{tx("Tài khoản")}</a><button onClick={() => void signOut(auth)}>{tx("Đăng xuất")}</button></div>
     </aside>
     <section className="workspace-conversation">
       <div className="conversation-toolbar"><div><strong>{device?.hostname ?? tx("Hỗ trợ IT")}</strong><small>{device ? device.status === "online" ? tx("Máy đang kết nối") : tx("Máy ngoại tuyến · bạn vẫn có thể xem lịch sử") : tx("Chọn một máy ở bên trái")}</small></div><div className="conversation-actions">{history.length > 0 && <select aria-label={tx("Lịch sử trò chuyện")} value={ticketId ?? ""} onChange={(e) => { selection.current += 1; setOpening(false); setTicketId(e.target.value); }}><option value="" disabled>{tx("Lịch sử chat")}</option>{history.map((t) => <option key={t.id} value={t.id}>{new Date(t.created_at).toLocaleDateString(locale)} · {t.title}</option>)}</select>}<button disabled={!selected || opening || device?.revoked} onClick={() => void newChat()}>{opening ? tx("Đang mở…") : tx("+ Chat mới")}</button></div></div>

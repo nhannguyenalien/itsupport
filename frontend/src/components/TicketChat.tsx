@@ -47,6 +47,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [screenMode, setScreenMode] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [paused, setPaused] = useState(false);
   const advancing = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -153,12 +154,12 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
   return (
     <section className="support-chat-shell">
       <header className="support-chat-header">
-        <div>
+        <div className="support-chat-title">
           <h1>{ticket.title}</h1>
           <p><span className={`support-status-dot ${isWorking ? "working" : ""}`} />{isWorking ? tx("Đang xử lý yêu cầu…") : tx(statusText[ticket.status] ?? "Đang hỗ trợ")}</p>
         </div>
+        {ticket.device_id && <RemoteSupport deviceId={ticket.device_id} compact />}
       </header>
-      {ticket.device_id && <div style={{ padding: "0 24px 12px" }}><RemoteSupport deviceId={ticket.device_id} /></div>}
 
       <main className="support-chat-messages" aria-live="polite">
         {messages.length === 0 && <div className="support-welcome"><span>✦</span><h2>{tx("Xin chào, tôi có thể giúp gì cho bạn?")}</h2><p>{tx("Hãy mô tả vấn đề bằng lời bình thường. Tôi sẽ tự kiểm tra và chọn cách xử lý phù hợp.")}</p></div>}
@@ -183,7 +184,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
       </main>
 
       {displayError && <div className="support-error">{messageSaved && tx("Tin nhắn đã lưu. Chọn Thử lại để tiếp tục xử lý. ")}{tx(displayError)} <button disabled={busy} onClick={() => { setError(null); setPaused(false); setBusy(true); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>{tx("Thử lại")}</button></div>}
-      <details className="support-options"><summary>{tx("Tùy chọn · đính kèm & thao tác màn hình")}</summary><div className="support-chat-controls">
+      {showOptions && <div className="support-options"><div className="support-chat-controls">
         {sessionId ? <><span>{ticket.computerUseSession?.stop_requested ? tx("Đang dừng phiên…") : paused ? tx("Phiên màn hình đang tạm dừng do lỗi") : tx("Phiên web/màn hình đang mở")}</span><button type="button" onClick={() => void stopScreen()}>{tx("Dừng phiên")}</button><small>{tx("Thao tác đã gửi xuống máy có thể hoàn tất. Đóng trang sẽ tạm ngừng gửi bước tiếp theo.")}</small></> : <label><input type="checkbox" checked={screenMode} disabled={busy} onChange={(e) => setScreenMode(e.target.checked)} /> {tx("Thao tác web/màn hình trên máy đã kết nối")}</label>}
         {!sessionId && <button type="button" disabled={busy || approvals.length > 0} onClick={() => { setBusy(true); setError(null); void askAi().catch((e) => setError(friendlyError(e))).finally(() => setBusy(false)); }}>{tx("Tiếp tục hỗ trợ")}</button>}
         <label>{tx("Đính kèm tài liệu")} <input ref={fileInput} type="file" accept=".pdf,.docx,.txt,.md" disabled={busy || !!sessionId} onChange={(e) => {
@@ -193,8 +194,10 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
         }} /></label>
         {file && <button type="button" onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = ""; }}>{tx("Bỏ tệp")}</button>}
         <small>{tx("PDF có chữ, DOCX, TXT, MD · tối đa 5 MB và 60.000 ký tự/tệp · nội dung được gửi cho AI để xử lý yêu cầu.")}</small>
-      </div></details>
+      </div></div>}
       <form className="support-composer" onSubmit={sendMessage}>
+        <button type="button" className={`composer-more ${showOptions ? "active" : ""}`} aria-expanded={showOptions} onClick={() => setShowOptions((v) => !v)} title={tx("Tùy chọn · đính kèm & thao tác màn hình")} aria-label={tx("Tùy chọn · đính kèm & thao tác màn hình")}>＋</button>
+        {file && <span className="composer-file" title={file.name}>📎 {file.name}</span>}
         <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={tx("Nhập vấn đề bạn đang gặp…")} rows={1} disabled={busy || approvals.length > 0 || !!sessionId} aria-label={tx("Tin nhắn hỗ trợ")} />
         <button className="primary" type="submit" disabled={busy || approvals.length > 0 || !!sessionId || (!message.trim() && !file)} aria-label={tx("Gửi tin nhắn")}>{tx("Gửi")}</button>
       </form>

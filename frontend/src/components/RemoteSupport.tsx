@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
-export default function RemoteSupport({ deviceId }: { deviceId: string }) {
+export default function RemoteSupport({ deviceId, compact = false }: { deviceId: string; compact?: boolean }) {
   const { tx } = useLanguage();
   const [data, setData] = useState<Awaited<ReturnType<typeof api.remoteSupport>> | null>(null);
   const [error, setError] = useState(false);
@@ -42,6 +42,23 @@ export default function RemoteSupport({ deviceId }: { deviceId: string }) {
 
   const terminal = data?.mode === "terminal";
   const title = terminal ? "remote.terminalTitle" : "remote.title";
+  if (compact) {
+    // One line for the conversation header: the switch, a status tooltip and
+    // the console link when enabled.
+    const hint = data ? tx(!data.ready ? "remote.notReady" : data.enabled ? (terminal ? "remote.terminalEnabledHint" : "remote.enabledHint") : (terminal ? "remote.terminalDisabledHint" : "remote.disabledHint")) : undefined;
+    return <div className="remote-compact" title={hint}>
+      <span>{tx(title)}</span>
+      <button type="button" role="switch" aria-checked={data?.enabled ?? false} aria-label={tx(title)}
+        className={`remote-switch ${data?.enabled ? "on" : ""}`}
+        disabled={!data || (!data.ready && !data.enabled) || saving} onClick={() => void toggle()}>
+        <i aria-hidden="true" />
+      </button>
+      {saving && <small>{tx("remote.updating")}</small>}
+      {error && <small role="alert" className="remote-error">{tx("remote.error")}</small>}
+      {data?.enabled && data.url && <a href={data.url} target="_blank" rel="noopener noreferrer">{tx(terminal ? "remote.openTerminal" : "remote.open")} ↗</a>}
+    </div>;
+  }
+
   return <section style={{ marginTop: 12, padding: 12, border: "1px solid var(--border, #ddd)", borderRadius: 12 }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
       <strong>{tx(title)}</strong>

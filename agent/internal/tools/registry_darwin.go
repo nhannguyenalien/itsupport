@@ -2,6 +2,8 @@
 
 package tools
 
+import "support-agent/agent/internal/update"
+
 // Allowlist on macOS wires the 9 desktop.* computer-use tools
 // (desktop_darwin.go) plus three of the general IT-diagnosis read tools
 // (disk.usage/process.list/temp.scan — disk_darwin.go/process_darwin.go/
@@ -25,6 +27,8 @@ var Allowlist = map[string]Definition{
 	"desktop.scroll":       {Fn: DesktopScroll, Risk: RiskHigh},
 
 	"desktop.open_customer_view": {Fn: OpenCustomerView, Risk: RiskRead},
+
+	"agent.update": {Fn: update.Apply, Risk: RiskMedium},
 
 	"disk.usage":   {Fn: DiskUsage, Risk: RiskRead},
 	"process.list": {Fn: ProcessList, Risk: RiskRead},

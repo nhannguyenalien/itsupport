@@ -103,7 +103,7 @@ Nút **Trợ lý** ở góc phải màn hình có 2 cấp:
 
 **AI có chạy được mọi lệnh không?** Không. Chỉ các công cụ có sẵn trong hệ thống; không có lệnh shell tùy ý, không gỡ gói, không nâng cấp toàn hệ thống.
 
-**Cập nhật agent thế nào?** Trên Windows (agent từ bản 0.3.0): trang **Thiết bị** báo khi có bản mới, bấm **Cập nhật** ở từng máy hoặc **Cập nhật tất cả** — không cần mở terminal, máy chỉ cập nhật khi bạn bấm. Agent chỉ cài bản có chữ ký số hợp lệ của nhà phát hành và tự quay về bản cũ nếu bản mới lỗi. Máy cài bản cũ hơn hoặc macOS/Linux: chạy lại đúng lệnh cài đặt một lần; danh tính thiết bị được giữ nguyên.
+**Cập nhật agent thế nào?** Trên Windows, macOS và Linux (agent từ bản 0.3.0): trang **Thiết bị** báo khi có bản mới, bấm **Cập nhật** ở từng máy hoặc **Cập nhật tất cả** — không cần mở terminal, máy chỉ cập nhật khi bạn bấm. Agent chỉ cài bản có chữ ký số hợp lệ của nhà phát hành và tự quay về bản cũ nếu bản mới lỗi. Máy cài bản cũ hơn 0.3.0: chạy lại đúng lệnh cài đặt một lần; danh tính thiết bị được giữ nguyên.
 
 **Máy in không in được thì AI làm gì?** (Windows) AI xem chi tiết máy in và dịch vụ in, ping tới IP máy in, đề xuất xóa lệnh in kẹt hoặc khởi động lại dịch vụ in, rồi in thử một trang để xác nhận. Máy in người dùng tự thêm riêng trong tài khoản của họ (kết nối tới máy chủ in) có thể không hiện với agent.
 
