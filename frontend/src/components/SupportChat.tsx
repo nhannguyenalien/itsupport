@@ -125,7 +125,7 @@ export function SupportChat() {
   // The ticket workspace has its own composer in that corner; it opens the
   // assistant from the sidebar instead of a floating button.
   if (!open) {
-    if (pathname?.startsWith("/tickets")) return null;
+    if (pathname?.startsWith("/tickets") || pathname === "/devices") return null;
     return <button type="button" className="assistant-launcher" onClick={() => setOpen(true)} aria-label={tx("Mở trợ lý hỗ trợ")}>
       <span aria-hidden="true">?</span> {tx("Trợ lý")}
     </button>;

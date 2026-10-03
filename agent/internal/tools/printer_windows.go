@@ -171,19 +171,26 @@ func openPrinter(name string, admin bool) (windows.Handle, error) {
 }
 
 func printerStatusFlags(h windows.Handle) (uint32, error) {
-	var info printerInfo6
+	// Real drivers can require more than sizeof(PRINTER_INFO_6) for level 6
+	// (ERROR_INSUFFICIENT_BUFFER, "the data area passed to a system call is
+	// too small"), so ask for the needed size first.
 	var needed uint32
+	procGetPrinterW.Call(uintptr(h), 6, 0, 0, uintptr(unsafe.Pointer(&needed)))
+	if needed < uint32(unsafe.Sizeof(printerInfo6{})) {
+		needed = uint32(unsafe.Sizeof(printerInfo6{}))
+	}
+	buf := make([]byte, needed)
 	ret, _, callErr := procGetPrinterW.Call(
 		uintptr(h),
 		6,
-		uintptr(unsafe.Pointer(&info)),
-		unsafe.Sizeof(info),
+		uintptr(unsafe.Pointer(&buf[0])),
+		uintptr(needed),
 		uintptr(unsafe.Pointer(&needed)),
 	)
 	if ret == 0 {
 		return 0, fmt.Errorf("GetPrinter level 6: %w", callErr)
 	}
-	return info.dwStatus, nil
+	return (*printerInfo6)(unsafe.Pointer(&buf[0])).dwStatus, nil
 }
 
 func enumPrinterNames() ([]string, error) {
