@@ -366,5 +366,17 @@
   "Cập nhật chưa thành công.": "Cập nhật chưa thành công.",
   "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.",
   "Máy đang ngoại tuyến": "Máy đang ngoại tuyến",
-  "Cập nhật lên {version}": "Cập nhật lên {version}"
+  "Cập nhật lên {version}": "Cập nhật lên {version}",
+  "Tài khoản": "Tài khoản",
+  "Đổi mật khẩu": "Đổi mật khẩu",
+  "Tạo mật khẩu": "Tạo mật khẩu",
+  "Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.": "Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.",
+  "Mật khẩu hiện tại": "Mật khẩu hiện tại",
+  "Mật khẩu mới": "Mật khẩu mới",
+  "Nhập lại mật khẩu mới": "Nhập lại mật khẩu mới",
+  "Mật khẩu xác nhận không khớp.": "Mật khẩu xác nhận không khớp.",
+  "Mật khẩu hiện tại chưa đúng.": "Mật khẩu hiện tại chưa đúng.",
+  "Đã đổi mật khẩu.": "Đã đổi mật khẩu.",
+  "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.",
+  "Quay lại hỗ trợ": "Quay lại hỗ trợ"
 }

@@ -37,6 +37,7 @@ export function TopNav() {
           <Link href="/dashboard">{tx("Tổng quan")}</Link>
           <Link href="/connections">{tx("Kết nối dịch vụ")}</Link>
           <Link href="/metrics">{tx("Thống kê")}</Link>
+          <Link href="/account">{tx("Tài khoản")}</Link>
         </div>
       </details>
       <LanguageSwitcher />

@@ -366,5 +366,17 @@
   "Cập nhật chưa thành công.": "The update did not complete.",
   "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "Older agent: rerun the install command once (+ Add device) to enable one-click updates.",
   "Máy đang ngoại tuyến": "Device is offline",
-  "Cập nhật lên {version}": "Update to {version}"
+  "Cập nhật lên {version}": "Update to {version}",
+  "Tài khoản": "Account",
+  "Đổi mật khẩu": "Change password",
+  "Tạo mật khẩu": "Create password",
+  "Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.": "You signed in with Google, so you don't need your old password.",
+  "Mật khẩu hiện tại": "Current password",
+  "Mật khẩu mới": "New password",
+  "Nhập lại mật khẩu mới": "Confirm new password",
+  "Mật khẩu xác nhận không khớp.": "Passwords do not match.",
+  "Mật khẩu hiện tại chưa đúng.": "Current password is incorrect.",
+  "Đã đổi mật khẩu.": "Password changed.",
+  "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Password created. You can now sign in with email and password.",
+  "Quay lại hỗ trợ": "Back to support"
 }

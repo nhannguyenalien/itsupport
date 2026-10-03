@@ -366,5 +366,17 @@
   "Cập nhật chưa thành công.": "更新が完了しませんでした。",
   "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "古いエージェント：インストールコマンドを一度再実行すると（+ 端末を追加）、ボタンで更新できるようになります。",
   "Máy đang ngoại tuyến": "端末はオフラインです",
-  "Cập nhật lên {version}": "{version} に更新"
+  "Cập nhật lên {version}": "{version} に更新",
+  "Tài khoản": "アカウント",
+  "Đổi mật khẩu": "パスワードを変更",
+  "Tạo mật khẩu": "パスワードを作成",
+  "Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.": "Googleでログインしているため、現在のパスワードは不要です。",
+  "Mật khẩu hiện tại": "現在のパスワード",
+  "Mật khẩu mới": "新しいパスワード",
+  "Nhập lại mật khẩu mới": "新しいパスワード（確認）",
+  "Mật khẩu xác nhận không khớp.": "パスワードが一致しません。",
+  "Mật khẩu hiện tại chưa đúng.": "現在のパスワードが正しくありません。",
+  "Đã đổi mật khẩu.": "パスワードを変更しました。",
+  "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "パスワードを作成しました。今後はメールとパスワードでログインできます。",
+  "Quay lại hỗ trợ": "サポートに戻る"
 }

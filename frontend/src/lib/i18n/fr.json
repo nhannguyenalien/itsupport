@@ -366,5 +366,17 @@
   "Cập nhật chưa thành công.": "La mise à jour n’a pas abouti.",
   "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "Agent ancien : relancez la commande d’installation une fois (+ Ajouter) pour activer la mise à jour en un clic.",
   "Máy đang ngoại tuyến": "Appareil hors ligne",
-  "Cập nhật lên {version}": "Mettre à jour vers {version}"
+  "Cập nhật lên {version}": "Mettre à jour vers {version}",
+  "Tài khoản": "Compte",
+  "Đổi mật khẩu": "Changer le mot de passe",
+  "Tạo mật khẩu": "Créer un mot de passe",
+  "Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.": "Vous êtes connecté avec Google, l'ancien mot de passe n'est donc pas nécessaire.",
+  "Mật khẩu hiện tại": "Mot de passe actuel",
+  "Mật khẩu mới": "Nouveau mot de passe",
+  "Nhập lại mật khẩu mới": "Confirmer le nouveau mot de passe",
+  "Mật khẩu xác nhận không khớp.": "Les mots de passe ne correspondent pas.",
+  "Mật khẩu hiện tại chưa đúng.": "Le mot de passe actuel est incorrect.",
+  "Đã đổi mật khẩu.": "Mot de passe modifié.",
+  "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Mot de passe créé. Vous pouvez maintenant vous connecter avec e-mail et mot de passe.",
+  "Quay lại hỗ trợ": "Retour au support"
 }

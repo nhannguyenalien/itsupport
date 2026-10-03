@@ -366,5 +366,17 @@
   "Cập nhật chưa thành công.": "La actualización no se completó.",
   "Agent bản cũ: chạy lại lệnh cài một lần (nút + Thêm máy) để bật cập nhật bằng nút bấm.": "Agente antiguo: vuelve a ejecutar el comando de instalación una vez (+ Añadir equipo) para activar las actualizaciones con un clic.",
   "Máy đang ngoại tuyến": "El equipo está sin conexión",
-  "Cập nhật lên {version}": "Actualizar a {version}"
+  "Cập nhật lên {version}": "Actualizar a {version}",
+  "Tài khoản": "Cuenta",
+  "Đổi mật khẩu": "Cambiar contraseña",
+  "Tạo mật khẩu": "Crear contraseña",
+  "Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.": "Iniciaste sesión con Google, así que no necesitas tu contraseña anterior.",
+  "Mật khẩu hiện tại": "Contraseña actual",
+  "Mật khẩu mới": "Nueva contraseña",
+  "Nhập lại mật khẩu mới": "Confirmar nueva contraseña",
+  "Mật khẩu xác nhận không khớp.": "Las contraseñas no coinciden.",
+  "Mật khẩu hiện tại chưa đúng.": "La contraseña actual es incorrecta.",
+  "Đã đổi mật khẩu.": "Contraseña cambiada.",
+  "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Contraseña creada. Ahora puedes iniciar sesión con correo y contraseña.",
+  "Quay lại hỗ trợ": "Volver a soporte"
 }
