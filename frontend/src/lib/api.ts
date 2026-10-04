@@ -52,6 +52,85 @@ export interface Device {
   update_error?: string | null;
 }
 
+export interface BackupPolicy {
+  enabled: boolean;
+  repo: string;
+  paths: string[];
+  excludes: string[];
+  interval_hours: number;
+  keep_daily: number;
+  keep_weekly: number;
+  keep_monthly: number;
+  use_vss: boolean;
+  limit_upload_kbps: number;
+  last_run_requested_at: string | null;
+  env_configured: string[];
+}
+
+export interface BackupStatus {
+  restic_installed: boolean;
+  restic_version?: string;
+  state: "idle" | "running" | "success" | "error";
+  step?: string;
+  started_at?: string;
+  finished_at?: string;
+  snapshot_id?: string;
+  files_new?: number;
+  bytes_added?: number;
+  bytes_total?: number;
+  error?: string;
+  restore_state?: "idle" | "running" | "success" | "error";
+  restore?: {
+    state: "running" | "success" | "error";
+    snapshot_id?: string;
+    target?: string;
+    finished_at?: string;
+    files_restored?: number;
+    bytes_restored?: number;
+    error?: string;
+  };
+}
+
+export interface BackupSnapshot { id: string; time: string; hostname: string; paths: string[] }
+export interface BackupSnapshots {
+  state: "none" | "pending" | "ready" | "error";
+  fetched_at?: string;
+  error?: string;
+  snapshots: BackupSnapshot[];
+}
+
+export type BackupHealth = "disabled" | "unsupported" | "running" | "ok" | "failed" | "overdue" | "never";
+
+export interface BackupOverview {
+  device_id: string;
+  hostname: string;
+  device_status: string;
+  health: BackupHealth;
+  last_success_at: string | null;
+  interval_hours: number | null;
+}
+
+export interface BackupInfo {
+  supported: boolean;
+  min_agent_version: string;
+  policy: BackupPolicy | null;
+  status: BackupStatus | null;
+  status_at: string | null;
+}
+
+export interface BackupPolicyInput {
+  enabled: boolean;
+  repo: string;
+  env: Record<string, string>;
+  paths: string[];
+  excludes: string[];
+  interval_hours: number;
+  keep_daily: number;
+  keep_weekly: number;
+  keep_monthly: number;
+  use_vss: boolean;
+}
+
 export interface EnrollmentToken {
   tokenId: string;
   token: string;
@@ -227,6 +306,16 @@ export const api = {
     request<EnrollmentToken>(`/enrollment-tokens`, { method: "POST", body: JSON.stringify({ tenantId }) }),
   requestAgentUpdate: (deviceId: string) =>
     request<{ version: string }>(`/devices/${deviceId}/agent-update`, { method: "POST", body: "{}" }),
+  listBackups: () => request<BackupOverview[]>(`/backups`),
+  requestBackupSnapshots: (deviceId: string) => request(`/devices/${deviceId}/backup/snapshots`, { method: "POST", body: "{}" }),
+  backupSnapshots: (deviceId: string) => request<BackupSnapshots>(`/devices/${deviceId}/backup/snapshots`),
+  restoreBackup: (deviceId: string, body: { snapshot_id: string; target: string; include: string[]; confirm: true }) =>
+    request(`/devices/${deviceId}/backup/restore`, { method: "POST", body: JSON.stringify(body) }),
+  backupInfo: (deviceId: string) => request<BackupInfo>(`/devices/${deviceId}/backup`),
+  saveBackupPolicy: (deviceId: string, body: BackupPolicyInput) =>
+    request<BackupPolicy>(`/devices/${deviceId}/backup`, { method: "PUT", body: JSON.stringify(body) }),
+  runBackup: (deviceId: string) => request(`/devices/${deviceId}/backup/run`, { method: "POST", body: "{}" }),
+  refreshBackup: (deviceId: string) => request(`/devices/${deviceId}/backup/refresh`, { method: "POST", body: "{}" }),
   revokeDevice: (deviceId: string) => request(`/devices/${deviceId}/revoke`, { method: "POST", body: "{}" }),
   pauseDevice: (deviceId: string) => request(`/devices/${deviceId}/pause`, { method: "POST", body: "{}" }),
   unpauseDevice: (deviceId: string) => request(`/devices/${deviceId}/unpause`, { method: "POST", body: "{}" }),

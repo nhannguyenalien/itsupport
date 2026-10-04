@@ -28,4 +28,29 @@ export async function ensureAuthSchema(): Promise<void> {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry ON auth_sessions(expires_at)`);
   await pool.query(`DELETE FROM auth_sessions WHERE expires_at <= now()`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS backup_policies (
+      device_id UUID PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE,
+      tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      enabled BOOLEAN NOT NULL DEFAULT false,
+      repo TEXT NOT NULL,
+      secrets_enc TEXT NOT NULL,
+      paths JSONB NOT NULL DEFAULT '[]',
+      excludes JSONB NOT NULL DEFAULT '[]',
+      interval_hours INTEGER NOT NULL DEFAULT 24 CHECK (interval_hours BETWEEN 1 AND 168),
+      keep_daily INTEGER NOT NULL DEFAULT 7,
+      keep_weekly INTEGER NOT NULL DEFAULT 4,
+      keep_monthly INTEGER NOT NULL DEFAULT 6,
+      use_vss BOOLEAN NOT NULL DEFAULT true,
+      limit_upload_kbps INTEGER NOT NULL DEFAULT 0,
+      last_run_requested_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_policies_tenant ON backup_policies(tenant_id)`);
+  await pool.query(`ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY`);
+  await pool.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'backup_policies' AND policyname = 'tenant_isolation') THEN
+      CREATE POLICY tenant_isolation ON backup_policies USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+    END IF; END $$`);
 }

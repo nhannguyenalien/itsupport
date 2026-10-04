@@ -118,6 +118,20 @@ services:
     depends_on:
       db: { condition: service_healthy }
 
+  # Optional restic repository server for device backups (docs/backup.md).
+  # Off by default: `docker compose --profile backup up -d restic-rest`.
+  # Append-only so a compromised client cannot delete or overwrite old snapshots;
+  # pruning is done operator-side (see docs/backup.md).
+  restic-rest:
+    profiles: ["backup"]
+    image: restic/rest-server:0.13.0
+    <<: *security
+    command: ["--path", "/data", "--append-only", "--private-repos", "--htpasswd-file", "/etc/restic/htpasswd", "--listen", ":8000"]
+    ports: ["127.0.0.1:8000:8000"]
+    volumes:
+      - restic-data:/data
+      - ./secrets/restic_htpasswd:/etc/restic/htpasswd:ro
+
 secrets:
   db_password: { file: ./secrets/db_password }
   db_app_password: { file: ./secrets/db_app_password }
@@ -130,3 +144,4 @@ volumes:
   db-backups:
   caddy-data:
   caddy-config:
+  restic-data:

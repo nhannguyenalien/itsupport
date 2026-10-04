@@ -57,6 +57,12 @@ var Allowlist = map[string]Definition{
 
 	"agent.update": {Fn: update.Apply, Risk: RiskMedium},
 
+	"backup.status": {Fn: BackupStatus, Risk: RiskRead},
+	"backup.run":    {Fn: BackupRun, Risk: RiskMedium},
+
+	"backup.snapshots": {Fn: BackupSnapshots, Risk: RiskRead},
+	"backup.restore":   {Fn: BackupRestore, Risk: RiskHigh},
+
 	"desktop.screenshot":   {Fn: DesktopScreenshot, Risk: RiskRead},
 	"desktop.move":         {Fn: DesktopMove, Risk: RiskRead},
 	"desktop.wait":         {Fn: DesktopWait, Risk: RiskRead},

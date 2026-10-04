@@ -43,6 +43,17 @@ var KnownTools = map[string]Risk{
 	// "Cập nhật" in the dashboard, never offered to the AI.
 	"agent.update": RiskMedium,
 
+	// Proactive backup through restic (backup.go). System-triggered only —
+	// created by the Devices backup panel and the backend scheduler, never
+	// offered to the AI (domain "agent"). backup.run returns once the job is
+	// started; backup.status reports the outcome.
+	"backup.status": RiskRead,
+	"backup.run":    RiskMedium,
+
+	// Restore (restore.go): extract into a new empty directory, never in place.
+	"backup.snapshots": RiskRead,
+	"backup.restore":   RiskHigh,
+
 	// v0.2 marketing-ops — opens the default browser at a backend-constructed
 	// /oauth/*/connect link so a human on this machine can complete OAuth
 	// consent themselves (see browser_windows.go for why this doesn't

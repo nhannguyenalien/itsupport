@@ -1,3 +1,5 @@
+import { backupRoutes } from "./backup/routes.js";
+import { backupAlertTick, backupSchedulerTick } from "./backup/index.js";
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
@@ -71,6 +73,7 @@ await app.register(computerUseRoutes);
 await app.register(oauthRoutes);
 await app.register(metricsRoutes);
 await app.register(supportChatRoutes);
+await app.register(backupRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the
@@ -84,6 +87,14 @@ setInterval(() => {
     )
     .catch((err) => app.log.error({ err }, "offline sweep failed"));
 }, 30_000);
+
+// Proactive backups: queue due backup.run calls and status polls (backup/index.ts).
+setInterval(() => {
+  backupSchedulerTick().catch((err) => app.log.error({ err }, "backup scheduler failed"));
+}, 60_000);
+setInterval(() => {
+  backupAlertTick().catch((err) => app.log.error({ err }, "backup alert sweep failed"));
+}, 30 * 60_000);
 
 const port = Number(process.env.PORT ?? 3000);
 app

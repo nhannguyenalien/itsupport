@@ -1,12 +1,13 @@
 "use client";
 
 import RemoteSupport from "./RemoteSupport";
+import BackupPanel from "./BackupPanel";
 import { useLanguage } from "@/lib/i18n";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
-import { api, type Device, type EnrollmentToken } from "@/lib/api";
+import { api, type BackupOverview, type Device, type EnrollmentToken } from "@/lib/api";
 
 type Platform = "windows" | "mac" | "linux";
 
@@ -20,6 +21,7 @@ export default function DevicesPage() {
   const [reconnect, setReconnect] = useState(false);
   const { tenantId, ready } = useTenant();
   const [devices, setDevices] = useState<Device[]>([]);
+  const [backups, setBackups] = useState<BackupOverview[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showInstaller, setShowInstaller] = useState(false);
   const [platform, setPlatform] = useState<Platform>("windows");
@@ -43,6 +45,8 @@ export default function DevicesPage() {
     try {
       setDevices(await api.listDevices(tenantId));
       setError(null);
+      // Backup health is a secondary signal: never let it break the device list.
+      api.listBackups().then(setBackups).catch(() => undefined);
     } catch (e) {
       setError(String(e));
     } finally { setLoading(false); }
@@ -74,6 +78,7 @@ export default function DevicesPage() {
 
   const updatable = devices.filter((d) => d.update_supported && d.update_available && d.status === "online" &&
     (d.update_state === "none" || d.update_state === "failed"));
+  const backupProblems = backups.filter((b) => b.health === "overdue" || b.health === "never" || b.health === "failed");
   const latestVersion = devices.find((d) => d.latest_agent_version)?.latest_agent_version;
 
   async function updateAgents(targets: Device[]) {
@@ -164,6 +169,19 @@ export default function DevicesPage() {
           <button className="primary" onClick={() => void updateAgents(updatable)}>{tx("Cập nhật tất cả")}</button>
         </div>
       )}
+      {backupProblems.length > 0 && (
+        <div className="card update-banner" role="alert">
+          <div><strong>{tx("{count} máy có backup cần chú ý", { count: backupProblems.length })}</strong>
+            {backupProblems.map((b) => (
+              <p className="muted" key={b.device_id}>
+                {b.hostname}: {b.health === "failed" ? tx("lần backup gần nhất bị lỗi")
+                  : b.health === "never" ? tx("chưa có backup thành công")
+                  : tx("quá hạn, lần thành công cuối: {time}", { time: b.last_success_at ? new Date(b.last_success_at).toLocaleString(locale) : "—" })}
+                {b.device_status !== "online" && ` (${tx("Ngoại tuyến")})`}
+              </p>
+            ))}</div>
+        </div>
+      )}
       {loading && <p className="muted">{tx("Đang kiểm tra kết nối…")}</p>}
       {!loading && !error && devices.length === 0 && <p className="muted">{tx("Chưa có thiết bị. Nhấn “Thêm máy” để bắt đầu.")}</p>}
       {devices.map((d) => (
@@ -207,6 +225,7 @@ export default function DevicesPage() {
             </div>
           </div>
           {!d.revoked && <RemoteSupport deviceId={d.id} />}
+          {!d.revoked && d.platform === "windows" && <BackupPanel deviceId={d.id} online={d.status === "online"} />}
         </div>
       ))}
     </div>

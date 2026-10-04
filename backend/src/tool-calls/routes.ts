@@ -5,6 +5,7 @@ import { getTool } from "../tool-registry/index.js";
 import { requestToolCall } from "./service.js";
 import { recordToolCallResult } from "./execution.js";
 import { recordAudit } from "../audit/index.js";
+import { hydrateBackupParams } from "../backup/index.js";
 
 const requestBody = z.object({
   initiatedBy: z.enum(["ai", "human"]),
@@ -124,7 +125,8 @@ export async function toolCallRoutes(app: FastifyInstance) {
        ORDER BY requested_at ASC`,
       [deviceId],
     );
-    reply.send(result.rows);
+    reply.header("Cache-Control", "no-store");
+    reply.send(await hydrateBackupParams(req.agentTenantId, deviceId, result.rows as Array<{ id: string; tool: string; params: Record<string, unknown>; risk: string }>));
   });
 
   // Agent-facing: report execution result. Triggers verification enqueueing for

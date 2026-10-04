@@ -148,6 +148,8 @@ func callExecutor(httpClient *http.Client, addr, secret string, call transport.P
 	case "disk.space_report", "windows_update.clear_cache", "agent.update":
 		// Bounded scans/deletes that legitimately run past the default.
 		client.Timeout = 6 * time.Minute
+	case "backup.snapshots":
+		client.Timeout = 3 * time.Minute
 	case "printer.spooler_reset", "startup.disable", "startup.enable":
 		client.Timeout = 2 * time.Minute
 	}

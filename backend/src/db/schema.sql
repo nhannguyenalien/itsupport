@@ -444,6 +444,29 @@ CREATE INDEX idx_audit_log_device ON audit_log(device_id);
 CREATE INDEX idx_enrollment_tokens_hash ON enrollment_tokens(token_hash);
 
 -- ============================================================
+-- BACKUP POLICIES (restic) — one proactive backup policy per device.
+-- Repository credentials live only in secrets_enc (AES-GCM, key from env).
+-- ============================================================
+CREATE TABLE backup_policies (
+    device_id              UUID PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE,
+    tenant_id              UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    enabled                BOOLEAN NOT NULL DEFAULT false,
+    repo                   TEXT NOT NULL,
+    secrets_enc            TEXT NOT NULL,
+    paths                  JSONB NOT NULL DEFAULT '[]',
+    excludes               JSONB NOT NULL DEFAULT '[]',
+    interval_hours         INTEGER NOT NULL DEFAULT 24 CHECK (interval_hours BETWEEN 1 AND 168),
+    keep_daily             INTEGER NOT NULL DEFAULT 7,
+    keep_weekly            INTEGER NOT NULL DEFAULT 4,
+    keep_monthly           INTEGER NOT NULL DEFAULT 6,
+    use_vss                BOOLEAN NOT NULL DEFAULT true,
+    limit_upload_kbps      INTEGER NOT NULL DEFAULT 0,
+    last_run_requested_at  TIMESTAMPTZ,
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_backup_policies_tenant ON backup_policies(tenant_id);
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- The application role must not own these tables and must not have BYPASSRLS.
 -- Missing app.tenant_id therefore means no tenant rows, never all rows.
@@ -466,6 +489,7 @@ ALTER TABLE approvals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE computer_use_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE computer_use_screenshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON tenants USING (id = app_tenant_id()) WITH CHECK (id = app_tenant_id());
 CREATE POLICY tenant_isolation ON users USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
@@ -474,6 +498,7 @@ CREATE POLICY tenant_isolation ON devices USING (tenant_id = app_tenant_id()) WI
 CREATE POLICY tenant_isolation ON platform_connections USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON tickets USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON audit_log USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON backup_policies USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON computer_use_sessions USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON auth_sessions USING (EXISTS (SELECT 1 FROM users u WHERE u.id = user_id));
 CREATE POLICY tenant_isolation ON ticket_messages USING (EXISTS (SELECT 1 FROM tickets t WHERE t.id = ticket_id));
