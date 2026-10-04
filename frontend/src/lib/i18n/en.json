@@ -438,5 +438,13 @@
   "Đang tổng hợp từ các máy…": "Gathering from your devices…",
   "Hỏi về tất cả máy, hoặc giao việc cho các máy…": "Ask about all devices, or hand tasks to them…",
   "Tin nhắn chat tổng": "General chat message",
-  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "General chat only proposes; each task opens its own device session and fixes still need approval."
+  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "General chat only proposes; each task opens its own device session and fixes still need approval.",
+  "Email cảnh báo backup": "Backup alert emails",
+  "Server chưa cấu hình SMTP nên chưa gửi được email.": "The server has no SMTP configured, so email cannot be sent.",
+  "Gửi email khi backup quá hạn hoặc lỗi": "Email me when a backup is overdue or failing",
+  "Người nhận (mỗi dòng một địa chỉ, tối đa 10)": "Recipients (one address per line, max 10)",
+  "Lưu": "Save",
+  "Đã lưu cài đặt email.": "Email settings saved.",
+  "Gửi email thử": "Send test email",
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "Test email sent to the saved addresses."
 }

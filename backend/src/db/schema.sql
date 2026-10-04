@@ -466,6 +466,14 @@ CREATE TABLE backup_policies (
 );
 CREATE INDEX idx_backup_policies_tenant ON backup_policies(tenant_id);
 
+-- Where backup alert emails go (backup/alerts.ts).
+CREATE TABLE backup_alert_settings (
+    tenant_id   UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+    enabled     BOOLEAN NOT NULL DEFAULT true,
+    emails      TEXT[] NOT NULL DEFAULT '{}',
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- The application role must not own these tables and must not have BYPASSRLS.
@@ -490,6 +498,7 @@ ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE computer_use_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE computer_use_screenshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE backup_alert_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON tenants USING (id = app_tenant_id()) WITH CHECK (id = app_tenant_id());
 CREATE POLICY tenant_isolation ON users USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
@@ -498,6 +507,7 @@ CREATE POLICY tenant_isolation ON devices USING (tenant_id = app_tenant_id()) WI
 CREATE POLICY tenant_isolation ON platform_connections USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON tickets USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON audit_log USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON backup_alert_settings USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON backup_policies USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON computer_use_sessions USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON auth_sessions USING (EXISTS (SELECT 1 FROM users u WHERE u.id = user_id));

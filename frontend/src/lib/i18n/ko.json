@@ -438,5 +438,13 @@
   "Đang tổng hợp từ các máy…": "기기에서 정보를 모으는 중…",
   "Hỏi về tất cả máy, hoặc giao việc cho các máy…": "모든 기기에 대해 묻거나 작업을 맡기세요…",
   "Tin nhắn chat tổng": "전체 채팅 메시지",
-  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "전체 채팅은 제안만 합니다. 각 작업은 기기별 세션을 열며 수정은 승인이 필요합니다."
+  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "전체 채팅은 제안만 합니다. 각 작업은 기기별 세션을 열며 수정은 승인이 필요합니다.",
+  "Email cảnh báo backup": "백업 알림 이메일",
+  "Server chưa cấu hình SMTP nên chưa gửi được email.": "서버에 SMTP가 설정되지 않아 이메일을 보낼 수 없습니다.",
+  "Gửi email khi backup quá hạn hoặc lỗi": "백업이 지연되거나 실패하면 이메일 보내기",
+  "Người nhận (mỗi dòng một địa chỉ, tối đa 10)": "수신자(한 줄에 주소 하나, 최대 10개)",
+  "Lưu": "저장",
+  "Đã lưu cài đặt email.": "이메일 설정을 저장했습니다.",
+  "Gửi email thử": "테스트 이메일 보내기",
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "저장된 주소로 테스트 이메일을 보냈습니다."
 }

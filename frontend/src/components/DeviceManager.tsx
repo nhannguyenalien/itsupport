@@ -2,6 +2,7 @@
 
 import RemoteSupport from "./RemoteSupport";
 import BackupPanel from "./BackupPanel";
+import BackupAlertSettings from "./BackupAlertSettings";
 import { useLanguage } from "@/lib/i18n";
 
 import { useRouter } from "next/navigation";
@@ -169,6 +170,7 @@ export default function DevicesPage() {
           <button className="primary" onClick={() => void updateAgents(updatable)}>{tx("Cập nhật tất cả")}</button>
         </div>
       )}
+      <BackupAlertSettings />
       {backupProblems.length > 0 && (
         <div className="card update-banner" role="alert">
           <div><strong>{tx("{count} máy có backup cần chú ý", { count: backupProblems.length })}</strong>

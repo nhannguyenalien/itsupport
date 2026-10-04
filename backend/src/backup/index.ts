@@ -1,6 +1,7 @@
 import { adminPool, queryTenantScoped } from "../db/pool.js";
 import { decryptToken, encryptToken } from "../oauth/crypto.js";
 import { compareVersions } from "../devices/agent-updates.js";
+import { emailBackupAlerts } from "./alerts.js";
 import { BACKUP_ROWS_SQL, PROBLEM_HEALTH, withHealth } from "./health.js";
 
 // Proactive backup through restic (agent/internal/tools/backup.go). The backend
@@ -105,11 +106,13 @@ export async function backupSchedulerTick(): Promise<void> {
  * team already looks for device events, and the dedupe keeps it from flooding. */
 export async function backupAlertTick(): Promise<void> {
   const rows = withHealth((await adminPool.query(BACKUP_ROWS_SQL(false))).rows, agentSupportsBackup);
-  for (const r of rows.filter((x) => PROBLEM_HEALTH.has(x.health))) {
+  const problems = rows.filter((x) => PROBLEM_HEALTH.has(x.health));
+  for (const r of problems) {
     await adminPool.query(
       `INSERT INTO audit_log (tenant_id, actor_type, event_type, event_data, device_id)
        SELECT $1::uuid, 'system', 'device.backup_alert', $3::jsonb, $2::uuid
        WHERE NOT EXISTS (SELECT 1 FROM audit_log WHERE device_id = $2::uuid AND event_type = 'device.backup_alert' AND created_at > now() - interval '24 hours')`,
       [r.tenant_id, r.device_id, JSON.stringify({ health: r.health, hostname: r.hostname, last_success_at: r.last_success_at })]);
   }
+  await emailBackupAlerts(problems as never);
 }

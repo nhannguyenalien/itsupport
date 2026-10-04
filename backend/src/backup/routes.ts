@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
+import { mailConfigured, sendMail } from "./alerts.js";
 import { BACKUP_ROWS_SQL, withHealth } from "./health.js";
 import { BACKUP_ENV_KEYS, BACKUP_MIN_AGENT_VERSION, agentSupportsBackup, decryptEnv, encryptEnv } from "./index.js";
 
@@ -189,5 +190,46 @@ export async function backupRoutes(app: FastifyInstance) {
     await recordAudit({ tenantId: user.tenantId, actorType: "user", actorId: user.id, eventType: "device.backup_restore_requested",
       eventData: { snapshot_id: body.snapshot_id, target: body.target, include: body.include }, deviceId });
     return reply.code(202).send({ queued: "backup.restore" });
+  });
+
+  // ---- Alert email settings (admin only) ----
+  const alertBody = z.object({ enabled: z.boolean(), emails: z.array(z.string().email().max(254)).max(10) });
+
+  app.get("/backup-alerts", async (req, reply) => {
+    const user = req.authUser!;
+    if (user.role !== "admin") return reply.code(403).send({ error: "admin role required" });
+    const r = await queryTenantScoped(user.tenantId, `SELECT enabled, emails FROM backup_alert_settings WHERE tenant_id = $1`, [user.tenantId]);
+    reply.header("Cache-Control", "no-store");
+    return { enabled: r.rows[0]?.enabled ?? false, emails: r.rows[0]?.emails ?? [], mail_configured: mailConfigured() };
+  });
+
+  app.put("/backup-alerts", async (req, reply) => {
+    const user = req.authUser!;
+    if (user.role !== "admin") return reply.code(403).send({ error: "admin role required" });
+    const body = alertBody.parse(req.body);
+    const emails = [...new Set(body.emails.map((e) => e.trim().toLowerCase()))];
+    await queryTenantScoped(user.tenantId,
+      `INSERT INTO backup_alert_settings (tenant_id, enabled, emails) VALUES ($1, $2, $3)
+       ON CONFLICT (tenant_id) DO UPDATE SET enabled = $2, emails = $3, updated_at = now()`, [user.tenantId, body.enabled, emails]);
+    await recordAudit({ tenantId: user.tenantId, actorType: "user", actorId: user.id, eventType: "tenant.backup_alert_settings_updated",
+      eventData: { enabled: body.enabled, recipients: emails.length } });
+    return { enabled: body.enabled, emails, mail_configured: mailConfigured() };
+  });
+
+  // Sends only to the already-saved recipients, never to an address in the request.
+  app.post("/backup-alerts/test", { config: { rateLimit: { max: 3, timeWindow: "1 minute" } } }, async (req, reply) => {
+    const user = req.authUser!;
+    if (user.role !== "admin") return reply.code(403).send({ error: "admin role required" });
+    const r = await queryTenantScoped(user.tenantId, `SELECT emails FROM backup_alert_settings WHERE tenant_id = $1`, [user.tenantId]);
+    const emails: string[] = r.rows[0]?.emails ?? [];
+    if (!emails.length) return reply.code(409).send({ error: "Chưa lưu email nhận cảnh báo." });
+    if (!mailConfigured()) return reply.code(503).send({ error: "Email chưa được cấu hình trên server (SMTP_URL, MAIL_FROM)." });
+    try {
+      await sendMail(emails, `[${user.tenantName}] Email thử cảnh báo backup`, "Đây là email thử. Cảnh báo backup sẽ được gửi tới địa chỉ này.\n");
+    } catch (err) {
+      req.log.error({ err }, "backup alert test email failed");
+      return reply.code(502).send({ error: "Gửi email thất bại. Kiểm tra cấu hình SMTP của server." });
+    }
+    return { sent: emails.length };
   });
 }

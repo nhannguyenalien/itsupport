@@ -62,9 +62,20 @@ Rào chắn an toàn:
 
 `GET /backups` trả `health` cho từng máy (`ok`, `running`, `overdue`, `never`, `failed`, `disabled`, `unsupported`). Quá hạn = quá 2 chu kỳ (tối thiểu 24 giờ) không có lần thành công. Trang Thiết bị hiện banner, và audit log ghi `device.backup_alert` (tối đa 1 lần/máy/24 giờ).
 
+## Email cảnh báo
+
+Cần SMTP trên server (biến môi trường của backend):
+
+```
+SMTP_URL=smtps://user:password@smtp.example.com:465
+MAIL_FROM="IT Support <alerts@example.com>"
+```
+
+Quản trị viên mở **Thiết bị → Email cảnh báo backup**, nhập tối đa 10 địa chỉ, bật và bấm "Gửi email thử" (chỉ gửi tới địa chỉ đã lưu). Cứ 30 phút hệ thống quét một lần và gửi **một email tóm tắt cho mỗi workspace**; mỗi máy chỉ được gửi lại sau 24 giờ nếu vẫn có vấn đề (`device.backup_alert_emailed` trong audit). Nếu SMTP lỗi, hệ thống thử lại ở lần quét sau chứ không bỏ qua cảnh báo. Email là văn bản thuần để tên máy không thể chèn mã.
+
 ## Giới hạn hiện tại
 
 - Chỉ Windows; chưa khôi phục tại chỗ (ghi đè) và chưa có kiểm tra restore định kỳ tự động.
 - Mất mật khẩu repository = mất dữ liệu: lưu bản dự phòng ngoài hệ thống.
 - Backup đang chạy bị dừng nếu dịch vụ agent khởi động lại; lần tới scheduler sẽ chạy lại.
-- Chưa có kênh gửi cảnh báo ra ngoài (email/Slack).
+- Cảnh báo ra ngoài mới có email (chưa có Slack/webhook) và chưa có email "đã phục hồi".

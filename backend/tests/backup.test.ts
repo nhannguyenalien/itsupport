@@ -40,3 +40,26 @@ test('backup health classification', () => {
   // freshly created policy gets its grace period before being flagged
   assert.equal(backupHealth({ ...base, policy_updated_at: ago(2) }, now), 'ok');
 });
+
+const { formatAlertEmail, mailConfigured } = await import('../src/backup/alerts.js');
+
+test('alert email lists every device, in plain text', () => {
+  const { subject, text } = formatAlertEmail('Trường A', [
+    { hostname: 'PC-01', health: 'overdue', last_success_at: '2026-10-01T00:00:00Z', device_status: 'online' },
+    { hostname: '<b>PC-02</b>', health: 'never', last_success_at: null, device_status: 'offline' },
+  ]);
+  assert.equal(subject, '[Trường A] 2 máy cần chú ý về backup');
+  assert.match(text, /PC-01: quá hạn backup \(lần thành công cuối: 2026-10-01T00:00:00\.000Z\)/);
+  assert.match(text, /PC-02<\/b>: chưa có backup thành công \(lần thành công cuối: chưa có; máy đang ngoại tuyến\)/);
+});
+
+test('email is off unless SMTP_URL and MAIL_FROM are both set', () => {
+  const saved = { u: process.env.SMTP_URL, f: process.env.MAIL_FROM };
+  delete process.env.SMTP_URL; delete process.env.MAIL_FROM;
+  assert.equal(mailConfigured(), false);
+  process.env.SMTP_URL = 'smtp://x'; assert.equal(mailConfigured(), false);
+  process.env.MAIL_FROM = 'a@b.c'; assert.equal(mailConfigured(), true);
+  process.env.SMTP_URL = saved.u; process.env.MAIL_FROM = saved.f;
+  if (saved.u === undefined) delete process.env.SMTP_URL;
+  if (saved.f === undefined) delete process.env.MAIL_FROM;
+});

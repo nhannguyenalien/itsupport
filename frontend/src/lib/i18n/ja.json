@@ -438,5 +438,13 @@
   "Đang tổng hợp từ các máy…": "端末から集計中…",
   "Hỏi về tất cả máy, hoặc giao việc cho các máy…": "全端末について質問、または作業を依頼…",
   "Tin nhắn chat tổng": "全体チャットのメッセージ",
-  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "全体チャットは提案のみ行います。各作業は端末ごとのセッションを開き、修正には承認が必要です。"
+  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "全体チャットは提案のみ行います。各作業は端末ごとのセッションを開き、修正には承認が必要です。",
+  "Email cảnh báo backup": "バックアップ通知メール",
+  "Server chưa cấu hình SMTP nên chưa gửi được email.": "サーバーに SMTP が設定されていないため、メールを送信できません。",
+  "Gửi email khi backup quá hạn hoặc lỗi": "バックアップが遅延または失敗したらメールで通知する",
+  "Người nhận (mỗi dòng một địa chỉ, tối đa 10)": "宛先（1 行に 1 アドレス、最大 10 件）",
+  "Lưu": "保存",
+  "Đã lưu cài đặt email.": "メール設定を保存しました。",
+  "Gửi email thử": "テストメールを送信",
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "保存済みのアドレスにテストメールを送信しました。"
 }

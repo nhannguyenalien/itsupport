@@ -438,5 +438,13 @@
   "Đang tổng hợp từ các máy…": "Đang tổng hợp từ các máy…",
   "Hỏi về tất cả máy, hoặc giao việc cho các máy…": "Hỏi về tất cả máy, hoặc giao việc cho các máy…",
   "Tin nhắn chat tổng": "Tin nhắn chat tổng",
-  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt."
+  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.",
+  "Email cảnh báo backup": "Email cảnh báo backup",
+  "Server chưa cấu hình SMTP nên chưa gửi được email.": "Server chưa cấu hình SMTP nên chưa gửi được email.",
+  "Gửi email khi backup quá hạn hoặc lỗi": "Gửi email khi backup quá hạn hoặc lỗi",
+  "Người nhận (mỗi dòng một địa chỉ, tối đa 10)": "Người nhận (mỗi dòng một địa chỉ, tối đa 10)",
+  "Lưu": "Lưu",
+  "Đã lưu cài đặt email.": "Đã lưu cài đặt email.",
+  "Gửi email thử": "Gửi email thử",
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "Đã gửi email thử tới các địa chỉ đã lưu."
 }

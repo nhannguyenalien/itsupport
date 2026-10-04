@@ -306,6 +306,10 @@ export const api = {
     request<EnrollmentToken>(`/enrollment-tokens`, { method: "POST", body: JSON.stringify({ tenantId }) }),
   requestAgentUpdate: (deviceId: string) =>
     request<{ version: string }>(`/devices/${deviceId}/agent-update`, { method: "POST", body: "{}" }),
+  backupAlertSettings: () => request<{ enabled: boolean; emails: string[]; mail_configured: boolean }>(`/backup-alerts`),
+  saveBackupAlertSettings: (body: { enabled: boolean; emails: string[] }) =>
+    request<{ enabled: boolean; emails: string[]; mail_configured: boolean }>(`/backup-alerts`, { method: "PUT", body: JSON.stringify(body) }),
+  testBackupAlert: () => request<{ sent: number }>(`/backup-alerts/test`, { method: "POST", body: "{}" }),
   listBackups: () => request<BackupOverview[]>(`/backups`),
   requestBackupSnapshots: (deviceId: string) => request(`/devices/${deviceId}/backup/snapshots`, { method: "POST", body: "{}" }),
   backupSnapshots: (deviceId: string) => request<BackupSnapshots>(`/devices/${deviceId}/backup/snapshots`),

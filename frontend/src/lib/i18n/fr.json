@@ -438,5 +438,13 @@
   "Đang tổng hợp từ các máy…": "Collecte auprès des appareils…",
   "Hỏi về tất cả máy, hoặc giao việc cho các máy…": "Interrogez tous les appareils ou confiez-leur des tâches…",
   "Tin nhắn chat tổng": "Message du chat général",
-  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "Le chat général ne fait que proposer ; chaque tâche ouvre une session d’appareil et les corrections restent soumises à approbation."
+  "Chat tổng chỉ đề xuất; mỗi việc giao cho máy mở một phiên riêng và thao tác sửa vẫn cần duyệt.": "Le chat général ne fait que proposer ; chaque tâche ouvre une session d’appareil et les corrections restent soumises à approbation.",
+  "Email cảnh báo backup": "E-mails d’alerte de sauvegarde",
+  "Server chưa cấu hình SMTP nên chưa gửi được email.": "Le serveur n’a pas de SMTP configuré : impossible d’envoyer des e-mails.",
+  "Gửi email khi backup quá hạn hoặc lỗi": "Envoyer un e-mail quand une sauvegarde est en retard ou échoue",
+  "Người nhận (mỗi dòng một địa chỉ, tối đa 10)": "Destinataires (une adresse par ligne, 10 max)",
+  "Lưu": "Enregistrer",
+  "Đã lưu cài đặt email.": "Paramètres e-mail enregistrés.",
+  "Gửi email thử": "Envoyer un e-mail de test",
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "E-mail de test envoyé aux adresses enregistrées."
 }

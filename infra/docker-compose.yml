@@ -59,6 +59,9 @@ services:
       # Where agents download restic from for device backups (docs/backup.md).
       RESTIC_WINDOWS_URL: ${RESTIC_WINDOWS_URL:-}
       RESTIC_WINDOWS_SHA256: ${RESTIC_WINDOWS_SHA256:-}
+      # SMTP for backup alert emails (docs/backup.md).
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-}
       OAUTH_REDIRECT_BASE_URL: ${APP_PUBLIC_URL:-http://127.0.0.1:18080}/api
     secrets: [db_password, db_app_password, agent_ca_cert, agent_ca_key, firebase_admin]
