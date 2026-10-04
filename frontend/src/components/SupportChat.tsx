@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { api, type SupportProposal, type SupportTier } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { useLanguage } from "@/lib/i18n";
+import { executeProposal, proposalKey } from "@/lib/assistantActions";
 
 interface ChatEntry {
   role: "user" | "bot" | "error";
@@ -98,19 +99,13 @@ export function SupportChat() {
   }
 
   async function runProposal(proposal: SupportProposal) {
-    const key = proposal.action + JSON.stringify(proposal.params);
+    const key = proposalKey(proposal);
     setActing(key);
     try {
-      if (proposal.action === "create_ticket") {
-        const { user } = await api.me();
-        const ticket = await api.createTicket({ tenantId: user.tenantId, deviceId: proposal.params.deviceId, title: proposal.params.title });
-        append("account", { role: "bot", text: tx("Đã tạo ticket. Đang mở…") });
-        router.push(`/tickets/${ticket.id}`);
-      } else {
-        await api.runAiStep(proposal.params.ticketId);
-        append("account", { role: "bot", text: tx("Đã bắt đầu chẩn đoán. Đang mở ticket…") });
-        router.push(`/tickets/${proposal.params.ticketId}`);
-      }
+      const { user } = await api.me();
+      const { ticketId } = await executeProposal(proposal, user.tenantId);
+      append("account", { role: "bot", text: proposal.action === "create_ticket" ? tx("Đã tạo ticket. Đang mở…") : tx("Đã bắt đầu chẩn đoán. Đang mở ticket…") });
+      router.push(`/tickets/${ticketId}`);
     } catch (error) {
       append("account", { role: "error", text: error instanceof Error ? error.message : tx("Không thực hiện được thao tác.") });
     } finally {
@@ -152,7 +147,7 @@ export function SupportChat() {
             <div className="assistant-bubble">{entry.text.replace(/\*\*/g, "")}</div>
             {entry.needsHuman && <p className="assistant-note">{tx("Cần kỹ thuật viên hỗ trợ thêm — hãy tạo ticket ở mục Hỗ trợ.")}</p>}
             {entry.proposals?.map((proposal) => {
-              const key = proposal.action + JSON.stringify(proposal.params);
+              const key = proposalKey(proposal);
               return <button key={key} type="button" className="primary assistant-action" disabled={acting !== null} onClick={() => runProposal(proposal)}>
                 {acting === key ? tx("Đang thực hiện…") : `${tx("Xác nhận")}: ${proposal.label}`}
               </button>;

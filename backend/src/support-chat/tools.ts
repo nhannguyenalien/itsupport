@@ -13,14 +13,14 @@ import { queryTenantScoped } from "../db/pool.js";
 // approvals and audit all still apply).
 
 export interface Proposal {
-  action: "create_ticket" | "run_diagnosis";
+  action: "create_ticket" | "run_diagnosis" | "device_task";
   label: string;
   params: Record<string, string>;
 }
 
 export interface ToolOutput {
   data: unknown;
-  proposal?: Proposal;
+  proposals?: Proposal[];
 }
 
 interface ToolDefinition {
@@ -157,7 +157,31 @@ export const supportTools: Record<string, ToolDefinition> = {
       if (device.revoked) return { data: { error: "Thiết bị đã bị thu hồi, không thể tạo ticket." } };
       return {
         data: { proposed: true, note: "Đã hiển thị nút xác nhận cho người dùng. Chưa có gì được tạo." },
-        proposal: { action: "create_ticket", label: `Tạo ticket "${title}" cho ${device.hostname}`, params: { deviceId: device.id, title } },
+        proposals: [{ action: "create_ticket", label: `Tạo ticket "${title}" cho ${device.hostname}`, params: { deviceId: device.id, title } }],
+      };
+    },
+  },
+
+  propose_device_task: {
+    description: "ĐỀ XUẤT giao 1 yêu cầu cho AI của từng máy (mở phiên chat mới trên mỗi máy, gửi yêu cầu và chạy chẩn đoán). Dùng khi người dùng muốn kiểm tra/xử lý trên 1 hoặc nhiều máy; người dùng bấm xác nhận. Thao tác sửa vẫn cần duyệt trong phiên của từng máy",
+    args: z.object({ device_ids: z.array(uuid).min(1).max(20), request: z.string().trim().min(3).max(1000) }),
+    argsHint: '{"device_ids":["<uuid từ list_devices>", "..."],"request":"yêu cầu gửi cho AI của máy, viết rõ ràng"}',
+    run: async (tenantId, { device_ids, request }) => {
+      const proposals: Proposal[] = [];
+      const skipped: string[] = [];
+      for (const id of [...new Set<string>(device_ids)]) {
+        const device = await findDevice(tenantId, id);
+        if (!device) { skipped.push(`${id}: không thuộc tài khoản này`); continue; }
+        if (device.revoked) { skipped.push(`${device.hostname}: đã thu hồi`); continue; }
+        proposals.push({
+          action: "device_task",
+          label: `Giao cho ${device.hostname}${device.status === "online" ? "" : " (đang ngoại tuyến)"}: ${request.length > 80 ? request.slice(0, 80) + "…" : request}`,
+          params: { deviceId: device.id, hostname: device.hostname, request },
+        });
+      }
+      return {
+        data: { proposed: proposals.length, skipped, note: "Đã hiển thị nút xác nhận cho từng máy. Chưa có gì được thực hiện; sau khi người dùng xác nhận, kết quả nằm trong phiên chat của từng máy (đọc lại bằng list_tickets/get_ticket)." },
+        proposals,
       };
     },
   },
@@ -175,7 +199,7 @@ export const supportTools: Record<string, ToolDefinition> = {
       if (["resolved", "closed"].includes(row.status)) return { data: { error: "Ticket đã đóng." } };
       return {
         data: { proposed: true, note: "Đã hiển thị nút xác nhận cho người dùng. Chẩn đoán chưa chạy." },
-        proposal: { action: "run_diagnosis", label: `Chạy chẩn đoán AI cho "${row.title}"`, params: { ticketId: row.id } },
+        proposals: [{ action: "run_diagnosis", label: `Chạy chẩn đoán AI cho "${row.title}"`, params: { ticketId: row.id } }],
       };
     },
   },

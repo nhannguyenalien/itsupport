@@ -449,3 +449,28 @@ input, select {
 @media (max-width: 640px) { .remote-compact > span { display: none; } .composer-file { max-width: 110px; } }
 .support-chat-shell button.primary, .assistant-panel button.primary { border-color: #087a52; background: #087a52; color: #fff; }
 .support-chat-shell button.primary:hover:not(:disabled), .assistant-panel button.primary:hover:not(:disabled) { background: #066744; }
+
+/* Chat tổng (components/GeneralChat.tsx) */
+.general-item { margin-bottom: 14px; border-color: #cfe5da; background: #eef8f3; }
+.general-item.selected { background: #fff; border-color: #8fd0b2; }
+.general-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #087a52; color: #fff; font-size: 13px !important; }
+.general-overview { border-bottom: 1px solid #e8eeeb; }
+.general-stats { display: flex; align-items: center; gap: 16px; width: 100%; padding: 10px 24px; border: 0; border-radius: 0; background: #f8faf9; color: #4d6259; font-size: 12px; text-align: left; }
+.general-stats strong { color: #10231e; }
+.general-stats small { margin-left: auto; color: #73817c; }
+.general-stats:hover { background: #f0f6f3; }
+.general-sessions { list-style: none; margin: 0; padding: 6px 16px 10px; max-height: 240px; overflow: auto; background: #f8faf9; }
+.general-sessions li > button { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; gap: 12px; align-items: center; width: 100%; padding: 8px; border: 0; border-radius: 8px; background: transparent; text-align: left; font-size: 12px; }
+.general-sessions li > button:hover { background: #fff; }
+.general-sessions span { overflow: hidden; color: #4d6259; text-overflow: ellipsis; white-space: nowrap; }
+.general-sessions time { color: #8b9692; font-size: 11px; }
+.general-suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
+.general-suggestions button { border-color: #cfe5da; border-radius: 999px; background: #fff; color: #087a52; font-size: 12px; }
+.general-suggestions button:hover { background: #eef8f3; }
+.general-proposals { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 10px; }
+.general-proposals button { text-align: left; white-space: normal; font-size: 12px; }
+.general-done { border-color: #cfe5da; background: #eef8f3; color: #087a52; }
+.general-all { border-color: #087a52; color: #087a52; font-weight: 600; }
+.general-error > div { background: #fef2f2; color: #991b1b; }
+.general-chat .support-composer, .general-chat .support-hint { flex: 0 0 auto; }
+@media (max-width: 640px) { .general-stats { gap: 10px; padding: 10px 14px; flex-wrap: wrap; } .general-sessions li > button { grid-template-columns: 1fr; gap: 2px; } }

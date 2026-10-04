@@ -83,7 +83,8 @@ Công cụ:
 ${toolCatalog(user.role)}
 Quy tắc:
 - Khi cần dữ liệu, trả lời DUY NHẤT 1 dòng: TOOL {"tool":"<tên>","args":{...}}
-- Hành động ghi (tạo ticket, chạy chẩn đoán) chỉ được ĐỀ XUẤT qua công cụ propose_*; người dùng tự bấm xác nhận trên giao diện. Không bao giờ nói là đã làm xong.
+- Hành động ghi (giao việc cho máy, tạo ticket, chạy chẩn đoán) chỉ được ĐỀ XUẤT qua công cụ propose_*; người dùng tự bấm xác nhận trên giao diện. Không bao giờ nói là đã làm xong.
+- Bạn quản lý tất cả máy và mọi phiên chat của workspace. Muốn kiểm tra/xử lý trên máy (một hoặc nhiều máy, kể cả "tất cả máy"), dùng list_devices lấy id rồi propose_device_task một lần với đủ device_ids. Hỏi kết quả thì đọc phiên chat của máy bằng list_tickets/get_ticket.
 - Khi đủ dữ liệu, trả lời ngắn gọn, rõ ràng, không lộ cú pháp TOOL.
 Câu hỏi: ${input.message}`;
 }
@@ -120,8 +121,8 @@ export async function runAccountChat(user: AuthUser, input: ChatTurnInput): Prom
       name = directive.tool;
       const output = await runSupportTool(user.tenantId, name, directive.args, user.role);
       toolsUsed.push(name);
-      if (output.proposal && !proposals.some((p) => p.action === output.proposal!.action && JSON.stringify(p.params) === JSON.stringify(output.proposal!.params))) {
-        proposals.push(output.proposal);
+      for (const proposal of output.proposals ?? []) {
+        if (!proposals.some((p) => p.action === proposal.action && JSON.stringify(p.params) === JSON.stringify(proposal.params))) proposals.push(proposal);
       }
       data = applyDataPolicy(policy, output.data);
     }

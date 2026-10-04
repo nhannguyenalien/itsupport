@@ -262,7 +262,7 @@ export interface Metrics {
 export type SupportTier = "system" | "account";
 
 export interface SupportProposal {
-  action: "create_ticket" | "run_diagnosis";
+  action: "create_ticket" | "run_diagnosis" | "device_task";
   label: string;
   params: Record<string, string>;
 }
