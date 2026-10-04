@@ -15,3 +15,4 @@ frontend/public/downloads/agent/windows-*/
 infra/secrets/
 infra/backups/
 frontend/public/downloads/agent/linux-*/
+frontend/public/downloads/agent/restic-*.exe

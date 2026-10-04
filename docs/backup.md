@@ -30,7 +30,7 @@ RESTIC_WINDOWS_URL=https://itsupport.example.com/downloads/agent/restic-windows-
 RESTIC_WINDOWS_SHA256=<sha256 của file>
 ```
 
-Đặt file `restic.exe` (bản chính thức, giải nén từ zip release) vào `frontend/public/downloads/agent/`. Agent chỉ chấp nhận https và đúng SHA-256.
+Đặt file `restic.exe` (bản chính thức, giải nén từ zip release, đối chiếu với `SHA256SUMS` của restic) vào `frontend/public/downloads/agent/restic-windows-amd64.exe` (file bị `.gitignore`, phải copy lên server cùng thư mục `downloads/agent/`). Hiện dùng restic 0.19.1, SHA-256 `b0dd1fd2…7830`. Agent chỉ chấp nhận https và đúng SHA-256.
 
 ## Repository server tự host (tuỳ chọn)
 
