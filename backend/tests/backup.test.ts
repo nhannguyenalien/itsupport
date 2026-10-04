@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
-import { BACKUP_ENV_KEYS, agentSupportsBackup } from '../src/backup/index.js';
+
+process.env.DATABASE_URL ||= 'postgres://localhost/backup_test';
+const { BACKUP_ENV_KEYS, agentSupportsBackup } = await import('../src/backup/index.js');
 
 test('backup env allowlist matches the agent', () => {
   const source = readFileSync(new URL('../../agent/internal/tools/backup.go', import.meta.url), 'utf8');
