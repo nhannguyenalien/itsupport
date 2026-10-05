@@ -1,6 +1,6 @@
 # Backup chủ động (restic)
 
-Agent Windows (từ 0.4.0) chạy [restic](https://restic.net) theo chính sách lưu ở backend.
+Agent Windows, macOS và Linux (từ 0.4.1) chạy [restic](https://restic.net) theo chính sách lưu ở backend.
 restic tự mã hoá, dedup và gửi dữ liệu thẳng tới repository — dữ liệu backup **không đi qua backend**.
 
 ## Luồng
@@ -62,6 +62,31 @@ Rào chắn an toàn:
 
 `GET /backups` trả `health` cho từng máy (`ok`, `running`, `overdue`, `never`, `failed`, `disabled`, `unsupported`). Quá hạn = quá 2 chu kỳ (tối thiểu 24 giờ) không có lần thành công. Trang Thiết bị hiện banner, và audit log ghi `device.backup_alert` (tối đa 1 lần/máy/24 giờ).
 
+## macOS
+
+Agent macOS chạy trong phiên đăng nhập của người dùng (LaunchAgent) nên backup dữ liệu của chính người dùng đó. Cấp **Full Disk Access** cho binary `executor` trong System Settings → Privacy & Security, nếu không macOS (TCC) sẽ chặn Desktop/Documents/iCloud. Mẫu mặc định: thư mục `/Users`, loại trừ `Library/Caches`, `.Trash`. Binary restic tải dạng `.bz2` (`RESTIC_DARWIN_AMD64/ARM64_*`). Khôi phục vào thư mục mới/trống, ví dụ `/Users/Shared/Restore-…`; không dùng VSS (chỉ có trên Windows).
+
+## Linux và Coolify
+
+Agent Linux chạy bằng root nên đọc được `/data/coolify` và `/var/lib/docker`. Restic Linux được tải về dạng `.bz2` chính thức (SHA-256 ghim trên chính file `.bz2`); đặt `restic-linux-amd64.bz2` / `restic-linux-arm64.bz2` cạnh bản Windows và khai báo `RESTIC_LINUX_AMD64_URL/SHA256`, `RESTIC_LINUX_ARM64_URL/SHA256` (xem `.env.example`).
+
+Trong **Backup** của máy Linux bấm **Mẫu Coolify** để điền sẵn:
+- Thư mục: `/data/coolify` (cấu hình, khoá SSH, `.env`) và `/var/lib/docker/volumes`.
+- Loại trừ: `*.tmp`, `*.log`. Không backup `overlay2`/image (dựng lại được).
+
+**Postgres trong container:** chép thẳng thư mục dữ liệu Postgres đang chạy có thể cho bản khôi phục không khởi động được, nên mỗi lần backup agent **dump trước** rồi đưa file dump vào snapshot. Khai báo mỗi dòng `container:user:database`:
+
+```
+postgres-abc123:postgres:appdb      # pg_dump -Fc, file <container>__appdb.dump
+postgres-abc123:postgres:           # bỏ trống database = pg_dumpall, file <container>__ALL.sql
+```
+
+Lấy tên container bằng `docker ps --format '{{.Names}} {{.Image}}'`. Chỉ chạy đúng `docker exec <container> pg_dump|pg_dumpall` với tên khớp mẫu chặt (không thể thành lệnh tuỳ ý). Dump nằm ở `/root/.config/support-agent/dumps/` và được thay mới mỗi lần. **Nếu một dump lỗi, lần backup bị tính là lỗi** (file vẫn được backup nhưng bản database thiếu/cũ) và kích hoạt cảnh báo.
+
+Khôi phục database: restore snapshot vào thư mục trống như thường lệ, rồi tự chạy `pg_restore`/`psql` từ file dump vào container Postgres.
+
+Lưu ý: restic vẫn chép cả volume Postgres thô trong `/var/lib/docker/volumes`; bản đó không đáng tin để khôi phục DB (chỉ tốn dung lượng, restic khử trùng lặp). Dùng file dump. Backup file không thay cho snapshot ổ đĩa của nhà cung cấp VPS khi cần dựng lại cả máy.
+
 ## Email cảnh báo
 
 Cần SMTP trên server (biến môi trường của backend):
@@ -75,7 +100,7 @@ Quản trị viên mở **Thiết bị → Email cảnh báo backup**, nhập t�
 
 ## Giới hạn hiện tại
 
-- Chỉ Windows; chưa khôi phục tại chỗ (ghi đè) và chưa có kiểm tra restore định kỳ tự động.
+- Chỉ Windows, macOS và Linux; chỉ dump Postgres (chưa MySQL/MariaDB); chưa khôi phục tại chỗ (ghi đè) và chưa có kiểm tra restore định kỳ tự động.
 - Mất mật khẩu repository = mất dữ liệu: lưu bản dự phòng ngoài hệ thống.
 - Backup đang chạy bị dừng nếu dịch vụ agent khởi động lại; lần tới scheduler sẽ chạy lại.
 - Cảnh báo ra ngoài mới có email (chưa có Slack/webhook) và chưa có email "đã phục hồi".

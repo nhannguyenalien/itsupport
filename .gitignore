@@ -16,3 +16,4 @@ infra/secrets/
 infra/backups/
 frontend/public/downloads/agent/linux-*/
 frontend/public/downloads/agent/restic-*.exe
+frontend/public/downloads/agent/restic-*.bz2

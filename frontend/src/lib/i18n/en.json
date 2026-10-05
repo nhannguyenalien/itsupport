@@ -380,7 +380,6 @@
   "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Password created. You can now sign in with email and password.",
   "Quay lại hỗ trợ": "Back to support",
   "Backup (restic)": "Backup (restic)",
-  "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "Proactive backup is only available for Windows devices running agent {version} or newer. Update the agent first.",
   "Đã lưu chính sách backup.": "Backup policy saved.",
   "Chưa chạy": "Not run yet",
   "Đang chạy": "Running",
@@ -446,5 +445,10 @@
   "Lưu": "Save",
   "Đã lưu cài đặt email.": "Email settings saved.",
   "Gửi email thử": "Send test email",
-  "Đã gửi email thử tới các địa chỉ đã lưu.": "Test email sent to the saved addresses."
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "Test email sent to the saved addresses.",
+  "Mẫu Coolify": "Coolify template",
+  "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.": "Coolify template applied. Review and adjust before saving.",
+  "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)": "Postgres databases in Docker (one per line: container:user:database — leave database empty to dump all)",
+  "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.": "The system dumps the databases before each backup and includes the dump files in the snapshot.",
+  "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "Proactive backup is only available for Windows, macOS and Linux devices running agent {version} or newer. Update the agent first."
 }

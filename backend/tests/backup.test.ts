@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 
 process.env.DATABASE_URL ||= 'postgres://localhost/backup_test';
-const { BACKUP_ENV_KEYS, agentSupportsBackup } = await import('../src/backup/index.js');
+const { BACKUP_ENV_KEYS, agentSupportsBackup, resticDownloads, platformSupportsBackup } = await import('../src/backup/index.js');
 
 test('backup env allowlist matches the agent', () => {
   const source = readFileSync(new URL('../../agent/internal/tools/backup.go', import.meta.url), 'utf8');
@@ -12,10 +12,11 @@ test('backup env allowlist matches the agent', () => {
   assert.deepEqual([...BACKUP_ENV_KEYS].sort(), agent);
 });
 
-test('backup requires agent 0.4.0 or newer', () => {
+test('backup requires agent 0.4.1 or newer', () => {
   assert.equal(agentSupportsBackup('0.3.2'), false);
+  assert.equal(agentSupportsBackup('0.4.0'), false);
   assert.equal(agentSupportsBackup(null), false);
-  assert.equal(agentSupportsBackup('0.4.0'), true);
+  assert.equal(agentSupportsBackup('0.4.1'), true);
   assert.equal(agentSupportsBackup('0.10.1'), true);
 });
 
@@ -62,4 +63,21 @@ test('email is off unless SMTP_URL and MAIL_FROM are both set', () => {
   process.env.SMTP_URL = saved.u; process.env.MAIL_FROM = saved.f;
   if (saved.u === undefined) delete process.env.SMTP_URL;
   if (saved.f === undefined) delete process.env.MAIL_FROM;
+});
+
+test('backup runs on Windows, Linux and macOS only', () => {
+  assert.equal(platformSupportsBackup('windows'), true);
+  assert.equal(platformSupportsBackup('linux'), true);
+  assert.equal(platformSupportsBackup('mac'), true);
+  assert.equal(platformSupportsBackup('freebsd'), false);
+});
+
+test('restic downloads are offered per platform only when fully configured', () => {
+  const d = resticDownloads({
+    RESTIC_WINDOWS_URL: 'https://x/w.exe', RESTIC_WINDOWS_SHA256: 'aa',
+    RESTIC_LINUX_AMD64_URL: 'https://x/l.bz2', RESTIC_LINUX_AMD64_SHA256: 'bb',
+    RESTIC_LINUX_ARM64_URL: 'https://x/a.bz2', // no hash -> omitted
+  } as NodeJS.ProcessEnv);
+  assert.deepEqual(Object.keys(d).sort(), ['linux-amd64', 'windows-amd64']);
+  assert.deepEqual(d['linux-amd64'], { url: 'https://x/l.bz2', sha256: 'bb' });
 });

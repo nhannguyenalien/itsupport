@@ -380,7 +380,6 @@
   "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "パスワードを作成しました。今後はメールとパスワードでログインできます。",
   "Quay lại hỗ trợ": "サポートに戻る",
   "Backup (restic)": "バックアップ（restic）",
-  "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "プロアクティブバックアップは、エージェント {version} 以降の Windows デバイスでのみ利用できます。先にエージェントを更新してください。",
   "Đã lưu chính sách backup.": "バックアップポリシーを保存しました。",
   "Chưa chạy": "未実行",
   "Đang chạy": "実行中",
@@ -446,5 +445,10 @@
   "Lưu": "保存",
   "Đã lưu cài đặt email.": "メール設定を保存しました。",
   "Gửi email thử": "テストメールを送信",
-  "Đã gửi email thử tới các địa chỉ đã lưu.": "保存済みのアドレスにテストメールを送信しました。"
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "保存済みのアドレスにテストメールを送信しました。",
+  "Mẫu Coolify": "Coolify テンプレート",
+  "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.": "Coolify テンプレートを適用しました。保存前に確認して調整してください。",
+  "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)": "Docker 内の Postgres データベース（1 行に 1 つ: container:user:database — database を空にすると全件）",
+  "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.": "システムは各バックアップの前にデータベースをダンプし、ダンプファイルをスナップショットに含めます。",
+  "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "プロアクティブバックアップは、エージェント {version} 以降の Windows・macOS・Linux デバイスでのみ利用できます。先にエージェントを更新してください。"
 }

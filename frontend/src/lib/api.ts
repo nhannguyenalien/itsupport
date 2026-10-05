@@ -63,6 +63,7 @@ export interface BackupPolicy {
   keep_monthly: number;
   use_vss: boolean;
   limit_upload_kbps: number;
+  db_dumps: { container: string; user: string; database: string }[];
   last_run_requested_at: string | null;
   env_configured: string[];
 }
@@ -129,6 +130,7 @@ export interface BackupPolicyInput {
   keep_weekly: number;
   keep_monthly: number;
   use_vss: boolean;
+  db_dumps: { container: string; user: string; database: string }[];
 }
 
 export interface EnrollmentToken {

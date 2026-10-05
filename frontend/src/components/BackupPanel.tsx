@@ -4,15 +4,27 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type BackupInfo, type BackupSnapshots } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
-const DEFAULT_PATHS = "C:\\Users\\";
-const DEFAULT_EXCLUDES = "*.tmp\n$RECYCLE.BIN\nAppData\\Local\\Temp";
+const DEFAULTS = {
+  windows: { paths: "C:\\Users\\", excludes: "*.tmp\n$RECYCLE.BIN\nAppData\\Local\\Temp", restoreTarget: "C:\\Restore\\2026-10-04" },
+  mac: { paths: "/Users", excludes: "*.tmp\n.Trash\nLibrary/Caches\n.DS_Store", restoreTarget: "/Users/Shared/Restore-2026-10-05" },
+  linux: { paths: "/data/coolify\n/var/lib/docker/volumes", excludes: "*.tmp\n*.log", restoreTarget: "/restore/2026-10-04" },
+};
+
+// "container:user:database" per line; user defaults to postgres, an empty
+// database means every database (pg_dumpall).
+function parseDumps(text: string) {
+  return text.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
+    const [container, user = "", database = ""] = line.split(":").map((x) => x.trim());
+    return { container, user: user || "postgres", database };
+  });
+}
 
 function formatBytes(n?: number) {
   if (!n) return "0 MB";
   return n >= 1 << 30 ? `${(n / (1 << 30)).toFixed(2)} GB` : `${(n / (1 << 20)).toFixed(1)} MB`;
 }
 
-export default function BackupPanel({ deviceId, online }: { deviceId: string; online: boolean }) {
+export default function BackupPanel({ deviceId, online, platform }: { deviceId: string; online: boolean; platform: "windows" | "linux" | "mac" }) {
   const { tx, locale } = useLanguage();
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<BackupInfo | null>(null);
@@ -20,8 +32,8 @@ export default function BackupPanel({ deviceId, online }: { deviceId: string; on
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
     enabled: true, repo: "", password: "", keyId: "", keySecret: "",
-    paths: DEFAULT_PATHS, excludes: DEFAULT_EXCLUDES,
-    interval: 24, daily: 7, weekly: 4, monthly: 6, vss: true,
+    paths: DEFAULTS[platform].paths, excludes: DEFAULTS[platform].excludes, dumps: "",
+    interval: 24, daily: 7, weekly: 4, monthly: 6, vss: platform === "windows",
   });
   const [loadedPolicy, setLoadedPolicy] = useState(false);
   const [snaps, setSnaps] = useState<BackupSnapshots | null>(null);
@@ -33,7 +45,7 @@ export default function BackupPanel({ deviceId, online }: { deviceId: string; on
       setInfo(data);
       const p = data.policy;
       if (p) setForm((f) => loadedPolicy ? f : ({
-        ...f, enabled: p.enabled, repo: p.repo, paths: p.paths.join("\n"), excludes: p.excludes.join("\n"),
+        ...f, enabled: p.enabled, repo: p.repo, paths: p.paths.join("\n"), excludes: p.excludes.join("\n"), dumps: (p.db_dumps ?? []).map((d) => `${d.container}:${d.user}:${d.database}`).join("\n"),
         interval: p.interval_hours, daily: p.keep_daily, weekly: p.keep_weekly, monthly: p.keep_monthly, vss: p.use_vss,
       }));
       setLoadedPolicy(true);
@@ -69,7 +81,7 @@ export default function BackupPanel({ deviceId, online }: { deviceId: string; on
   const save = () => run(async () => {
     await api.saveBackupPolicy(deviceId, {
       enabled: form.enabled, repo: form.repo.trim(), env: envFromForm(), paths: lines(form.paths), excludes: lines(form.excludes),
-      interval_hours: form.interval, keep_daily: form.daily, keep_weekly: form.weekly, keep_monthly: form.monthly, use_vss: form.vss,
+      interval_hours: form.interval, keep_daily: form.daily, keep_weekly: form.weekly, keep_monthly: form.monthly, use_vss: platform === "windows" && form.vss, db_dumps: platform === "linux" ? parseDumps(form.dumps) : [],
     });
     setForm((f) => ({ ...f, password: "", keyId: "", keySecret: "" }));
   }, tx("Đã lưu chính sách backup."));
@@ -85,7 +97,7 @@ export default function BackupPanel({ deviceId, online }: { deviceId: string; on
   return (
     <details style={{ marginTop: 12 }} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary><strong>{tx("Backup (restic)")}</strong></summary>
-      {info && !info.supported && <p className="muted">{tx("Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.", { version: info.min_agent_version })}</p>}
+      {info && !info.supported && <p className="muted">{tx("Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.", { version: info.min_agent_version })}</p>}
       {message && <p style={{ color: message.error ? "#b91c1c" : undefined }}>{message.text}</p>}
       {status && (
         <div className="muted" style={{ margin: "8px 0" }}>
@@ -115,7 +127,15 @@ export default function BackupPanel({ deviceId, online }: { deviceId: string; on
           <label>{tx("Loại trừ (mỗi dòng một mẫu)")}
             <textarea style={{ width: "100%" }} rows={3} value={form.excludes} onChange={(e) => setForm({ ...form, excludes: e.target.value })} /></label>
           <div>{tx("Chạy mỗi (giờ)")} {num("interval")} · {tx("Giữ theo ngày / tuần / tháng")} {num("daily")} {num("weekly")} {num("monthly")}</div>
-          <label><input type="checkbox" checked={form.vss} onChange={(e) => setForm({ ...form, vss: e.target.checked })} /> {tx("Dùng VSS (backup cả file đang mở)")}</label>
+          {platform === "linux" && (
+            <>
+              <div><button disabled={busy} onClick={() => { setForm({ ...form, paths: DEFAULTS.linux.paths, excludes: DEFAULTS.linux.excludes, vss: false }); setMessage({ text: tx("Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu."), error: false }); }}>{tx("Mẫu Coolify")}</button></div>
+              <label>{tx("Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)")}
+                <textarea style={{ width: "100%" }} rows={3} placeholder="postgres-abc123:postgres:appdb" value={form.dumps} onChange={(e) => setForm({ ...form, dumps: e.target.value })} /></label>
+              <p className="muted">{tx("Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.")}</p>
+            </>
+          )}
+          {platform === "windows" && <label><input type="checkbox" checked={form.vss} onChange={(e) => setForm({ ...form, vss: e.target.checked })} /> {tx("Dùng VSS (backup cả file đang mở)")}</label>}
           <div style={{ display: "flex", gap: 8 }}>
             <button className="primary" disabled={busy || !form.repo} onClick={() => void save()}>{tx("Lưu chính sách")}</button>
             <button disabled={busy || !online || !info.policy?.enabled || status?.state === "running"} onClick={() => void run(() => api.runBackup(deviceId), tx("Đã gửi yêu cầu, máy sẽ xử lý trong vài giây."))}>{tx("Chạy ngay")}</button>
@@ -142,7 +162,7 @@ export default function BackupPanel({ deviceId, online }: { deviceId: string; on
                     {snaps.snapshots.map((x) => <option key={x.id} value={x.id}>{new Date(x.time).toLocaleString(locale)} · {x.id} · {x.paths.join(", ")}</option>)}
                   </select></label>
                 <label>{tx("Thư mục đích (phải mới hoặc trống)")}
-                  <input style={{ width: "100%" }} placeholder="C:\\Restore\\2026-10-04" value={restore.target} onChange={(e) => setRestore({ ...restore, target: e.target.value })} /></label>
+                  <input style={{ width: "100%" }} placeholder={DEFAULTS[platform].restoreTarget} value={restore.target} onChange={(e) => setRestore({ ...restore, target: e.target.value })} /></label>
                 <label>{tx("Chỉ khôi phục các đường dẫn này (tuỳ chọn, mỗi dòng một đường dẫn)")}
                   <textarea style={{ width: "100%" }} rows={2} value={restore.include} onChange={(e) => setRestore({ ...restore, include: e.target.value })} /></label>
                 <label><input type="checkbox" checked={restore.confirm} onChange={(e) => setRestore({ ...restore, confirm: e.target.checked })} /> {tx("Tôi xác nhận khôi phục snapshot này vào thư mục đích trên máy {name}.", { name: deviceId.slice(0, 8) })}</label>

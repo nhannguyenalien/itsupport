@@ -10,7 +10,9 @@ import { BACKUP_ROWS_SQL, PROBLEM_HEALTH, withHealth } from "./health.js";
 // any API — tool_calls.params for backup.run holds only an empty marker, and
 // hydrateBackupParams() fills in the secrets as the agent polls for work.
 
-export const BACKUP_MIN_AGENT_VERSION = "0.4.0";
+export const BACKUP_MIN_AGENT_VERSION = "0.4.1";
+
+export { BACKUP_PLATFORMS, platformSupportsBackup } from "./platforms.js";
 
 // Must mirror backupEnvAllowlist in agent/internal/tools/backup.go.
 export const BACKUP_ENV_KEYS = [
@@ -33,7 +35,17 @@ export function decryptEnv(stored: string): Record<string, string> {
 interface PolicyRow {
   repo: string; secrets_enc: string; paths: string[]; excludes: string[];
   keep_daily: number; keep_weekly: number; keep_monthly: number;
-  use_vss: boolean; limit_upload_kbps: number;
+  use_vss: boolean; limit_upload_kbps: number; db_dumps: unknown[];
+}
+
+/** Pinned restic downloads per agent platform; the agent picks its own GOOS-GOARCH. */
+export function resticDownloads(env: NodeJS.ProcessEnv = process.env): Record<string, { url: string; sha256: string }> {
+  const out: Record<string, { url: string; sha256: string }> = {};
+  for (const [key, prefix] of [["windows-amd64", "RESTIC_WINDOWS"], ["linux-amd64", "RESTIC_LINUX_AMD64"], ["linux-arm64", "RESTIC_LINUX_ARM64"], ["darwin-amd64", "RESTIC_DARWIN_AMD64"], ["darwin-arm64", "RESTIC_DARWIN_ARM64"]] as const) {
+    const url = env[`${prefix}_URL`], sha256 = env[`${prefix}_SHA256`];
+    if (url && sha256) out[key] = { url, sha256 };
+  }
+  return out;
 }
 
 const SECRET_TOOLS = new Set(["backup.run", "backup.snapshots", "backup.restore"]);
@@ -48,19 +60,22 @@ export async function hydrateBackupParams<T extends { tool: string; params: Reco
 ): Promise<T[]> {
   if (!calls.some((c) => SECRET_TOOLS.has(c.tool))) return calls;
   const res = await queryTenantScoped<PolicyRow & { enabled: boolean }>(tenantId,
-    `SELECT enabled, repo, secrets_enc, paths, excludes, keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps
+    `SELECT enabled, repo, secrets_enc, paths, excludes, keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps, db_dumps
      FROM backup_policies WHERE device_id = $1`, [deviceId]);
   const p = res.rows[0];
   return calls.map((c) => {
     if (!SECRET_TOOLS.has(c.tool) || !p || (c.tool === "backup.run" && !p.enabled)) return c;
     const access: Record<string, unknown> = { repo: p.repo, env: decryptEnv(p.secrets_enc) };
+    const downloads = resticDownloads();
+    if (Object.keys(downloads).length) access.restic_downloads = downloads;
+    // Legacy single pair, kept so 0.4.0 Windows agents can still self-install restic.
     if (process.env.RESTIC_WINDOWS_URL && process.env.RESTIC_WINDOWS_SHA256) {
       access.restic_url = process.env.RESTIC_WINDOWS_URL;
       access.restic_sha256 = process.env.RESTIC_WINDOWS_SHA256;
     }
     if (c.tool === "backup.run") {
       Object.assign(access, { paths: p.paths, excludes: p.excludes, keep_daily: p.keep_daily, keep_weekly: p.keep_weekly,
-        keep_monthly: p.keep_monthly, use_vss: p.use_vss, limit_upload_kbps: p.limit_upload_kbps });
+        keep_monthly: p.keep_monthly, use_vss: p.use_vss, limit_upload_kbps: p.limit_upload_kbps, db_dumps: p.db_dumps });
     }
     // Stored params (snapshot_id/target/include) are non-secret; credentials always win.
     return { ...c, params: { ...c.params, ...access } };
@@ -76,7 +91,7 @@ export async function backupSchedulerTick(): Promise<void> {
     WITH due AS (
       SELECT bp.device_id FROM backup_policies bp JOIN devices d ON d.id = bp.device_id
       WHERE bp.enabled AND d.status = 'online' AND d.cert_revoked_at IS NULL AND NOT d.actions_paused
-        AND d.platform = 'windows'
+        AND d.platform IN ('windows', 'linux', 'mac')
         AND (bp.last_run_requested_at IS NULL OR bp.last_run_requested_at < now() - make_interval(hours => bp.interval_hours))
         AND NOT EXISTS (SELECT 1 FROM tool_calls t WHERE t.device_id = bp.device_id AND t.tool = 'backup.run' AND t.executed_at IS NULL)
     ), queued AS (
@@ -90,7 +105,7 @@ export async function backupSchedulerTick(): Promise<void> {
     INSERT INTO tool_calls (device_id, tool, risk, params)
     SELECT bp.device_id, 'backup.status', 'read', '{}'::jsonb
     FROM backup_policies bp JOIN devices d ON d.id = bp.device_id
-    WHERE bp.enabled AND d.status = 'online' AND d.cert_revoked_at IS NULL AND d.platform = 'windows'
+    WHERE bp.enabled AND d.status = 'online' AND d.cert_revoked_at IS NULL AND d.platform IN ('windows', 'linux', 'mac')
       AND NOT EXISTS (SELECT 1 FROM tool_calls t WHERE t.device_id = bp.device_id AND t.tool = 'backup.status' AND t.executed_at IS NULL)
       AND COALESCE((SELECT max(t.requested_at) FROM tool_calls t WHERE t.device_id = bp.device_id AND t.tool = 'backup.status'), 'epoch')
           < now() - CASE WHEN bp.last_run_requested_at > now() - interval '30 minutes'

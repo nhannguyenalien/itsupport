@@ -380,7 +380,6 @@
   "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Contraseña creada. Ahora puedes iniciar sesión con correo y contraseña.",
   "Quay lại hỗ trợ": "Volver a soporte",
   "Backup (restic)": "Copia de seguridad (restic)",
-  "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "La copia proactiva solo está disponible en Windows con el agente {version} o posterior. Actualice primero el agente.",
   "Đã lưu chính sách backup.": "Política de copia guardada.",
   "Chưa chạy": "Aún no ejecutada",
   "Đang chạy": "En curso",
@@ -446,5 +445,10 @@
   "Lưu": "Guardar",
   "Đã lưu cài đặt email.": "Configuración de correo guardada.",
   "Gửi email thử": "Enviar correo de prueba",
-  "Đã gửi email thử tới các địa chỉ đã lưu.": "Correo de prueba enviado a las direcciones guardadas."
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "Correo de prueba enviado a las direcciones guardadas.",
+  "Mẫu Coolify": "Plantilla Coolify",
+  "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.": "Plantilla Coolify aplicada. Revise y ajuste antes de guardar.",
+  "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)": "Bases Postgres en Docker (una por línea: contenedor:usuario:base — base vacía = todas)",
+  "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.": "El sistema vuelca las bases antes de cada copia e incluye los archivos de volcado en la instantánea.",
+  "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "La copia proactiva solo está disponible en Windows, macOS y Linux con el agente {version} o posterior. Actualice primero el agente."
 }

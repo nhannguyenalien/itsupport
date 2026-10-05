@@ -43,6 +43,7 @@ export async function ensureAuthSchema(): Promise<void> {
       keep_monthly INTEGER NOT NULL DEFAULT 6,
       use_vss BOOLEAN NOT NULL DEFAULT true,
       limit_upload_kbps INTEGER NOT NULL DEFAULT 0,
+      db_dumps JSONB NOT NULL DEFAULT '[]',
       last_run_requested_at TIMESTAMPTZ,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
@@ -60,6 +61,7 @@ export async function ensureAuthSchema(): Promise<void> {
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'backup_alert_settings' AND policyname = 'tenant_isolation') THEN
       CREATE POLICY tenant_isolation ON backup_alert_settings USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
     END IF; END $$`);
+  await pool.query(`ALTER TABLE backup_policies ADD COLUMN IF NOT EXISTS db_dumps JSONB NOT NULL DEFAULT '[]'`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_policies_tenant ON backup_policies(tenant_id)`);
   await pool.query(`ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY`);
   await pool.query(`DO $$ BEGIN

@@ -461,6 +461,7 @@ CREATE TABLE backup_policies (
     keep_monthly           INTEGER NOT NULL DEFAULT 6,
     use_vss                BOOLEAN NOT NULL DEFAULT true,
     limit_upload_kbps      INTEGER NOT NULL DEFAULT 0,
+    db_dumps               JSONB NOT NULL DEFAULT '[]',
     last_run_requested_at  TIMESTAMPTZ,
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );

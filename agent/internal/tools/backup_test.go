@@ -3,6 +3,7 @@ package tools
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -83,5 +84,33 @@ func TestRestoreRequestValidation(t *testing.T) {
 	p["include"] = []any{"-x"}
 	if _, err := BackupRestore(p); err == nil {
 		t.Fatal("flag-like include accepted")
+	}
+}
+
+func TestParseDbDumps(t *testing.T) {
+	good, err := parseDbDumps([]any{
+		map[string]any{"container": "postgres-abc123", "user": "app", "database": "appdb"},
+		map[string]any{"container": "db.1"},
+	})
+	if err != nil || len(good) != 2 || good[1].user != "postgres" || good[0].fileName() != "postgres-abc123__appdb.dump" || good[1].fileName() != "db.1__ALL.sql" {
+		t.Fatalf("unexpected: %+v %v", good, err)
+	}
+	for name, bad := range map[string]map[string]any{
+		"space in container": {"container": "a b"},
+		"flag container":     {"container": "-v"},
+		"shell in database":  {"container": "db", "database": "x;rm -rf /"},
+		"flag database":      {"container": "db", "database": "--help"},
+		"bad user":           {"container": "db", "user": "a b"},
+		"no container":       {"user": "postgres"},
+	} {
+		if _, err := parseDbDumps([]any{bad}); err == nil {
+			t.Errorf("%s: expected rejection", name)
+		}
+	}
+}
+
+func TestRestoreRejectsCoolifyDir(t *testing.T) {
+	if _, err := validateRestoreTarget("/data/coolify/restore"); err == nil && runtime.GOOS != "windows" {
+		t.Fatal("restore into /data/coolify must be refused")
 	}
 }

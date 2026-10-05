@@ -1,4 +1,5 @@
 import type { QueryResultRow } from "pg";
+import { platformSupportsBackup } from "./platforms.js";
 
 // "Is this device's backup healthy?" — one definition shared by the dashboard
 // (GET /backups) and the scheduler's audit alerts, so they can never disagree.
@@ -23,7 +24,7 @@ export function overdueAfterHours(intervalHours: number): number {
 
 export function backupHealth(row: BackupHealthInput, now: Date = new Date()): BackupHealth {
   if (row.policy_enabled === null || row.policy_enabled === false) return "disabled";
-  if (row.platform !== "windows" || !row.supported) return "unsupported";
+  if (!platformSupportsBackup(row.platform) || !row.supported) return "unsupported";
   const since = row.last_success_at ?? row.policy_updated_at;
   const ageHours = since ? (now.getTime() - new Date(since).getTime()) / 3_600_000 : Infinity;
   const overdue = ageHours > overdueAfterHours(row.interval_hours ?? 24);

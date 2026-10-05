@@ -4,7 +4,7 @@ import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 import { mailConfigured, sendMail } from "./alerts.js";
 import { BACKUP_ROWS_SQL, withHealth } from "./health.js";
-import { BACKUP_ENV_KEYS, BACKUP_MIN_AGENT_VERSION, agentSupportsBackup, decryptEnv, encryptEnv } from "./index.js";
+import { BACKUP_ENV_KEYS, BACKUP_MIN_AGENT_VERSION, agentSupportsBackup, platformSupportsBackup, decryptEnv, encryptEnv } from "./index.js";
 
 const deviceParams = z.object({ deviceId: z.string().uuid() });
 
@@ -14,6 +14,13 @@ const repo = z.string().max(500).refine(
 );
 const absolutePath = z.string().min(3).max(500).regex(/^([A-Za-z]:[\\/]|\/)/, "Path must be absolute").refine((v) => !v.includes("\0"));
 const envKey = z.enum(BACKUP_ENV_KEYS);
+
+const dbDump = z.object({
+  container: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/, "Tên container không hợp lệ"),
+  user: z.string().regex(/^[A-Za-z_][A-Za-z0-9_$-]{0,62}$/).default("postgres"),
+  // Empty = dump every database (pg_dumpall).
+  database: z.string().regex(/^[A-Za-z_][A-Za-z0-9_$-]{0,62}$/).or(z.literal("")).default(""),
+});
 
 const policyBody = z.object({
   enabled: z.boolean(),
@@ -28,10 +35,11 @@ const policyBody = z.object({
   keep_monthly: z.number().int().min(0).max(120).default(6),
   use_vss: z.boolean().default(true),
   limit_upload_kbps: z.number().int().min(0).max(10_000_000).default(0),
+  db_dumps: z.array(dbDump).max(20).default([]),
 }).refine((v) => v.keep_daily + v.keep_weekly + v.keep_monthly > 0, "Retention must keep at least one snapshot");
 
 const SELECT_POLICY = `SELECT enabled, repo, secrets_enc, paths, excludes, interval_hours, keep_daily, keep_weekly, keep_monthly,
-  use_vss, limit_upload_kbps, last_run_requested_at, updated_at FROM backup_policies WHERE device_id = $1`;
+  use_vss, limit_upload_kbps, db_dumps, last_run_requested_at, updated_at FROM backup_policies WHERE device_id = $1`;
 
 function publicPolicy(row: Record<string, unknown> | undefined) {
   if (!row) return null;
@@ -67,7 +75,8 @@ export async function backupRoutes(app: FastifyInstance) {
        ORDER BY executed_at DESC LIMIT 1`, [deviceId]);
     reply.header("Cache-Control", "no-store");
     return {
-      supported: device.platform === "windows" && agentSupportsBackup(device.agent_version),
+      supported: platformSupportsBackup(device.platform) && agentSupportsBackup(device.agent_version),
+      platform: device.platform,
       min_agent_version: BACKUP_MIN_AGENT_VERSION,
       policy: publicPolicy(policy.rows[0]),
       status: status.rows[0]?.result_data ?? null,
@@ -82,7 +91,7 @@ export async function backupRoutes(app: FastifyInstance) {
     const body = policyBody.parse(req.body);
     const device = await loadDevice(user.tenantId, deviceId);
     if (!device) return reply.code(404).send({ error: "device not found" });
-    if (device.platform !== "windows") return reply.code(409).send({ error: "Backup hiện chỉ hỗ trợ máy Windows." });
+    if (!platformSupportsBackup(device.platform)) return reply.code(409).send({ error: "Backup hiện chỉ hỗ trợ máy Windows, macOS và Linux." });
 
     const existing = await queryTenantScoped(user.tenantId, SELECT_POLICY, [deviceId]);
     let stored: Record<string, string> = {};
@@ -97,15 +106,15 @@ export async function backupRoutes(app: FastifyInstance) {
 
     await queryTenantScoped(user.tenantId, `
       INSERT INTO backup_policies (device_id, tenant_id, enabled, repo, secrets_enc, paths, excludes, interval_hours,
-        keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps, db_dumps)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       ON CONFLICT (device_id) DO UPDATE SET enabled = $3, repo = $4, secrets_enc = $5, paths = $6, excludes = $7,
-        interval_hours = $8, keep_daily = $9, keep_weekly = $10, keep_monthly = $11, use_vss = $12, limit_upload_kbps = $13, updated_at = now()`,
+        interval_hours = $8, keep_daily = $9, keep_weekly = $10, keep_monthly = $11, use_vss = $12, limit_upload_kbps = $13, db_dumps = $14, updated_at = now()`,
       [deviceId, user.tenantId, body.enabled, body.repo, secrets, JSON.stringify(body.paths), JSON.stringify(body.excludes), body.interval_hours,
-       body.keep_daily, body.keep_weekly, body.keep_monthly, body.use_vss, body.limit_upload_kbps]);
+       body.keep_daily, body.keep_weekly, body.keep_monthly, body.use_vss, body.limit_upload_kbps, JSON.stringify(body.db_dumps)]);
     // Never log credentials — only that the policy changed and what it targets.
     await recordAudit({ tenantId: user.tenantId, actorType: "user", actorId: user.id, eventType: "device.backup_policy_updated",
-      eventData: { enabled: body.enabled, repo: body.repo, paths: body.paths, interval_hours: body.interval_hours }, deviceId });
+      eventData: { enabled: body.enabled, repo: body.repo, paths: body.paths, interval_hours: body.interval_hours, db_dumps: body.db_dumps.map((d) => `${d.container}/${d.database || "*"}`) }, deviceId });
     const saved = await queryTenantScoped(user.tenantId, SELECT_POLICY, [deviceId]);
     return publicPolicy(saved.rows[0]);
   });

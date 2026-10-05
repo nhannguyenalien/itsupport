@@ -380,7 +380,6 @@
   "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "비밀번호가 생성되었습니다. 이제 이메일과 비밀번호로 로그인할 수 있습니다.",
   "Quay lại hỗ trợ": "지원으로 돌아가기",
   "Backup (restic)": "백업(restic)",
-  "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "사전 백업은 에이전트 {version} 이상이 설치된 Windows 장치에서만 사용할 수 있습니다. 먼저 에이전트를 업데이트하세요.",
   "Đã lưu chính sách backup.": "백업 정책을 저장했습니다.",
   "Chưa chạy": "아직 실행 안 됨",
   "Đang chạy": "실행 중",
@@ -446,5 +445,10 @@
   "Lưu": "저장",
   "Đã lưu cài đặt email.": "이메일 설정을 저장했습니다.",
   "Gửi email thử": "테스트 이메일 보내기",
-  "Đã gửi email thử tới các địa chỉ đã lưu.": "저장된 주소로 테스트 이메일을 보냈습니다."
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "저장된 주소로 테스트 이메일을 보냈습니다.",
+  "Mẫu Coolify": "Coolify 템플릿",
+  "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.": "Coolify 템플릿을 적용했습니다. 저장 전에 검토하고 수정하세요.",
+  "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)": "Docker의 Postgres 데이터베이스(한 줄에 하나: container:user:database — database를 비우면 전체)",
+  "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.": "시스템이 매 백업 전에 데이터베이스를 덤프하고 덤프 파일을 스냅샷에 포함합니다.",
+  "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "사전 백업은 에이전트 {version} 이상이 설치된 Windows, macOS, Linux 장치에서만 사용할 수 있습니다. 먼저 에이전트를 업데이트하세요."
 }

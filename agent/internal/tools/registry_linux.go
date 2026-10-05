@@ -6,6 +6,10 @@ import "support-agent/agent/internal/update"
 
 // Linux diagnostics use native read-only interfaces; desktop entries remain legacy.
 var Allowlist = map[string]Definition{
+	"backup.status":        {Fn: BackupStatus, Risk: RiskRead},
+	"backup.run":           {Fn: BackupRun, Risk: RiskMedium},
+	"backup.snapshots":     {Fn: BackupSnapshots, Risk: RiskRead},
+	"backup.restore":       {Fn: BackupRestore, Risk: RiskHigh},
 	"package.status":       {Fn: PackageStatus, Risk: RiskRead},
 	"package.install":      {Fn: PackageInstall, Risk: RiskHigh},
 	"system.temperature":   {Fn: SystemTemperature, Risk: RiskRead},

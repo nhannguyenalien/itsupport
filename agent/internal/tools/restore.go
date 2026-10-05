@@ -76,7 +76,7 @@ func protectedRestoreRoots() []string {
 		}
 	}
 	if runtime.GOOS != "windows" {
-		roots = append(roots, "/etc", "/usr", "/bin", "/sbin", "/boot", "/System", "/Library", "/var/lib")
+		roots = append(roots, "/etc", "/usr", "/bin", "/sbin", "/boot", "/System", "/Library", "/var/lib", "/data/coolify")
 	}
 	return roots
 }

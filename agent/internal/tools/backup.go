@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"bytes"
+	"compress/bzip2"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -174,6 +175,7 @@ type backupRequest struct {
 	limitKbps  int
 	resticURL  string
 	resticSHA  string
+	dumps      []dbDump
 }
 
 func intParam(params map[string]any, key string, def, min, max int) (int, error) {
@@ -225,6 +227,16 @@ func parseAccess(params map[string]any) (backupRequest, error) {
 
 	r.resticURL, _ = params["restic_url"].(string)
 	r.resticSHA, _ = params["restic_sha256"].(string)
+	// Per-platform downloads ("windows-amd64", "linux-arm64", …) win over the
+	// legacy single url/sha pair.
+	if all, ok := params["restic_downloads"].(map[string]any); ok {
+		if d, ok := all[runtime.GOOS+"-"+runtime.GOARCH].(map[string]any); ok {
+			if u, _ := d["url"].(string); u != "" {
+				r.resticURL = u
+				r.resticSHA, _ = d["sha256"].(string)
+			}
+		}
+	}
 	return r, nil
 }
 
@@ -272,6 +284,11 @@ func parseBackupRequest(params map[string]any) (backupRequest, error) {
 		return r, err
 	}
 	r.useVSS, _ = params["use_vss"].(bool)
+	if raw, ok := params["db_dumps"]; ok && raw != nil {
+		if r.dumps, err = parseDbDumps(raw); err != nil {
+			return r, err
+		}
+	}
 	return r, nil
 }
 
@@ -319,7 +336,15 @@ func ensureRestic(r backupRequest) error {
 		os.Remove(tmp)
 		return fmt.Errorf("restic checksum mismatch — refusing to install")
 	}
-	if err := os.Rename(tmp, dest); err != nil {
+	// Official Linux/macOS releases are .bz2; the pinned hash covers the
+	// compressed file exactly as published, so verify first, then decompress.
+	if strings.HasSuffix(u.Path, ".bz2") {
+		if err := decompressBzip2(tmp, dest); err != nil {
+			os.Remove(tmp)
+			return err
+		}
+		os.Remove(tmp)
+	} else if err := os.Rename(tmp, dest); err != nil {
 		return err
 	}
 	if resticVersion() == "" {
@@ -327,6 +352,26 @@ func ensureRestic(r backupRequest) error {
 		return fmt.Errorf("downloaded restic does not run")
 	}
 	return nil
+}
+
+func decompressBzip2(src, dest string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	tmp := dest + ".unpack"
+	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o700)
+	if err != nil {
+		return err
+	}
+	n, copyErr := io.Copy(out, io.LimitReader(bzip2.NewReader(in), 200<<20))
+	closeErr := out.Close()
+	if copyErr != nil || closeErr != nil || n == 0 {
+		os.Remove(tmp)
+		return fmt.Errorf("unpack restic: invalid archive")
+	}
+	return os.Rename(tmp, dest)
 }
 
 func scrub(text string, secrets []string) string {
@@ -402,6 +447,13 @@ func runBackupJob(r backupRequest, state backupState) {
 		}
 	}
 
+	var dumpFailures []string
+	if len(r.dumps) > 0 {
+		setStep("database_dumps")
+		dumpFailures = runDatabaseDumps(ctx, r.dumps)
+		r.paths = append(append([]string{}, r.paths...), dumpDir())
+	}
+
 	setStep("backup")
 	args := []string{"backup", "--json", "--tag", "support-agent"}
 	if r.useVSS && runtime.GOOS == "windows" {
@@ -461,6 +513,12 @@ func runBackupJob(r backupRequest, state backupState) {
 	}
 
 	state.State, state.Step = "success", "done"
+	if len(dumpFailures) > 0 {
+		// Files are safe in the snapshot, but the database copy is missing or
+		// stale — that must surface as a failed backup, not a quiet success.
+		state.State, state.Step = "error", "database_dumps"
+		state.Error = scrub("database dump failed: "+strings.Join(dumpFailures, "; "), r.secrets)
+	}
 	state.FinishedAt = time.Now().UTC().Format(time.RFC3339)
 	state.DurationSec = time.Since(started).Seconds()
 	backupMu.Lock()

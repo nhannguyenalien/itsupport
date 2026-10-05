@@ -380,7 +380,6 @@
   "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Mot de passe créé. Vous pouvez maintenant vous connecter avec e-mail et mot de passe.",
   "Quay lại hỗ trợ": "Retour au support",
   "Backup (restic)": "Sauvegarde (restic)",
-  "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "La sauvegarde proactive n’est disponible que sur Windows avec l’agent {version} ou plus récent. Mettez d’abord l’agent à jour.",
   "Đã lưu chính sách backup.": "Politique de sauvegarde enregistrée.",
   "Chưa chạy": "Jamais exécutée",
   "Đang chạy": "En cours",
@@ -446,5 +445,10 @@
   "Lưu": "Enregistrer",
   "Đã lưu cài đặt email.": "Paramètres e-mail enregistrés.",
   "Gửi email thử": "Envoyer un e-mail de test",
-  "Đã gửi email thử tới các địa chỉ đã lưu.": "E-mail de test envoyé aux adresses enregistrées."
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "E-mail de test envoyé aux adresses enregistrées.",
+  "Mẫu Coolify": "Modèle Coolify",
+  "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.": "Modèle Coolify appliqué. Vérifiez et ajustez avant d’enregistrer.",
+  "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)": "Bases Postgres dans Docker (une par ligne : conteneur:utilisateur:base — base vide = toutes)",
+  "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.": "Le système exporte les bases avant chaque sauvegarde et inclut les fichiers d’export dans l’instantané.",
+  "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "La sauvegarde proactive n’est disponible que sur Windows, macOS et Linux avec l’agent {version} ou plus récent. Mettez d’abord l’agent à jour."
 }

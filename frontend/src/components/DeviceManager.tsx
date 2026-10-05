@@ -227,7 +227,7 @@ export default function DevicesPage() {
             </div>
           </div>
           {!d.revoked && <RemoteSupport deviceId={d.id} />}
-          {!d.revoked && d.platform === "windows" && <BackupPanel deviceId={d.id} online={d.status === "online"} />}
+          {!d.revoked && (d.platform === "windows" || d.platform === "linux" || d.platform === "mac") && <BackupPanel deviceId={d.id} online={d.status === "online"} platform={d.platform} />}
         </div>
       ))}
     </div>

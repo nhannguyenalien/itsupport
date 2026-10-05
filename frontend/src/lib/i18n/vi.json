@@ -380,7 +380,6 @@
   "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.": "Đã tạo mật khẩu. Từ nay bạn có thể đăng nhập bằng email và mật khẩu.",
   "Quay lại hỗ trợ": "Quay lại hỗ trợ",
   "Backup (restic)": "Backup (restic)",
-  "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "Backup chủ động chỉ hỗ trợ máy Windows có agent từ phiên bản {version}. Hãy cập nhật agent trước.",
   "Đã lưu chính sách backup.": "Đã lưu chính sách backup.",
   "Chưa chạy": "Chưa chạy",
   "Đang chạy": "Đang chạy",
@@ -446,5 +445,10 @@
   "Lưu": "Lưu",
   "Đã lưu cài đặt email.": "Đã lưu cài đặt email.",
   "Gửi email thử": "Gửi email thử",
-  "Đã gửi email thử tới các địa chỉ đã lưu.": "Đã gửi email thử tới các địa chỉ đã lưu."
+  "Đã gửi email thử tới các địa chỉ đã lưu.": "Đã gửi email thử tới các địa chỉ đã lưu.",
+  "Mẫu Coolify": "Mẫu Coolify",
+  "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.": "Đã điền mẫu Coolify. Kiểm tra và sửa lại trước khi lưu.",
+  "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)": "Database Postgres trong Docker (mỗi dòng: container:user:database — bỏ trống database để dump tất cả)",
+  "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.": "Hệ thống dump database trước mỗi lần backup rồi đưa file dump vào snapshot.",
+  "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước.": "Backup chủ động chỉ hỗ trợ máy Windows, macOS và Linux có agent từ phiên bản {version}. Hãy cập nhật agent trước."
 }
