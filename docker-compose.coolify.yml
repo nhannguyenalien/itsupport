@@ -1,0 +1,156 @@
+# IT Support on Coolify (https://coolify.io). Runbook: docs/coolify.md.
+#
+# Coolify: New Resource -> Docker Compose, build pack "Docker Compose",
+# Base Directory "/", Docker Compose Location "/docker-compose.coolify.yml".
+# Then set the domain of the `caddy` service to https://<your-domain>:8080 and
+# fill the environment variables listed in docs/coolify.md.
+#
+# Differences from infra/docker-compose.yml (macmini):
+#   - secrets come from environment variables, not ./infra/secrets files
+#   - no host ports: Coolify's Traefik routes to the `caddy` service
+#   - Caddy stays in front of the backend on purpose: it strips the
+#     X-Agent-Cert-Serial header, which the backend would otherwise trust
+#   - agents authenticate with their bearer token over HTTPS (Traefik terminates
+#     TLS); the :8443 mTLS listener is not used here
+#   - agent binaries live on the host (DOWNLOADS_DIR), not in git
+
+x-security: &security
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-alpine
+    <<: *security
+    environment:
+      POSTGRES_USER: support
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD}
+      POSTGRES_DB: support_agent
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./infra/coolify/02-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U support -d support_agent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits: { memory: 1G, cpus: "1.0" }
+
+  backend:
+    build: ./backend
+    <<: *security
+    cap_drop: ["ALL"]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    environment:
+      PORT: "3000"
+      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD}
+      FIREBASE_ADMIN_JSON_B64: ${FIREBASE_ADMIN_JSON_B64:?set FIREBASE_ADMIN_JSON_B64}
+      AGENT_CA_CERT_B64: ${AGENT_CA_CERT_B64:?set AGENT_CA_CERT_B64}
+      AGENT_CA_KEY_B64: ${AGENT_CA_KEY_B64:?set AGENT_CA_KEY_B64}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?set FIREBASE_PROJECT_ID}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
+      FRONTEND_URL: ${APP_PUBLIC_URL:?set APP_PUBLIC_URL}
+      MESHCENTRAL_API_USER: ${MESHCENTRAL_API_USER:-}
+      MESHCENTRAL_API_PASSWORD: ${MESHCENTRAL_API_PASSWORD:-}
+      MESHCENTRAL_URL: ${MESHCENTRAL_URL:-}
+      MESHCENTRAL_TENANT_GROUPS: ${MESHCENTRAL_TENANT_GROUPS:-}
+      MESHCENTRAL_LINUX_TENANT_GROUPS: ${MESHCENTRAL_LINUX_TENANT_GROUPS:-}
+      AGENT_API_URL: ${AGENT_PUBLIC_URL:-${APP_PUBLIC_URL}/api}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SCHOOLSAI_API_URL: ${SCHOOLSAI_API_URL:-https://apic.schoolsai.work}
+      SCHOOLSAI_API_KEY: ${SCHOOLSAI_API_KEY:-}
+      # Read through Caddy so the published (host-mounted) manifests are seen.
+      AGENT_DOWNLOADS_URL: http://caddy:8080/downloads/agent
+      OAUTH_TOKEN_ENC_KEY: ${OAUTH_TOKEN_ENC_KEY:-}
+      OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:-}
+      OAUTH_REDIRECT_BASE_URL: ${APP_PUBLIC_URL}/api
+      RESTIC_WINDOWS_URL: ${RESTIC_WINDOWS_URL:-}
+      RESTIC_WINDOWS_SHA256: ${RESTIC_WINDOWS_SHA256:-}
+      RESTIC_LINUX_AMD64_URL: ${RESTIC_LINUX_AMD64_URL:-}
+      RESTIC_LINUX_AMD64_SHA256: ${RESTIC_LINUX_AMD64_SHA256:-}
+      RESTIC_LINUX_ARM64_URL: ${RESTIC_LINUX_ARM64_URL:-}
+      RESTIC_LINUX_ARM64_SHA256: ${RESTIC_LINUX_ARM64_SHA256:-}
+      RESTIC_DARWIN_AMD64_URL: ${RESTIC_DARWIN_AMD64_URL:-}
+      RESTIC_DARWIN_AMD64_SHA256: ${RESTIC_DARWIN_AMD64_SHA256:-}
+      RESTIC_DARWIN_ARM64_URL: ${RESTIC_DARWIN_ARM64_URL:-}
+      RESTIC_DARWIN_ARM64_SHA256: ${RESTIC_DARWIN_ARM64_SHA256:-}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes:
+      - ./infra/coolify/backend-entrypoint.sh:/entrypoint.sh:ro
+    command: ["sh", "/entrypoint.sh"]
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    deploy:
+      resources:
+        limits: { memory: 1G, cpus: "1.0" }
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:?set NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${FIREBASE_PROJECT_ID}.firebaseapp.com
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:?set NEXT_PUBLIC_FIREBASE_APP_ID}
+    <<: *security
+    cap_drop: ["ALL"]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m", "/app/.next/cache:rw,noexec,nosuid,size=64m"]
+    depends_on:
+      backend: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 512M, cpus: "0.5" }
+
+  # The only service Coolify's proxy talks to (domain -> caddy, port 8080).
+  caddy:
+    image: caddy:2-alpine
+    <<: *security
+    expose: ["8080"]
+    volumes:
+      - ./infra/coolify/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DOWNLOADS_DIR:-/data/itsupport/downloads}:/srv/downloads/agent:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    depends_on: [frontend, backend]
+
+  # Nightly pg_dump kept 14 days in the db-backups volume (device files are
+  # backed up separately, see docs/backup.md).
+  backup:
+    image: postgres:16-alpine
+    <<: *security
+    environment:
+      PGHOST: db
+      PGUSER: support
+      PGDATABASE: support_agent
+      PGPASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD}
+    volumes:
+      - ./infra/coolify/backup.sh:/usr/local/bin/backup:ro
+      - db-backups:/backups
+    command: ["sh", "-c", "while true; do /usr/local/bin/backup; sleep 86400; done"]
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  db-data:
+  db-backups:
+  caddy-data:
+  caddy-config:

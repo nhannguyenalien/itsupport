@@ -1,0 +1,50 @@
+{
+  admin off
+  auto_https off
+}
+
+# Coolify's Traefik terminates TLS and forwards here.
+:8080 {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+    -Server
+  }
+
+  handle /healthz {
+    respond "ok" 200
+  }
+
+  @api path /api/*
+  handle @api {
+    uri strip_prefix /api
+    reverse_proxy backend:3000 {
+      # Never let a client assert a certificate identity: the backend trusts this
+      # header on agent routes, and there is no mTLS in front of it here.
+      header_up -X-Agent-Cert-Serial
+    }
+  }
+
+  # Agent releases and restic binaries are mounted from the host; the install
+  # scripts committed in git are served by the frontend as before.
+  @download path /downloads/agent/*
+  handle @download {
+    @ondisk file {
+      root /srv
+      try_files {path}
+    }
+    handle @ondisk {
+      root * /srv
+      file_server
+    }
+    handle {
+      reverse_proxy frontend:3000
+    }
+  }
+
+  handle {
+    reverse_proxy frontend:3000
+  }
+}
