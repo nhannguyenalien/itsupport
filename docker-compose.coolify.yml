@@ -142,16 +142,19 @@ services:
       retries: 8
     depends_on: [frontend, backend]
 
-  # Nightly pg_dump kept 14 days in the db-backups volume (device files are
-  # backed up separately, see docs/backup.md).
+  # Nightly pg_dump of the database in use (Neon when EXTERNAL_* is set), kept
+  # 14 days in the db-backups volume. It lives on the same host: copy it offsite
+  # (see docs/coolify.md). Device files are backed up separately (docs/backup.md).
   backup:
-    image: postgres:16-alpine
+    # Newest client: pg_dump can read older servers but not newer ones (Neon).
+    image: postgres:18-alpine
     <<: *security
     environment:
       PGHOST: db
       PGUSER: support
       PGDATABASE: support_agent
       PGPASSWORD: ${DB_ADMIN_PASSWORD:-}
+      EXTERNAL_DATABASE_ADMIN_URL: ${EXTERNAL_DATABASE_ADMIN_URL:-}
     volumes:
       - ./infra/coolify/backup.sh:/usr/local/bin/backup:ro
       - db-backups:/backups
