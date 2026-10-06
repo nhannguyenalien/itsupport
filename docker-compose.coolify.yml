@@ -5,6 +5,12 @@
 # Then set the domain of the `caddy` service to https://<your-domain>:8080 and
 # fill the environment variables listed in docs/coolify.md.
 #
+# Secrets use ${VAR:-} on purpose: Coolify interpolates the whole file during
+# `docker compose build` with build-time variables only, so a `:?` check on a
+# runtime-only secret fails the build. They are validated when the container
+# starts instead (infra/coolify/backend-entrypoint.sh; Postgres refuses an empty
+# POSTGRES_PASSWORD). Only non-secret values need "Build Variable".
+#
 # Differences from infra/docker-compose.yml (macmini):
 #   - secrets come from environment variables, not ./infra/secrets files
 #   - no host ports: Coolify's Traefik routes to the `caddy` service
@@ -24,9 +30,9 @@ services:
     <<: *security
     environment:
       POSTGRES_USER: support
-      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:-}
       POSTGRES_DB: support_agent
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-}
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -48,15 +54,15 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
     environment:
       PORT: "3000"
-      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD}
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD}
+      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:-}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-}
       # Optional: use an external Postgres (Neon) instead of the bundled db service.
       EXTERNAL_DATABASE_URL: ${EXTERNAL_DATABASE_URL:-}
       EXTERNAL_DATABASE_ADMIN_URL: ${EXTERNAL_DATABASE_ADMIN_URL:-}
       NODE_OPTIONS: ${NODE_OPTIONS:-}
-      FIREBASE_ADMIN_JSON_B64: ${FIREBASE_ADMIN_JSON_B64:?set FIREBASE_ADMIN_JSON_B64}
-      AGENT_CA_CERT_B64: ${AGENT_CA_CERT_B64:?set AGENT_CA_CERT_B64}
-      AGENT_CA_KEY_B64: ${AGENT_CA_KEY_B64:?set AGENT_CA_KEY_B64}
+      FIREBASE_ADMIN_JSON_B64: ${FIREBASE_ADMIN_JSON_B64:-}
+      AGENT_CA_CERT_B64: ${AGENT_CA_CERT_B64:-}
+      AGENT_CA_KEY_B64: ${AGENT_CA_KEY_B64:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?set FIREBASE_PROJECT_ID}
       CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
       FRONTEND_URL: ${APP_PUBLIC_URL:?set APP_PUBLIC_URL}
@@ -145,7 +151,7 @@ services:
       PGHOST: db
       PGUSER: support
       PGDATABASE: support_agent
-      PGPASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD}
+      PGPASSWORD: ${DB_ADMIN_PASSWORD:-}
     volumes:
       - ./infra/coolify/backup.sh:/usr/local/bin/backup:ro
       - db-backups:/backups

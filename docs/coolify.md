@@ -38,7 +38,7 @@ Bắt buộc (compose báo lỗi nếu thiếu):
 | `DB_ADMIN_PASSWORD`, `DB_APP_PASSWORD` | chuỗi ngẫu nhiên **chỉ gồm chữ/số** (chúng nằm trong URL): `openssl rand -hex 24` |
 | `APP_PUBLIC_URL` | `https://itsupport.example.com` |
 | `CORS_ORIGINS` | cùng giá trị `APP_PUBLIC_URL` |
-| `FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_APP_ID` | như `infra/.env` (hai biến `NEXT_PUBLIC_*` phải tick **Build Variable** để vào bản build frontend) |
+| `FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_APP_ID` | như `infra/.env` (`NEXT_PUBLIC_*`, `FIREBASE_PROJECT_ID`, `APP_PUBLIC_URL`, `CORS_ORIGINS` phải tick **Build Variable**: chúng vào bản build frontend hoặc được compose kiểm tra lúc build; **mật khẩu và khoá để runtime-only**) |
 | `FIREBASE_ADMIN_JSON_B64` | `base64 < firebase-admin.json \| tr -d '\n'` |
 | `AGENT_CA_CERT_B64`, `AGENT_CA_KEY_B64` | `base64 < agent-ca.crt \| tr -d '\n'`, tương tự cho `.key` |
 
