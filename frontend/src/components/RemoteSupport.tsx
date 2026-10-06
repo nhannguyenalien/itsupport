@@ -56,6 +56,7 @@ export default function RemoteSupport({ deviceId, compact = false }: { deviceId:
       {saving && <small>{tx("remote.updating")}</small>}
       {error && <small role="alert" className="remote-error">{tx("remote.error")}</small>}
       {data?.enabled && data.url && <a href={data.url} target="_blank" rel="noopener noreferrer">{tx(terminal ? "remote.openTerminal" : "remote.open")} ↗</a>}
+      {!terminal && data?.enabled && data.terminalUrl && <a href={data.terminalUrl} target="_blank" rel="noopener noreferrer">{tx("remote.openTerminal")} ↗</a>}
     </div>;
   }
 
@@ -71,5 +72,6 @@ export default function RemoteSupport({ deviceId, compact = false }: { deviceId:
     {error && <p role="alert">{tx("remote.error")}</p>}
     {data && <p className="muted">{tx(!data.ready ? "remote.notReady" : data.enabled ? (terminal ? "remote.terminalEnabledHint" : "remote.enabledHint") : (terminal ? "remote.terminalDisabledHint" : "remote.disabledHint"))}</p>}
     {data?.enabled && data.url && <a href={data.url} target="_blank" rel="noopener noreferrer">{tx(terminal ? "remote.openTerminal" : "remote.open")} ↗</a>}
+      {!terminal && data?.enabled && data.terminalUrl && <a href={data.terminalUrl} target="_blank" rel="noopener noreferrer">{tx("remote.openTerminal")} ↗</a>}
   </section>;
 }

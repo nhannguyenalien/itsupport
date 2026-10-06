@@ -44,13 +44,20 @@ export function shareUrl(value: string): string {
   if (url.origin !== remoteConsoleUrl() || url.pathname !== '/sharing') throw new Error('Invalid support URL');
   return url.toString();
 }
+// Same share link, but MeshCentral opens the terminal tab (viewmode 12) instead of the desktop.
+export function terminalShareUrl(value: string): string {
+  const url = new URL(shareUrl(value));
+  url.searchParams.set('viewmode', '12');
+  return url.toString();
+}
 export async function remoteStatus(tenantId: string, deviceId: string, technician: boolean) {
   const device = await remoteDevice(tenantId, deviceId);
   const mode = device.platform === 'linux' ? 'terminal' : 'desktop-terminal';
   const ready = meshConfigured() && !!device.meshcentral_device_id && !device.cert_revoked_at;
-  if (!ready) return { mode, ready: false, enabled: false, expiresAt: null, url: null };
+  if (!ready) return { mode, ready: false, enabled: false, expiresAt: null, url: null, terminalUrl: null };
   await verifyNode(tenantId, normalizeNodeId(device.meshcentral_device_id), device.platform);
   const share = activeShare(await supportShares(normalizeNodeId(device.meshcentral_device_id), deviceId));
   return { mode, ready: true, enabled: !!share, expiresAt: share ? new Date(share.expireTime).toISOString() : null,
-    url: share && technician ? shareUrl(share.url) : null };
+    url: share && technician ? shareUrl(share.url) : null,
+    terminalUrl: share && technician ? terminalShareUrl(share.url) : null };
 }
