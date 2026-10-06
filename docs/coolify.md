@@ -44,6 +44,8 @@ Bắt buộc (compose báo lỗi nếu thiếu):
 
 Quan trọng khi **chuyển từ macmini**: dùng lại *đúng* `OAUTH_TOKEN_ENC_KEY`, `OAUTH_STATE_SECRET` và CA cũ. Đổi `OAUTH_TOKEN_ENC_KEY` thì mọi token OAuth và mật khẩu repository backup đang lưu **không giải mã được nữa**.
 
+**Dùng Neon (hoặc Postgres ngoài) thay cho service `db`:** đặt cả `EXTERNAL_DATABASE_URL` (role ứng dụng, chịu RLS) và `EXTERNAL_DATABASE_ADMIN_URL` (role chạy migration); khi có hai biến này backend bỏ qua `db`. Nếu production đang dùng Neon (macmini có `docker-compose.neon.yml`) thì cách này **không cần chuyển dữ liệu**, nhưng bản test và bản cũ cùng ghi vào một DB. Nếu máy Coolify chỉ có IPv4, đặt `NODE_OPTIONS=--dns-result-order=ipv4first --no-network-family-autoselection` như macmini. Vẫn phải đặt `DB_ADMIN_PASSWORD`/`DB_APP_PASSWORD` (service `db` vẫn được khởi động nhưng không dùng).
+
 Tuỳ chọn: `AGENT_PUBLIC_URL` (mặc định `${APP_PUBLIC_URL}/api` — **phải kết thúc bằng `/api`**, agent gọi `<url>/devices/...`), `OPENAI_API_KEY`, `SCHOOLSAI_API_URL/KEY`, `MESHCENTRAL_*`, `SMTP_URL`, `MAIL_FROM`, các biến `RESTIC_*` (xem `docs/backup.md`), `DOWNLOADS_DIR` (mặc định `/data/itsupport/downloads`).
 
 ## 4. Đưa file agent và restic lên host
