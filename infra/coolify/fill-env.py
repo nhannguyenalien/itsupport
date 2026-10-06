@@ -10,9 +10,10 @@ new domain, generates the bundled-db passwords, and PATCHes everything to
 Coolify in one bulk call. Secret values are never printed (only key names).
 The token needs write permission; revoke it afterwards.
 
-Optional: DOMAIN (default https://itsupports.schoolsai.work), MACMINI (default
+Optional: ONLY=KEY1,KEY2 (send just those variables), DOMAIN (default https://itsupports.schoolsai.work), MACMINI (default
 mac@macmini), COOLIFY_API (default https://cool.schoolsai.work/api/v1).
 """
+import base64
 import json
 import os
 import secrets
@@ -76,6 +77,11 @@ for k in ["OAUTH_STATE_SECRET", "OAUTH_TOKEN_ENC_KEY", "OPENAI_API_KEY", "FIREBA
           "MESHCENTRAL_LINUX_TENANT_GROUPS", "SCHOOLSAI_API_URL", "SCHOOLSAI_API_KEY"]:
     if dotenv.get(k):
         env[k] = dotenv[k]
+# MeshCentral group ids contain `$`/`@`, which Compose and Coolify can mangle:
+# ship them base64-encoded as well (the backend prefers the _B64 variants).
+for k in ("MESHCENTRAL_TENANT_GROUPS", "MESHCENTRAL_LINUX_TENANT_GROUPS"):
+    if dotenv.get(k):
+        env[k + "_B64"] = base64.b64encode(dotenv[k].encode()).decode()
 env["APP_PUBLIC_URL"] = DOMAIN
 env["CORS_ORIGINS"] = DOMAIN
 env["AGENT_PUBLIC_URL"] = DOMAIN + "/api"
@@ -104,7 +110,12 @@ env.update({
     "RESTIC_DARWIN_ARM64_SHA256": "7be0a144ccc377880f294204aa271d76e4b79554b42a751151d425ce6ebac143",
 })
 
-for k in ["OAUTH_TOKEN_ENC_KEY", "OAUTH_STATE_SECRET", "OPENAI_API_KEY", "SCHOOLSAI_API_KEY", "MESHCENTRAL_API_PASSWORD",
+# ONLY=KEY1,KEY2 limits the update to those variables (e.g. after a partial fix).
+only = {k for k in os.environ.get("ONLY", "").split(",") if k}
+if only:
+    env = {k: v for k, v in env.items() if k in only}
+
+for k in ["MESHCENTRAL_TENANT_GROUPS_B64", "MESHCENTRAL_LINUX_TENANT_GROUPS_B64", "OAUTH_TOKEN_ENC_KEY", "OAUTH_STATE_SECRET", "OPENAI_API_KEY", "SCHOOLSAI_API_KEY", "MESHCENTRAL_API_PASSWORD",
           "FIREBASE_ADMIN_JSON_B64", "AGENT_CA_KEY_B64", "EXTERNAL_DATABASE_URL", "EXTERNAL_DATABASE_ADMIN_URL",
           "DB_ADMIN_PASSWORD", "DB_APP_PASSWORD"]:
     if env.get(k):
