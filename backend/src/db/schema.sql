@@ -557,3 +557,49 @@ CREATE POLICY tenant_isolation ON approvals USING (EXISTS (SELECT 1 FROM tickets
 CREATE POLICY tenant_isolation ON computer_use_screenshots USING (
   EXISTS (SELECT 1 FROM computer_use_sessions s WHERE s.id = session_id)
 );
+
+-- ============================================================
+-- CUSTOMER DATABASE BACKUPS (db-backup/customer-*) — a customer pastes a
+-- PostgreSQL URL and the platform backs it up daily to the operator's storage.
+-- source_enc / repo_password_enc are AES-GCM ciphertexts; never returned by an API.
+-- ============================================================
+CREATE TABLE tenant_db_backups (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id         UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name              TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80),
+    source_label      TEXT NOT NULL,
+    source_enc        TEXT NOT NULL,
+    repo_password_enc TEXT NOT NULL,
+    enabled           BOOLEAN NOT NULL DEFAULT true,
+    interval_hours    INTEGER NOT NULL DEFAULT 24 CHECK (interval_hours IN (6, 12, 24, 48, 168)),
+    keep_daily        INTEGER NOT NULL DEFAULT 7,
+    keep_weekly       INTEGER NOT NULL DEFAULT 4,
+    keep_monthly      INTEGER NOT NULL DEFAULT 6,
+    created_by        UUID,
+    last_alert_at     TIMESTAMPTZ,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_tenant_db_backups_tenant ON tenant_db_backups(tenant_id);
+CREATE TABLE tenant_db_backup_runs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    backup_id     UUID NOT NULL REFERENCES tenant_db_backups(id) ON DELETE CASCADE,
+    tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    kind          TEXT NOT NULL CHECK (kind IN ('backup', 'verify', 'restore')),
+    trigger       TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual')),
+    state         TEXT NOT NULL CHECK (state IN ('running', 'success', 'error')),
+    started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at   TIMESTAMPTZ,
+    snapshot_id   TEXT,
+    bytes_added   BIGINT,
+    dump_bytes    BIGINT,
+    tables_found  INTEGER,
+    error         TEXT,
+    detail        JSONB NOT NULL DEFAULT '{}'
+);
+CREATE INDEX idx_tenant_db_backup_runs_backup ON tenant_db_backup_runs(backup_id, started_at DESC);
+ALTER TABLE tenant_db_backups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_db_backup_runs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON tenant_db_backups USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+CREATE POLICY tenant_isolation ON tenant_db_backup_runs USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+

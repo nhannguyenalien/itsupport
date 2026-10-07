@@ -110,6 +110,16 @@ export interface DbBackupSettingsInput {
   interval_hours: number; keep_daily: number; keep_weekly: number; keep_monthly: number;
 }
 
+export interface CustomerDbTarget {
+  id: string; name: string; source_label: string; enabled: boolean; interval_hours: number;
+  health: DbBackupHealth; running: boolean; last_success_at: string | null; last_error: string | null; next_run_at: string | null; created_at: string;
+}
+export interface CustomerDbList { storage_ready: boolean; limits: { max_targets: number; max_gb: number }; targets: CustomerDbTarget[] }
+export interface CustomerDbRun {
+  id: string; kind: "backup" | "verify" | "restore"; trigger: "schedule" | "manual"; state: "running" | "success" | "error";
+  started_at: string; finished_at: string | null; snapshot_id: string | null; dump_bytes: string | null; tables_found: number | null; error: string | null;
+}
+
 export interface BackupSnapshot { id: string; time: string; hostname: string; paths: string[] }
 export interface BackupSnapshots {
   state: "none" | "pending" | "ready" | "error";
@@ -339,6 +349,15 @@ export const api = {
   verifyDbBackup: (snapshotId: string) => request<{ runId: string }>(`/platform/db-backup/verify`, { method: "POST", body: JSON.stringify({ snapshot_id: snapshotId }) }),
   restoreDbBackup: (body: { snapshot_id: string; target_url: string; confirm: "KHOI PHUC" }) =>
     request<{ runId: string }>(`/platform/db-backup/restore`, { method: "POST", body: JSON.stringify(body) }),
+  customerDbs: () => request<CustomerDbList>(`/db-backups`),
+  addCustomerDb: (body: { name: string; url: string }) => request<{ id: string; label: string; sizeBytes: number; tables: number; serverVersion: string }>(`/db-backups`, { method: "POST", body: JSON.stringify(body) }),
+  updateCustomerDb: (id: string, body: { enabled?: boolean; interval_hours?: number }) => request<{ ok: true }>(`/db-backups/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  runCustomerDb: (id: string) => request<{ runId: string }>(`/db-backups/${id}/run`, { method: "POST", body: "{}" }),
+  customerDbRuns: (id: string) => request<CustomerDbRun[]>(`/db-backups/${id}/runs`),
+  customerDbSnapshots: (id: string) => request<DbBackupSnapshot[]>(`/db-backups/${id}/snapshots`),
+  verifyCustomerDb: (id: string, snapshotId: string) => request<{ runId: string }>(`/db-backups/${id}/verify`, { method: "POST", body: JSON.stringify({ snapshot_id: snapshotId }) }),
+  restoreCustomerDb: (id: string, body: { snapshot_id: string; target_url: string; confirm: "KHOI PHUC" }) => request<{ runId: string }>(`/db-backups/${id}/restore`, { method: "POST", body: JSON.stringify(body) }),
+  deleteCustomerDb: (id: string) => request<{ removedSnapshots: number }>(`/db-backups/${id}/delete`, { method: "POST", body: JSON.stringify({ confirm: "XOA" }) }),
   listBackups: () => request<BackupOverview[]>(`/backups`),
   requestBackupSnapshots: (deviceId: string) => request(`/devices/${deviceId}/backup/snapshots`, { method: "POST", body: "{}" }),
   backupSnapshots: (deviceId: string) => request<BackupSnapshots>(`/devices/${deviceId}/backup/snapshots`),

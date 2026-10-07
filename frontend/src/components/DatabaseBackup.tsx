@@ -108,9 +108,9 @@ export default function DatabaseBackup() {
         <strong>{tx("Cài đặt")}</strong>
         <div style={{ display: "grid", gap: 8, maxWidth: 640, marginTop: 8 }}>
           <label><input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> {tx("Bật sao lưu tự động")}</label>
-          <label>{tx("Repository (rest:https://…, s3:https://…, b2:bucket:path)")}
+          <label>{tx("Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.")}
             <input style={{ width: "100%" }} value={form.repo} onChange={(e) => setForm({ ...form, repo: e.target.value })} /></label>
-          <label>{tx("Mật khẩu mã hoá repository")}
+          <label>{tx("Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)")}
             <input style={{ width: "100%" }} type="password" autoComplete="new-password" value={form.password}
               placeholder={hasPassword ? tx("Đã lưu — để trống nếu giữ nguyên") : ""} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
           <label>{tx("Tài khoản / Access key ID (nếu có)")}

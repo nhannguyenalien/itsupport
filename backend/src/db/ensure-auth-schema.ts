@@ -96,6 +96,52 @@ export async function ensureAuthSchema(): Promise<void> {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_platform_db_backup_runs_started ON platform_db_backup_runs(started_at DESC)`);
   await pool.query(`ALTER TABLE platform_db_backup ENABLE ROW LEVEL SECURITY`);
   await pool.query(`ALTER TABLE platform_db_backup_runs ENABLE ROW LEVEL SECURITY`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tenant_db_backups (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80),
+      source_label TEXT NOT NULL,
+      source_enc TEXT NOT NULL,
+      repo_password_enc TEXT NOT NULL,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      interval_hours INTEGER NOT NULL DEFAULT 24 CHECK (interval_hours IN (6, 12, 24, 48, 168)),
+      keep_daily INTEGER NOT NULL DEFAULT 7,
+      keep_weekly INTEGER NOT NULL DEFAULT 4,
+      keep_monthly INTEGER NOT NULL DEFAULT 6,
+      created_by UUID,
+      last_alert_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_tenant_db_backups_tenant ON tenant_db_backups(tenant_id)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tenant_db_backup_runs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      backup_id UUID NOT NULL REFERENCES tenant_db_backups(id) ON DELETE CASCADE,
+      tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('backup', 'verify', 'restore')),
+      trigger TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual')),
+      state TEXT NOT NULL CHECK (state IN ('running', 'success', 'error')),
+      started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      finished_at TIMESTAMPTZ,
+      snapshot_id TEXT,
+      bytes_added BIGINT,
+      dump_bytes BIGINT,
+      tables_found INTEGER,
+      error TEXT,
+      detail JSONB NOT NULL DEFAULT '{}'
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_tenant_db_backup_runs_backup ON tenant_db_backup_runs(backup_id, started_at DESC)`);
+  for (const table of ["tenant_db_backups", "tenant_db_backup_runs"]) {
+    await pool.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+    await pool.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '${table}' AND policyname = 'tenant_isolation') THEN
+        CREATE POLICY tenant_isolation ON ${table} USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+      END IF; END $$`);
+  }
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_policies_tenant ON backup_policies(tenant_id)`);
   await pool.query(`ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY`);
   await pool.query(`DO $$ BEGIN

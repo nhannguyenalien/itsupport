@@ -1,5 +1,7 @@
 import { backupRoutes } from "./backup/routes.js";
 import { dbBackupRoutes } from "./db-backup/routes.js";
+import { customerDbBackupRoutes } from "./db-backup/customer-routes.js";
+import { failInterruptedRuns as failInterruptedCustomerRuns, tick as customerDbBackupTick } from "./db-backup/customer-service.js";
 import { failInterruptedRuns, tick as dbBackupTick } from "./db-backup/service.js";
 import { backupAlertTick, backupSchedulerTick } from "./backup/index.js";
 import Fastify, { type FastifyError } from "fastify";
@@ -77,6 +79,7 @@ await app.register(metricsRoutes);
 await app.register(supportChatRoutes);
 await app.register(backupRoutes);
 await app.register(dbBackupRoutes);
+await app.register(customerDbBackupRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the
@@ -104,6 +107,12 @@ setInterval(() => {
 failInterruptedRuns().catch((err) => app.log.error({ err }, "could not reset interrupted database backups"));
 setInterval(() => {
   dbBackupTick().catch((err) => app.log.error({ err }, "database backup scheduler failed"));
+}, 60_000);
+
+// Customer database backups (db-backup/customer-*): same rhythm as above.
+failInterruptedCustomerRuns().catch((err) => app.log.error({ err }, "could not reset interrupted customer database backups"));
+setInterval(() => {
+  customerDbBackupTick().catch((err) => app.log.error({ err }, "customer database backup scheduler failed"));
 }, 60_000);
 
 const port = Number(process.env.PORT ?? 3000);

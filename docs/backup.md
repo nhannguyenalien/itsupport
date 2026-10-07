@@ -87,25 +87,48 @@ Khôi phục database: restore snapshot vào thư mục trống như thường l
 
 Lưu ý: restic vẫn chép cả volume Postgres thô trong `/var/lib/docker/volumes`; bản đó không đáng tin để khôi phục DB (chỉ tốn dung lượng, restic khử trùng lặp). Dùng file dump. Backup file không thay cho snapshot ổ đĩa của nhà cung cấp VPS khi cần dựng lại cả máy.
 
-## Sao lưu database của hệ thống (Neon / Postgres)
+## Sao lưu database: kho lưu trữ, database của hệ thống và database của khách
 
-Khác với backup thiết bị ở trên, mục này sao lưu **chính database của ứng dụng** (mọi khách hàng), do backend tự chạy: `pg_dump` truyền thẳng vào restic (không có file tạm), mã hoá phía máy chủ, đẩy lên S3/B2/rest-server.
+Có **một kho lưu trữ chung** do quản trị nền tảng cấu hình một lần (R2/S3/B2/rest-server). Bên dưới nó mỗi bản sao lưu có **một thư mục restic riêng**, mã hoá bằng khoá riêng:
 
-**Ai dùng được:** chỉ quản trị nền tảng. Đặt biến `PLATFORM_ADMIN_EMAILS` (danh sách email, cách nhau dấu phẩy); người dùng phải là *admin* của workspace *và* có email trong danh sách. Để trống thì tính năng tắt hoàn toàn. Mục **Thêm → Sao lưu database** chỉ hiện với họ, và server cũng chặn mọi API (`/platform/db-backup/*`) với người khác.
+| Ai | Sao lưu cái gì | Thư mục trong kho |
+|---|---|---|
+| Quản trị nền tảng | database của chính hệ thống (mọi khách hàng) | `<gốc>/platform` |
+| Khách hàng (kỹ thuật viên hoặc admin) | database PostgreSQL **của họ**, chỉ cần dán URL | `<gốc>/customers-<khách>-<id>` |
 
-**Cần gì trên server:** image backend phải có `pg_dump` và `restic`. Bản Coolify dùng `backend/Dockerfile.coolify` (Alpine 3.23 + `postgresql18-client` + `restic`; client 18 đọc được mọi server từ PG 9.2 đến 18). Bản macmini dùng Dockerfile thường nên báo "chưa cài".
+Tên là **một cấp phẳng** để chạy được cả trên restic REST server (chỉ cho hai cấp thư mục) lẫn S3/R2/B2.
 
-**Trong giao diện:**
-- *Kiểm tra kết nối*: xem `pg_dump`, `restic`, phiên bản server so với client, và kho restic có kết nối được không.
-- *Cài đặt*: repository, mật khẩu mã hoá, khoá S3/B2, chu kỳ (giờ) và số bản giữ theo ngày/tuần/tháng. Bí mật được mã hoá AES-GCM và không API nào trả lại.
-- *Sao lưu ngay* và lịch tự động. Mỗi lần chạy được **kiểm tra ngay** bằng cách đọc lại bản sao qua `pg_restore --list`; bản không đọc được bị xoá và lần chạy tính là lỗi. Nếu `pg_dump` chết giữa chừng, bản sao dở dang cũng bị xoá thay vì để làm "bản mới nhất".
-- *Lịch sử*, *danh sách bản sao*, *kiểm tra một bản sao*.
-- *Khôi phục*: **chỉ vào một database khác** (ví dụ một nhánh Neon mới); ứng dụng từ chối khôi phục đè lên database đang chạy (kể cả khi so host pooler với host trực tiếp). Phải gõ `KHOI PHUC` để xác nhận; URL đích chứa mật khẩu không được lưu và không vào audit.
-- Cảnh báo email (nếu đã cấu hình SMTP) tới `PLATFORM_ADMIN_EMAILS` khi quá hạn hoặc lỗi, tối đa 1 lần/24 giờ.
+### Cấu hình kho (quản trị nền tảng, một lần)
+Mục **Thêm → Sao lưu database**. Biến `PLATFORM_ADMIN_EMAILS` (cách nhau dấu phẩy) quyết định ai thấy mục này; người đó phải là *admin* và có email trong danh sách. Để trống thì tắt hẳn, và server chặn mọi API `/platform/db-backup/*` với người khác.
+- *Kho gốc*: ví dụ `s3:https://<tài-khoản>.r2.cloudflarestorage.com/<bucket>`; thêm khoá S3/B2 và *mật khẩu mã hoá của bản sao hệ thống*. Mật khẩu này **chỉ** mở thư mục `platform`; thư mục của khách có mật khẩu riêng do hệ thống sinh.
+- *Kiểm tra kết nối*, *Sao lưu ngay*, lịch, lịch sử, khôi phục sang database khác, email cảnh báo cho `PLATFORM_ADMIN_EMAILS`.
 
-**Chuyển ứng dụng sang bản khôi phục:** sau khi khôi phục vào database mới, đổi `EXTERNAL_DATABASE_URL`/`EXTERNAL_DATABASE_ADMIN_URL` trong Coolify và deploy lại. Việc này cố ý không làm trong giao diện.
+### Khách hàng tự thêm database
+Mục **Thêm → Database của bạn** (cần quyền kỹ thuật viên trở lên). Khách chỉ dán URL (`postgresql://user:pass@host/db?sslmode=require`) và đặt tên. Hệ thống:
+1. kiểm tra kết nối (báo rõ sai mật khẩu, không tới được, database không tồn tại) và dung lượng;
+2. sao lưu **ngay** (để lỗi phân quyền lộ ra lúc này, không phải đêm sau), rồi theo lịch (6/12 giờ, hằng ngày mặc định, 2 ngày, hằng tuần), giữ 7 ngày + 4 tuần + 6 tháng;
+3. **kiểm tra mỗi bản bằng cách đọc lại** (`pg_restore --list`), xoá bản không đọc được hoặc dở dang;
+4. gửi email cho admin của khách khi quá hạn hoặc lỗi (tối đa 1 lần/24 giờ).
 
-**Kiểm thử:** `backend/tests/db-backup.e2e.test.ts` chạy `pg_dump`/`restic`/`pg_restore` thật (cần Postgres có schema, một restic REST server và công cụ trong `PATH`): `DBBACKUP_E2E=1 DBBACKUP_E2E_ADMIN_URL=… DBBACKUP_E2E_DST_URL=… DBBACKUP_E2E_REPO=rest:http://127.0.0.1:8000/db DBBACKUP_RESTIC=/đường/dẫn/restic npx tsx --test tests/db-backup.e2e.test.ts`.
+Khách còn có: tải danh sách bản sao, kiểm tra một bản, **khôi phục vào một database khác** (từ chối khôi phục đè lên chính database nguồn; phải gõ `KHOI PHUC`), tạm dừng và xoá (gõ `XOA`, xoá cả các bản đã lưu).
+
+**Mật khẩu mã hoá do hệ thống giữ** (mã hoá AES-GCM bằng `OAUTH_TOKEN_ENC_KEY`): khách không phải nhớ, nhưng quản trị nền tảng về mặt kỹ thuật có thể giải mã. URL của khách cũng được mã hoá và **không bao giờ** trả lại qua API.
+
+### Chống lạm dụng
+Máy chủ của ta kết nối tới địa chỉ do khách nhập, nên có các chốt chặn (đều có test):
+- **Chỉ địa chỉ công khai**: từ chối localhost, mạng riêng (10/8, 172.16/12, 192.168/16), CGNAT/Tailscale (100.64/10), link-local và metadata đám mây (169.254/16), IPv6 nội bộ và dạng IPv4 nhúng trong IPv6; kết nối tới đúng địa chỉ đã kiểm tra (`PGHOSTADDR`) nên DNS không đổi được giữa chừng.
+- **Bắt buộc TLS** (`sslmode=require` trở lên).
+- Giới hạn **số database mỗi khách** (`CUSTOMER_DB_MAX_PER_TENANT`, mặc định 5), **dung lượng** (`CUSTOMER_DB_MAX_GB`, mặc định 20), và số lần chạy đồng thời (`CUSTOMER_DB_MAX_CONCURRENT`, mặc định 2).
+- **Cô lập khách hàng**: bảng có RLS theo `tenant_id` *và* mọi truy vấn lọc theo khách; test đầu-cuối dùng role ứng dụng không phải superuser để chứng minh khách B không thấy gì của khách A.
+
+### Cần gì trên server
+Image backend phải có `pg_dump` và `restic`: bản Coolify dùng `backend/Dockerfile.coolify` (Alpine 3.23 + `postgresql18-client` + `restic`; client 18 đọc được mọi server PostgreSQL 9.2 đến 18). Bản macmini dùng Dockerfile thường nên báo "chưa cài". Với Neon, sao lưu tự dùng endpoint **trực tiếp** (bỏ `-pooler`) như Neon khuyến nghị cho `pg_dump`.
+
+### Khôi phục và chuyển ứng dụng sang bản khôi phục
+Khôi phục luôn vào một database khác (ví dụ một nhánh Neon mới). Việc đổi ứng dụng sang database đó là bước thủ công có chủ ý (sửa `EXTERNAL_DATABASE_URL`/`EXTERNAL_DATABASE_ADMIN_URL` rồi deploy lại cho hệ thống; khách tự đổi cấu hình của họ).
+
+### Kiểm thử
+`backend/tests/db-backup.e2e.test.ts` (database hệ thống) và `backend/tests/customer-db-backup.e2e.test.ts` (database khách) chạy `pg_dump`/`restic`/`pg_restore` thật; cần Postgres bật TLS có schema dự án, một restic REST server (`rest-server`) và công cụ trong `PATH`, chỉ chạy khi `DBBACKUP_E2E=1` (xem biến `DBBACKUP_E2E_*` đầu mỗi file; `DBBACKUP_ALLOW_PRIVATE=1` chỉ có hiệu lực khi `NODE_ENV` không phải `production`).
 
 ## Email cảnh báo
 

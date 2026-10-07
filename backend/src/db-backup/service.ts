@@ -39,10 +39,23 @@ export async function getSettings(): Promise<Settings> {
   };
 }
 
-export async function access(): Promise<RepoAccess> {
+/** `base/a/b`, tolerant of a trailing slash on the base (also works for b2:bucket:path). */
+export function repoJoin(base: string, ...parts: string[]): string {
+  return [base.replace(/\/+$/, ""), ...parts].join("/");
+}
+
+/** The operator's shared storage: where every backup lives. The settings hold its
+ * base path and credentials; each backup gets its own sub-repository below it. */
+export async function getStorage(): Promise<{ base: string; env: Record<string, string> } | null> {
   const r = await row();
-  if (!r.repo || !r.secrets_enc) throw new Error("The backup repository is not configured yet");
-  return { repo: r.repo, env: decryptEnv(r.secrets_enc) };
+  if (!r.repo || !r.secrets_enc) return null;
+  try { return { base: r.repo, env: decryptEnv(r.secrets_enc) }; } catch { return null; }
+}
+
+export async function access(): Promise<RepoAccess> {
+  const storage = await getStorage();
+  if (!storage) throw new Error("The backup repository is not configured yet");
+  return { repo: repoJoin(storage.base, "platform"), env: storage.env };
 }
 
 export async function saveSettings(input: {
@@ -138,7 +151,7 @@ export async function startRestore(snapshotId: string, targetUrl: string, by: st
   const target = parsePgUrl(targetUrl);          // fail fast, before a run row exists
   const id = await startRun("restore", "manual", by, { snapshotId, target: `${target.host}/${target.database}` });
   background(id, async () => {
-    await restoreInto(acc, snapshotId, targetUrl, live);
+    await restoreInto(acc, snapshotId, target, live);
     return { state: "success" as const, snapshotId, detail: { target: `${target.host}/${target.database}` } };
   }, secretsOf(acc, [target.env.PGPASSWORD ?? "", targetUrl]));
   return id;

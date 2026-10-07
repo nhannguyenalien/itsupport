@@ -161,9 +161,8 @@ export async function listSnapshots(access: RepoAccess): Promise<SnapshotInfo[]>
   return raw.map((s) => ({ id: s.short_id, time: s.time, sizeBytes: s.summary?.total_bytes_processed ?? null })).sort((a, b) => b.time.localeCompare(a.time)).slice(0, 60);
 }
 
-/** Restores a snapshot into ANOTHER database. Refuses the live database. */
-export async function restoreInto(access: RepoAccess, snapshotId: string, targetUrl: string, live: PgConnection): Promise<{ warnings: string[] }> {
-  const target = parsePgUrl(targetUrl);
+/** Restores a snapshot into ANOTHER database. Refuses the live (source) one. */
+export async function restoreInto(access: RepoAccess, snapshotId: string, target: PgConnection, live: PgConnection): Promise<{ warnings: string[] }> {
   if (sameDatabase(target, live)) throw new Error("Refusing to restore over the live database. Use a new database or a Neon branch.");
   const t = tools();
   const secrets = secretsOf(access, [target.env.PGPASSWORD ?? ""]);
@@ -176,4 +175,13 @@ export async function restoreInto(access: RepoAccess, snapshotId: string, target
   if (res.producer.code !== 0) throw new Error("cannot read snapshot: " + scrub(res.producer.stderr, secrets));
   if (res.consumer.code !== 0) throw new Error("pg_restore reported errors: " + scrub(res.consumer.stderr, secrets));
   return { warnings: [] };
+}
+
+/** Removes every snapshot (and the data they hold) from a repository. */
+export async function purgeRepository(access: RepoAccess): Promise<number> {
+  const ids = (await listSnapshots(access).catch(() => [])).map((s) => s.id);
+  if (!ids.length) return 0;
+  const out = await run(tools().restic, ["forget", "--prune", ...ids], resticEnv(access), 30 * 60_000);
+  if (out.code !== 0) throw new Error(scrub(out.stderr, secretsOf(access)) || "cannot purge repository");
+  return ids.length;
 }
