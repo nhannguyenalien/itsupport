@@ -32,6 +32,7 @@ export interface AuthUser {
   tenantName: string;
   email: string;
   role: "admin" | "technician" | "member";
+  platformAdmin?: boolean;
 }
 
 export interface Device {
@@ -90,6 +91,23 @@ export interface BackupStatus {
     bytes_restored?: number;
     error?: string;
   };
+}
+
+export type DbBackupHealth = "disabled" | "ok" | "failed" | "overdue" | "never";
+export interface DbBackupInfo {
+  enabled: boolean; repo: string; interval_hours: number; keep_daily: number; keep_weekly: number; keep_monthly: number;
+  env_configured: string[]; health: DbBackupHealth; last_success_at: string | null; next_run_at: string | null; running: boolean;
+  tools: { pgDump: string | null; restic: string | null }; alert_recipients: number;
+}
+export interface DbBackupRun {
+  id: string; kind: "backup" | "verify" | "restore"; trigger: "schedule" | "manual"; state: "running" | "success" | "error";
+  started_at: string; finished_at: string | null; requested_by: string | null; snapshot_id: string | null;
+  bytes_added: string | null; dump_bytes: string | null; tables_found: number | null; error: string | null;
+}
+export interface DbBackupSnapshot { id: string; time: string; sizeBytes: number | null }
+export interface DbBackupSettingsInput {
+  enabled: boolean; repo: string; env: Record<string, string>;
+  interval_hours: number; keep_daily: number; keep_weekly: number; keep_monthly: number;
 }
 
 export interface BackupSnapshot { id: string; time: string; hostname: string; paths: string[] }
@@ -312,6 +330,15 @@ export const api = {
   saveBackupAlertSettings: (body: { enabled: boolean; emails: string[] }) =>
     request<{ enabled: boolean; emails: string[]; mail_configured: boolean }>(`/backup-alerts`, { method: "PUT", body: JSON.stringify(body) }),
   testBackupAlert: () => request<{ sent: number }>(`/backup-alerts/test`, { method: "POST", body: "{}" }),
+  dbBackup: () => request<DbBackupInfo>(`/platform/db-backup`),
+  saveDbBackup: (body: DbBackupSettingsInput) => request<{ ok: true }>(`/platform/db-backup`, { method: "PUT", body: JSON.stringify(body) }),
+  testDbBackup: () => request<{ ok: boolean; checks: { name: string; ok: boolean; detail: string }[] }>(`/platform/db-backup/test`, { method: "POST", body: "{}" }),
+  runDbBackup: () => request<{ runId: string }>(`/platform/db-backup/run`, { method: "POST", body: "{}" }),
+  dbBackupRuns: () => request<DbBackupRun[]>(`/platform/db-backup/runs`),
+  dbBackupSnapshots: () => request<DbBackupSnapshot[]>(`/platform/db-backup/snapshots`),
+  verifyDbBackup: (snapshotId: string) => request<{ runId: string }>(`/platform/db-backup/verify`, { method: "POST", body: JSON.stringify({ snapshot_id: snapshotId }) }),
+  restoreDbBackup: (body: { snapshot_id: string; target_url: string; confirm: "KHOI PHUC" }) =>
+    request<{ runId: string }>(`/platform/db-backup/restore`, { method: "POST", body: JSON.stringify(body) }),
   listBackups: () => request<BackupOverview[]>(`/backups`),
   requestBackupSnapshots: (deviceId: string) => request(`/devices/${deviceId}/backup/snapshots`, { method: "POST", body: "{}" }),
   backupSnapshots: (deviceId: string) => request<BackupSnapshots>(`/devices/${deviceId}/backup/snapshots`),

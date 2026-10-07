@@ -476,6 +476,42 @@ CREATE TABLE backup_alert_settings (
 );
 
 -- ============================================================
+-- PLATFORM DATABASE BACKUP (db-backup/) — operator-level, not per tenant.
+-- No RLS policy on purpose: only the admin connection (table owner) can read
+-- these; the tenant-scoped app role sees nothing even if a query slips through.
+-- ============================================================
+CREATE TABLE platform_db_backup (
+    id              SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    enabled         BOOLEAN NOT NULL DEFAULT false,
+    repo            TEXT NOT NULL DEFAULT '',
+    secrets_enc     TEXT NOT NULL DEFAULT '',
+    interval_hours  INTEGER NOT NULL DEFAULT 24 CHECK (interval_hours BETWEEN 1 AND 168),
+    keep_daily      INTEGER NOT NULL DEFAULT 7,
+    keep_weekly     INTEGER NOT NULL DEFAULT 4,
+    keep_monthly    INTEGER NOT NULL DEFAULT 6,
+    last_alert_at   TIMESTAMPTZ,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE platform_db_backup_runs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kind          TEXT NOT NULL CHECK (kind IN ('backup', 'verify', 'restore')),
+    trigger       TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual')),
+    state         TEXT NOT NULL CHECK (state IN ('running', 'success', 'error')),
+    started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at   TIMESTAMPTZ,
+    requested_by  TEXT,
+    snapshot_id   TEXT,
+    bytes_added   BIGINT,
+    dump_bytes    BIGINT,
+    tables_found  INTEGER,
+    error         TEXT,
+    detail        JSONB NOT NULL DEFAULT '{}'
+);
+CREATE INDEX idx_platform_db_backup_runs_started ON platform_db_backup_runs(started_at DESC);
+ALTER TABLE platform_db_backup ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform_db_backup_runs ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- The application role must not own these tables and must not have BYPASSRLS.
 -- Missing app.tenant_id therefore means no tenant rows, never all rows.

@@ -47,7 +47,9 @@ services:
         limits: { memory: 1G, cpus: "1.0" }
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.coolify
     <<: *security
     cap_drop: ["ALL"]
     read_only: true
@@ -95,8 +97,12 @@ services:
       RESTIC_DARWIN_ARM64_SHA256: ${RESTIC_DARWIN_ARM64_SHA256:-}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      # Platform database backup (docs/backup.md): who may use it, and restic's cache.
+      PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-}
+      RESTIC_CACHE_DIR: /cache
     volumes:
       - ./infra/coolify/backend-entrypoint.sh:/entrypoint.sh:ro
+      - restic-cache:/cache
     command: ["sh", "/entrypoint.sh"]
     depends_on:
       db: { condition: service_healthy }
@@ -166,6 +172,7 @@ services:
       db: { condition: service_healthy }
 
 volumes:
+  restic-cache:
   db-data:
   db-backups:
   caddy-data:

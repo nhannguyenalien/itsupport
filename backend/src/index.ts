@@ -1,4 +1,6 @@
 import { backupRoutes } from "./backup/routes.js";
+import { dbBackupRoutes } from "./db-backup/routes.js";
+import { failInterruptedRuns, tick as dbBackupTick } from "./db-backup/service.js";
 import { backupAlertTick, backupSchedulerTick } from "./backup/index.js";
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
@@ -74,6 +76,7 @@ await app.register(oauthRoutes);
 await app.register(metricsRoutes);
 await app.register(supportChatRoutes);
 await app.register(backupRoutes);
+await app.register(dbBackupRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the
@@ -95,6 +98,13 @@ setInterval(() => {
 setInterval(() => {
   backupAlertTick().catch((err) => app.log.error({ err }, "backup alert sweep failed"));
 }, 30 * 60_000);
+
+// Platform database backup (db-backup/): resume cleanly after a restart, then
+// check every minute whether a backup is due or an alert is needed.
+failInterruptedRuns().catch((err) => app.log.error({ err }, "could not reset interrupted database backups"));
+setInterval(() => {
+  dbBackupTick().catch((err) => app.log.error({ err }, "database backup scheduler failed"));
+}, 60_000);
 
 const port = Number(process.env.PORT ?? 3000);
 app

@@ -5,6 +5,8 @@ import { useLanguage, LanguageSwitcher } from "@/lib/i18n";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -18,6 +20,9 @@ export function TopNav() {
   const { tx } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
+  // Shown only to the platform operator (the server enforces it as well).
+  const [platformAdmin, setPlatformAdmin] = useState(false);
+  useEffect(() => { api.me().then(({ user }) => setPlatformAdmin(!!user.platformAdmin)).catch(() => undefined); }, []);
   if (pathname === "/devices" || pathname.endsWith("/customer")) return <div className="locale-toolbar"><LanguageSwitcher /></div>;
   if (pathname.startsWith("/tickets") || pathname === "/devices" || pathname === "/" || pathname === "/login" || pathname?.endsWith("/customer")) return null;
 
@@ -37,6 +42,7 @@ export function TopNav() {
           <Link href="/dashboard">{tx("Tổng quan")}</Link>
           <Link href="/connections">{tx("Kết nối dịch vụ")}</Link>
           <Link href="/metrics">{tx("Thống kê")}</Link>
+          {platformAdmin && <Link href="/platform/database">{tx("Sao lưu database")}</Link>}
           <Link href="/account">{tx("Tài khoản")}</Link>
         </div>
       </details>

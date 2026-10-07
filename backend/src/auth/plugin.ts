@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { adminPool, pool, runWithRequestContext, setTenantContext } from "../db/pool.js";
 import { firebaseAuth } from "./firebase.js";
+import { isPlatformAdmin } from "../db-backup/config.js";
 
 const PUBLIC_EXACT = new Set(["/health", "/enrollment/register", "/auth/attempt", "/support-chat/status", "/support-chat/system"]);
 
@@ -113,7 +114,8 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
       );
       const user = result.rows[0];
       if (!user) return reply.code(403).send({ error: "workspace registration required", code: "WORKSPACE_REQUIRED" });
-      req.authUser = { id: user.id, tenantId: user.tenant_id, tenantName: user.tenant_name, email: user.email, role: user.role };
+      req.authUser = { id: user.id, tenantId: user.tenant_id, tenantName: user.tenant_name, email: user.email, role: user.role,
+        platformAdmin: isPlatformAdmin(user.email, user.role) };
       setTenantContext(user.tenant_id);
     } catch {
       return reply.code(401).send({ error: "invalid or expired authentication token" });

@@ -62,6 +62,40 @@ export async function ensureAuthSchema(): Promise<void> {
       CREATE POLICY tenant_isolation ON backup_alert_settings USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
     END IF; END $$`);
   await pool.query(`ALTER TABLE backup_policies ADD COLUMN IF NOT EXISTS db_dumps JSONB NOT NULL DEFAULT '[]'`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS platform_db_backup (
+      id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      enabled BOOLEAN NOT NULL DEFAULT false,
+      repo TEXT NOT NULL DEFAULT '',
+      secrets_enc TEXT NOT NULL DEFAULT '',
+      interval_hours INTEGER NOT NULL DEFAULT 24 CHECK (interval_hours BETWEEN 1 AND 168),
+      keep_daily INTEGER NOT NULL DEFAULT 7,
+      keep_weekly INTEGER NOT NULL DEFAULT 4,
+      keep_monthly INTEGER NOT NULL DEFAULT 6,
+      last_alert_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS platform_db_backup_runs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      kind TEXT NOT NULL CHECK (kind IN ('backup', 'verify', 'restore')),
+      trigger TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual')),
+      state TEXT NOT NULL CHECK (state IN ('running', 'success', 'error')),
+      started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      finished_at TIMESTAMPTZ,
+      requested_by TEXT,
+      snapshot_id TEXT,
+      bytes_added BIGINT,
+      dump_bytes BIGINT,
+      tables_found INTEGER,
+      error TEXT,
+      detail JSONB NOT NULL DEFAULT '{}'
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_platform_db_backup_runs_started ON platform_db_backup_runs(started_at DESC)`);
+  await pool.query(`ALTER TABLE platform_db_backup ENABLE ROW LEVEL SECURITY`);
+  await pool.query(`ALTER TABLE platform_db_backup_runs ENABLE ROW LEVEL SECURITY`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_policies_tenant ON backup_policies(tenant_id)`);
   await pool.query(`ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY`);
   await pool.query(`DO $$ BEGIN

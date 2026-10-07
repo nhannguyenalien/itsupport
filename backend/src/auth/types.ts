@@ -6,6 +6,8 @@ export interface AuthUser {
   email: string;
   role: "admin" | "technician" | "member";
   tenantName: string;
+  /** Platform operator (PLATFORM_ADMIN_EMAILS): may use the database backup. */
+  platformAdmin?: boolean;
 }
 
 declare module "fastify" {

@@ -87,6 +87,26 @@ Khôi phục database: restore snapshot vào thư mục trống như thường l
 
 Lưu ý: restic vẫn chép cả volume Postgres thô trong `/var/lib/docker/volumes`; bản đó không đáng tin để khôi phục DB (chỉ tốn dung lượng, restic khử trùng lặp). Dùng file dump. Backup file không thay cho snapshot ổ đĩa của nhà cung cấp VPS khi cần dựng lại cả máy.
 
+## Sao lưu database của hệ thống (Neon / Postgres)
+
+Khác với backup thiết bị ở trên, mục này sao lưu **chính database của ứng dụng** (mọi khách hàng), do backend tự chạy: `pg_dump` truyền thẳng vào restic (không có file tạm), mã hoá phía máy chủ, đẩy lên S3/B2/rest-server.
+
+**Ai dùng được:** chỉ quản trị nền tảng. Đặt biến `PLATFORM_ADMIN_EMAILS` (danh sách email, cách nhau dấu phẩy); người dùng phải là *admin* của workspace *và* có email trong danh sách. Để trống thì tính năng tắt hoàn toàn. Mục **Thêm → Sao lưu database** chỉ hiện với họ, và server cũng chặn mọi API (`/platform/db-backup/*`) với người khác.
+
+**Cần gì trên server:** image backend phải có `pg_dump` và `restic`. Bản Coolify dùng `backend/Dockerfile.coolify` (Alpine 3.23 + `postgresql18-client` + `restic`; client 18 đọc được mọi server từ PG 9.2 đến 18). Bản macmini dùng Dockerfile thường nên báo "chưa cài".
+
+**Trong giao diện:**
+- *Kiểm tra kết nối*: xem `pg_dump`, `restic`, phiên bản server so với client, và kho restic có kết nối được không.
+- *Cài đặt*: repository, mật khẩu mã hoá, khoá S3/B2, chu kỳ (giờ) và số bản giữ theo ngày/tuần/tháng. Bí mật được mã hoá AES-GCM và không API nào trả lại.
+- *Sao lưu ngay* và lịch tự động. Mỗi lần chạy được **kiểm tra ngay** bằng cách đọc lại bản sao qua `pg_restore --list`; bản không đọc được bị xoá và lần chạy tính là lỗi. Nếu `pg_dump` chết giữa chừng, bản sao dở dang cũng bị xoá thay vì để làm "bản mới nhất".
+- *Lịch sử*, *danh sách bản sao*, *kiểm tra một bản sao*.
+- *Khôi phục*: **chỉ vào một database khác** (ví dụ một nhánh Neon mới); ứng dụng từ chối khôi phục đè lên database đang chạy (kể cả khi so host pooler với host trực tiếp). Phải gõ `KHOI PHUC` để xác nhận; URL đích chứa mật khẩu không được lưu và không vào audit.
+- Cảnh báo email (nếu đã cấu hình SMTP) tới `PLATFORM_ADMIN_EMAILS` khi quá hạn hoặc lỗi, tối đa 1 lần/24 giờ.
+
+**Chuyển ứng dụng sang bản khôi phục:** sau khi khôi phục vào database mới, đổi `EXTERNAL_DATABASE_URL`/`EXTERNAL_DATABASE_ADMIN_URL` trong Coolify và deploy lại. Việc này cố ý không làm trong giao diện.
+
+**Kiểm thử:** `backend/tests/db-backup.e2e.test.ts` chạy `pg_dump`/`restic`/`pg_restore` thật (cần Postgres có schema, một restic REST server và công cụ trong `PATH`): `DBBACKUP_E2E=1 DBBACKUP_E2E_ADMIN_URL=… DBBACKUP_E2E_DST_URL=… DBBACKUP_E2E_REPO=rest:http://127.0.0.1:8000/db DBBACKUP_RESTIC=/đường/dẫn/restic npx tsx --test tests/db-backup.e2e.test.ts`.
+
 ## Email cảnh báo
 
 Cần SMTP trên server (biến môi trường của backend):
