@@ -8,7 +8,7 @@ import { validateCustomerUrl, type ValidatedTarget } from "./net-guard.js";
 import { listSnapshots, performBackup, purgeRepository, restoreInto, secretsOf, verifySnapshot, type RepoAccess } from "./runner.js";
 import { getStorage, repoJoin } from "./service.js";
 import { checkQuota } from "./plans.js";
-import { databaseBytes, fileBytes, tenantPlan } from "./usage.js";
+import { databaseBytes, fileBytes, tenantPlan, uploadBytes } from "./usage.js";
 
 // A customer pastes the URL of THEIR PostgreSQL database; the platform backs it
 // up on a schedule into the operator's shared storage. Each database gets its own
@@ -82,7 +82,7 @@ export async function loadRow(tenantId: string, id: string): Promise<Row> {
 
 /** Bytes already protected by the workspace's OTHER databases and its device files. */
 async function usedByOthers(tenantId: string, excludeId: string | null): Promise<number> {
-  return (await databaseBytes(tenantId, excludeId)) + (await fileBytes(tenantId));
+  return (await databaseBytes(tenantId, excludeId)) + (await fileBytes(tenantId)) + (await uploadBytes(tenantId));
 }
 
 export { usage } from "./usage.js";

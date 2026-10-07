@@ -545,5 +545,18 @@
   "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "El almacenamiento del sistema aún no está configurado. Contacte con su administrador o use su propio almacenamiento.",
   "Gói {plan}: đã dùng {used} / {limit}.": "Plan {plan}: usado {used} / {limit}.",
   "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "Ha superado el espacio de su plan: las copias nuevas se pausan hasta que libere espacio o mejore el plan.",
-  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "El almacenamiento del sistema requiere el agente {version} o posterior. Actualice primero el agente."
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "El almacenamiento del sistema requiere el agente {version} o posterior. Actualice primero el agente.",
+  "Tệp của bạn": "Tus archivos",
+  "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.": "Sube archivos desde tu ordenador al almacenamiento cifrado del sistema. Cuentan para el espacio de tu plan; cada archivo puede ocupar hasta {size}.",
+  "Chọn file để tải lên": "Elegir archivos para subir",
+  "Đang tải lên {name}… {percent}%": "Subiendo {name}… {percent}%",
+  "Đã tải lên {name}.": "Se subió {name}.",
+  "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.": "La subida falló. Revisa tu conexión e inténtalo de nuevo.",
+  "Tải xuống": "Descargar",
+  "Tên file": "Nombre del archivo",
+  "Ngày tải lên": "Fecha de subida",
+  "Chưa có file nào.": "Aún no hay archivos.",
+  "Xoá file {name}? Không thể hoàn tác.": "¿Eliminar {name}? No se puede deshacer.",
+  "Đã xoá {name}.": "Se eliminó {name}.",
+  "Tệp": "Archivos"
 }

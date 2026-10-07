@@ -545,5 +545,18 @@
   "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "The system storage is not configured yet. Contact your administrator or use your own storage.",
   "Gói {plan}: đã dùng {used} / {limit}.": "{plan} plan: used {used} / {limit}.",
   "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "You are over your plan's storage: new backups are paused until you free space or upgrade.",
-  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Using the system storage needs agent {version} or newer. Update the agent first."
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Using the system storage needs agent {version} or newer. Update the agent first.",
+  "Tệp của bạn": "Your files",
+  "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.": "Upload files from your computer to the system's encrypted storage. Files count toward your plan's storage; each file can be up to {size}.",
+  "Chọn file để tải lên": "Choose files to upload",
+  "Đang tải lên {name}… {percent}%": "Uploading {name}… {percent}%",
+  "Đã tải lên {name}.": "Uploaded {name}.",
+  "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.": "Upload failed. Check your connection and try again.",
+  "Tải xuống": "Download",
+  "Tên file": "File name",
+  "Ngày tải lên": "Uploaded",
+  "Chưa có file nào.": "No files yet.",
+  "Xoá file {name}? Không thể hoàn tác.": "Delete {name}? This cannot be undone.",
+  "Đã xoá {name}.": "Deleted {name}.",
+  "Tệp": "Files"
 }

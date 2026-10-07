@@ -117,6 +117,8 @@ export interface CustomerDbTarget {
 }
 export type Plan = "free" | "pro";
 export interface CustomerDbList { storage_ready: boolean; plan: Plan; used_bytes: number; limit_bytes: number; database_bytes: number; file_bytes: number; limits: { max_targets: number }; targets: CustomerDbTarget[] }
+export interface TenantFile { id: string; name: string; content_type: string; size_bytes: number; status: "ready"; created_at: string }
+export interface TenantFileList { storage_ready: boolean; max_file_bytes: number; plan: Plan; used_bytes: number; limit_bytes: number; upload_bytes: number; files: TenantFile[] }
 export interface PlatformTenant { id: string; name: string; plan: Plan; databases: number; used_bytes: number; limit_bytes: number; created_at: string }
 export interface CustomerDbRun {
   id: string; kind: "backup" | "verify" | "restore"; trigger: "schedule" | "manual"; state: "running" | "success" | "error";
@@ -360,6 +362,11 @@ export const api = {
     request<{ runId: string }>(`/platform/db-backup/restore`, { method: "POST", body: JSON.stringify(body) }),
   platformTenants: () => request<PlatformTenant[]>(`/platform/tenants`),
   setTenantPlan: (id: string, plan: Plan) => request<{ ok: true; plan: Plan }>(`/platform/tenants/${id}/plan`, { method: "PUT", body: JSON.stringify({ plan }) }),
+  files: () => request<TenantFileList>(`/files`),
+  startFileUpload: (b: { name: string; size: number; content_type: string }) => request<{ id: string; name: string; upload_url: string; expires_in: number }>(`/files/uploads`, { method: "POST", body: JSON.stringify(b) }),
+  completeFileUpload: (id: string) => request<TenantFile>(`/files/${id}/complete`, { method: "POST", body: "{}" }),
+  fileDownload: (id: string) => request<{ url: string; name: string }>(`/files/${id}/download`),
+  deleteFile: (id: string) => request<{ ok: true }>(`/files/${id}`, { method: "DELETE" }),
   customerDbs: () => request<CustomerDbList>(`/db-backups`),
   addCustomerDb: (body: { name: string; url: string }) => request<{ id: string; label: string; sizeBytes: number; tables: number; serverVersion: string }>(`/db-backups`, { method: "POST", body: JSON.stringify(body) }),
   updateCustomerDb: (id: string, body: { enabled?: boolean; interval_hours?: number }) => request<{ ok: true }>(`/db-backups/${id}`, { method: "PATCH", body: JSON.stringify(body) }),

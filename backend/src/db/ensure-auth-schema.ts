@@ -160,4 +160,23 @@ export async function ensureAuthSchema(): Promise<void> {
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'backup_policies' AND policyname = 'tenant_isolation') THEN
       CREATE POLICY tenant_isolation ON backup_policies USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
     END IF; END $$`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tenant_files (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
+      content_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+      size_bytes BIGINT NOT NULL CHECK (size_bytes >= 0),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready')),
+      created_by UUID,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_tenant_files_tenant ON tenant_files(tenant_id, created_at DESC)`);
+  await pool.query(`ALTER TABLE tenant_files ENABLE ROW LEVEL SECURITY`);
+  await pool.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenant_files' AND policyname = 'tenant_isolation') THEN
+      CREATE POLICY tenant_isolation ON tenant_files USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
+    END IF; END $$`);
 }

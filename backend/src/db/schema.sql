@@ -612,3 +612,18 @@ ALTER TABLE tenant_db_backup_runs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON tenant_db_backups USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 CREATE POLICY tenant_isolation ON tenant_db_backup_runs USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
 
+-- Files customers upload from the web, stored in the shared R2 under uploads-<tenant>/<id>.
+CREATE TABLE tenant_files (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id    UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
+    content_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+    size_bytes   BIGINT NOT NULL CHECK (size_bytes >= 0),
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready')),
+    created_by   UUID,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ
+);
+CREATE INDEX idx_tenant_files_tenant ON tenant_files(tenant_id, created_at DESC);
+ALTER TABLE tenant_files ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON tenant_files USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());

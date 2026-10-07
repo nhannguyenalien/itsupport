@@ -2,8 +2,8 @@ import { adminPool } from "../db/pool.js";
 import { checkQuota, isPlan, planLimitBytes, type Plan, type QuotaResult } from "./plans.js";
 
 // One quota per workspace, shared by everything it backs up to the system storage:
-// customer databases (their source size) and device files on system storage (the
-// source size the last successful backup scanned). Both are "bytes of data protected".
+// customer databases (their source size), device files on system storage (the
+// source size the last successful backup scanned) and files uploaded from the web. Both are "bytes of data protected".
 
 export async function tenantPlan(tenantId: string): Promise<Plan> {
   const r = await adminPool.query(`SELECT plan FROM tenants WHERE id = $1`, [tenantId]);
@@ -28,11 +28,17 @@ export async function fileBytes(tenantId: string): Promise<number> {
   return Number(r.rows[0].n);
 }
 
-export interface Usage { plan: Plan; databaseBytes: number; fileBytes: number; usedBytes: number; limitBytes: number }
+/** Files customers uploaded from the web (finished uploads only). */
+export async function uploadBytes(tenantId: string): Promise<number> {
+  const r = await adminPool.query(`SELECT COALESCE(sum(size_bytes), 0)::bigint AS n FROM tenant_files WHERE tenant_id = $1 AND status = 'ready'`, [tenantId]);
+  return Number(r.rows[0].n);
+}
+
+export interface Usage { plan: Plan; databaseBytes: number; fileBytes: number; uploadBytes: number; usedBytes: number; limitBytes: number }
 
 export async function usage(tenantId: string): Promise<Usage> {
-  const [plan, db, files] = await Promise.all([tenantPlan(tenantId), databaseBytes(tenantId), fileBytes(tenantId)]);
-  return { plan, databaseBytes: db, fileBytes: files, usedBytes: db + files, limitBytes: planLimitBytes(plan) };
+  const [plan, db, files, uploads] = await Promise.all([tenantPlan(tenantId), databaseBytes(tenantId), fileBytes(tenantId), uploadBytes(tenantId)]);
+  return { plan, databaseBytes: db, fileBytes: files, uploadBytes: uploads, usedBytes: db + files + uploads, limitBytes: planLimitBytes(plan) };
 }
 
 /** Device files are measured after the fact, so the cap is soft: a workspace that

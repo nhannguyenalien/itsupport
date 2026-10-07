@@ -135,6 +135,16 @@ Máy có agent từ **0.4.2** có thể chọn "Kho của hệ thống" trong b�
 - Biến môi trường cần có trên server: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (quyền Workers R2 Storage: Edit), `R2_PARENT_ACCESS_KEY_ID` (Access Key ID của token R2 giới hạn theo bucket). Thiếu một trong ba thì lựa chọn này ẩn đi.
 - Máy agent cũ hơn 0.4.2 chỉ dùng được kho tự cấu hình (`custom`).
 
+### Tệp khách tải lên từ web
+Trang **Thêm → Tệp** cho khách tải file từ trình duyệt lên cùng kho R2 (`<kho gốc>/uploads-<tenant>/<id>`), liệt kê, tải xuống và xoá.
+- Dữ liệu đi **thẳng từ trình duyệt lên R2** bằng URL ký sẵn (SigV4, PUT, hiệu lực 1 giờ), server không cõng dữ liệu. URL được ký bằng **khoá tạm** theo prefix của workspace (cùng cơ chế với sao lưu file thiết bị), không bao giờ bằng khoá gốc của vận hành. Tải xuống dùng URL ký sẵn hiệu lực 5 phút.
+- Luồng: `POST /files/uploads` (kiểm tra hạn mức, tạo bản ghi `pending`, trả URL) → trình duyệt PUT → `POST /files/:id/complete` (server HEAD lên R2 lấy kích thước **thật**; vượt hạn mức hoặc quá 5 GiB thì xoá object và trả 402). Đặt chỗ dung lượng cho các upload đang dở nên không thể "lách" bằng nhiều upload song song; upload dở quá 24 giờ bị dọn.
+- Tính chung hạn mức gói với database và file thiết bị. Mỗi file tối đa 5 GiB (một PUT). Xem/tải: mọi thành viên; tải lên/xoá: kỹ thuật viên và quản trị viên; có ghi audit `tenant.file_uploaded`/`tenant.file_deleted`.
+- **Cần bật CORS cho bucket một lần** (Cloudflare → R2 → bucket → Settings → CORS policy), nếu không trình duyệt sẽ chặn PUT:
+```json
+[{"AllowedOrigins": ["https://itsupport.schoolsai.work"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 3600}]
+```
+
 ### Chống lạm dụng
 Máy chủ của ta kết nối tới địa chỉ do khách nhập, nên có các chốt chặn (đều có test):
 - **Chỉ địa chỉ công khai**: từ chối localhost, mạng riêng (10/8, 172.16/12, 192.168/16), CGNAT/Tailscale (100.64/10), link-local và metadata đám mây (169.254/16), IPv6 nội bộ và dạng IPv4 nhúng trong IPv6; kết nối tới đúng địa chỉ đã kiểm tra (`PGHOSTADDR`) nên DNS không đổi được giữa chừng.
@@ -149,7 +159,7 @@ Image backend phải có `pg_dump` và `restic`: bản Coolify dùng `backend/Do
 Khôi phục luôn vào một database khác (ví dụ một nhánh Neon mới). Việc đổi ứng dụng sang database đó là bước thủ công có chủ ý (sửa `EXTERNAL_DATABASE_URL`/`EXTERNAL_DATABASE_ADMIN_URL` rồi deploy lại cho hệ thống; khách tự đổi cấu hình của họ).
 
 ### Kiểm thử
-`backend/tests/system-storage.e2e.test.ts` (file thiết bị trên kho hệ thống; chỉ cần Postgres có schema, không cần restic) cùng `backend/tests/db-backup.e2e.test.ts` (database hệ thống) và `backend/tests/customer-db-backup.e2e.test.ts` (database khách) chạy `pg_dump`/`restic`/`pg_restore` thật; cần Postgres bật TLS có schema dự án, một restic REST server (`rest-server`) và công cụ trong `PATH`, chỉ chạy khi `DBBACKUP_E2E=1` (xem biến `DBBACKUP_E2E_*` đầu mỗi file; `DBBACKUP_ALLOW_PRIVATE=1` chỉ có hiệu lực khi `NODE_ENV` không phải `production`).
+`backend/tests/system-storage.e2e.test.ts` (file thiết bị trên kho hệ thống; chỉ cần Postgres có schema, không cần restic) `backend/tests/uploads.e2e.test.ts` (tải file lên qua URL ký sẵn, giả lập R2), cùng `backend/tests/db-backup.e2e.test.ts` (database hệ thống) và `backend/tests/customer-db-backup.e2e.test.ts` (database khách) chạy `pg_dump`/`restic`/`pg_restore` thật; cần Postgres bật TLS có schema dự án, một restic REST server (`rest-server`) và công cụ trong `PATH`, chỉ chạy khi `DBBACKUP_E2E=1` (xem biến `DBBACKUP_E2E_*` đầu mỗi file; `DBBACKUP_ALLOW_PRIVATE=1` chỉ có hiệu lực khi `NODE_ENV` không phải `production`).
 
 ## Email cảnh báo
 

@@ -1,5 +1,6 @@
 import { backupRoutes } from "./backup/routes.js";
 import { dbBackupRoutes } from "./db-backup/routes.js";
+import { uploadRoutes } from "./uploads/routes.js";
 import { customerDbBackupRoutes } from "./db-backup/customer-routes.js";
 import { failInterruptedRuns as failInterruptedCustomerRuns, tick as customerDbBackupTick } from "./db-backup/customer-service.js";
 import { failInterruptedRuns, tick as dbBackupTick } from "./db-backup/service.js";
@@ -80,6 +81,7 @@ await app.register(supportChatRoutes);
 await app.register(backupRoutes);
 await app.register(dbBackupRoutes);
 await app.register(customerDbBackupRoutes);
+await app.register(uploadRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the

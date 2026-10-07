@@ -545,5 +545,18 @@
   "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "시스템 저장소가 아직 설정되지 않았습니다. 관리자에게 문의하거나 내 저장소를 사용하세요.",
   "Gói {plan}: đã dùng {used} / {limit}.": "{plan} 요금제: 사용량 {used} / {limit}.",
   "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "요금제 용량을 초과했습니다. 공간을 확보하거나 업그레이드할 때까지 새 백업이 일시 중지됩니다.",
-  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "시스템 저장소를 사용하려면 에이전트 {version} 이상이 필요합니다. 먼저 에이전트를 업데이트하세요."
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "시스템 저장소를 사용하려면 에이전트 {version} 이상이 필요합니다. 먼저 에이전트를 업데이트하세요.",
+  "Tệp của bạn": "내 파일",
+  "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.": "컴퓨터의 파일을 시스템의 암호화된 저장소에 업로드합니다. 파일은 요금제 용량에 포함되며 파일당 최대 {size}까지 가능합니다.",
+  "Chọn file để tải lên": "업로드할 파일 선택",
+  "Đang tải lên {name}… {percent}%": "{name} 업로드 중… {percent}%",
+  "Đã tải lên {name}.": "{name} 업로드 완료.",
+  "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.": "업로드에 실패했습니다. 연결을 확인하고 다시 시도하세요.",
+  "Tải xuống": "다운로드",
+  "Tên file": "파일 이름",
+  "Ngày tải lên": "업로드 날짜",
+  "Chưa có file nào.": "아직 파일이 없습니다.",
+  "Xoá file {name}? Không thể hoàn tác.": "{name} 파일을 삭제할까요? 되돌릴 수 없습니다.",
+  "Đã xoá {name}.": "{name} 삭제됨.",
+  "Tệp": "파일"
 }

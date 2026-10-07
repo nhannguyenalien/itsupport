@@ -545,5 +545,18 @@
   "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "Le stockage du système n’est pas encore configuré. Contactez votre administrateur ou utilisez votre propre stockage.",
   "Gói {plan}: đã dùng {used} / {limit}.": "Offre {plan} : utilisé {used} / {limit}.",
   "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "Vous avez dépassé l’espace de votre offre : les nouvelles sauvegardes sont suspendues jusqu’à ce que vous libériez de l’espace ou passiez à l’offre supérieure.",
-  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Le stockage du système nécessite l’agent {version} ou plus récent. Mettez d’abord l’agent à jour."
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Le stockage du système nécessite l’agent {version} ou plus récent. Mettez d’abord l’agent à jour.",
+  "Tệp của bạn": "Vos fichiers",
+  "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.": "Envoyez des fichiers depuis votre ordinateur vers le stockage chiffré du système. Ils comptent dans l'espace de votre offre ; chaque fichier peut aller jusqu'à {size}.",
+  "Chọn file để tải lên": "Choisir des fichiers à envoyer",
+  "Đang tải lên {name}… {percent}%": "Envoi de {name}… {percent} %",
+  "Đã tải lên {name}.": "{name} a été envoyé.",
+  "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.": "Échec de l'envoi. Vérifiez votre connexion et réessayez.",
+  "Tải xuống": "Télécharger",
+  "Tên file": "Nom du fichier",
+  "Ngày tải lên": "Envoyé le",
+  "Chưa có file nào.": "Aucun fichier pour l'instant.",
+  "Xoá file {name}? Không thể hoàn tác.": "Supprimer {name} ? Cette action est irréversible.",
+  "Đã xoá {name}.": "{name} a été supprimé.",
+  "Tệp": "Fichiers"
 }

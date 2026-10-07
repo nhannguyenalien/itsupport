@@ -545,5 +545,18 @@
   "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.",
   "Gói {plan}: đã dùng {used} / {limit}.": "Gói {plan}: đã dùng {used} / {limit}.",
   "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.",
-  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước."
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.",
+  "Tệp của bạn": "Tệp của bạn",
+  "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.": "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.",
+  "Chọn file để tải lên": "Chọn file để tải lên",
+  "Đang tải lên {name}… {percent}%": "Đang tải lên {name}… {percent}%",
+  "Đã tải lên {name}.": "Đã tải lên {name}.",
+  "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.": "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.",
+  "Tải xuống": "Tải xuống",
+  "Tên file": "Tên file",
+  "Ngày tải lên": "Ngày tải lên",
+  "Chưa có file nào.": "Chưa có file nào.",
+  "Xoá file {name}? Không thể hoàn tác.": "Xoá file {name}? Không thể hoàn tác.",
+  "Đã xoá {name}.": "Đã xoá {name}.",
+  "Tệp": "Tệp"
 }

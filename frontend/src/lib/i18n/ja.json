@@ -545,5 +545,18 @@
   "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "システムのストレージはまだ設定されていません。管理者に連絡するか、自分のストレージを使用してください。",
   "Gói {plan}: đã dùng {used} / {limit}.": "{plan} プラン: 使用量 {used} / {limit}。",
   "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "プランの容量を超えています。空き容量を確保するかアップグレードするまで、新しいバックアップは一時停止されます。",
-  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "システムのストレージを使うにはエージェント {version} 以降が必要です。先にエージェントを更新してください。"
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "システムのストレージを使うにはエージェント {version} 以降が必要です。先にエージェントを更新してください。",
+  "Tệp của bạn": "ファイル",
+  "Tải file từ máy tính lên kho mã hoá của hệ thống. File tính vào dung lượng gói của bạn, mỗi file tối đa {size}.": "パソコンのファイルをシステムの暗号化ストレージにアップロードします。プランの容量に含まれ、1ファイルあたり最大 {size} です。",
+  "Chọn file để tải lên": "アップロードするファイルを選択",
+  "Đang tải lên {name}… {percent}%": "{name} をアップロード中… {percent}%",
+  "Đã tải lên {name}.": "{name} をアップロードしました。",
+  "Tải lên thất bại. Kiểm tra kết nối mạng rồi thử lại.": "アップロードに失敗しました。接続を確認して再試行してください。",
+  "Tải xuống": "ダウンロード",
+  "Tên file": "ファイル名",
+  "Ngày tải lên": "アップロード日",
+  "Chưa có file nào.": "まだファイルがありません。",
+  "Xoá file {name}? Không thể hoàn tác.": "{name} を削除しますか？元に戻せません。",
+  "Đã xoá {name}.": "{name} を削除しました。",
+  "Tệp": "ファイル"
 }
