@@ -71,6 +71,9 @@ test('scheduling: due after the interval, retried every 30 minutes at most', () 
   assert.equal(isDue({ ...s, lastSuccessAt: ago(5) }, now), false);
   assert.equal(isDue({ ...s, lastStartedAt: ago(0.2) }, now), false, 'recent attempt, even a failed one');
   assert.equal(isDue({ ...s, lastStartedAt: ago(1) }, now), true);
+  // a failed run backs off for two hours, a successful-but-old one only for 30 minutes
+  assert.equal(isDue({ ...s, lastStartedAt: ago(1), lastState: 'error' }, now), false);
+  assert.equal(isDue({ ...s, lastStartedAt: ago(2.5), lastState: 'error' }, now), true);
   assert.equal(isDue({ ...s, lastSuccessAt: null, lastStartedAt: null }, now), true);
   assert.equal(isDue({ ...s, enabled: false }, now), false);
   assert.equal(isDue({ ...s, repo: '' }, now), false);
@@ -89,4 +92,14 @@ test('Neon pooled endpoints are swapped for the direct one for pg_dump, other ho
   const other = parsePgUrl('postgresql://u:p@db-pooler.internal.example.com/app');
   assert.equal(directConnection(other), other, 'only Neon hosts are rewritten');
   assert.equal(sameDatabase(direct, pooled), true, 'the restore guard still recognises both as the live database');
+});
+
+test('verify-ca / verify-full use the operating system trust store; weaker modes and URL-supplied paths do not', () => {
+  assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=verify-full').env.PGSSLROOTCERT, 'system');
+  assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=verify-ca').env.PGSSLROOTCERT, 'system');
+  assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=require').env.PGSSLROOTCERT, undefined);
+  // a customer cannot make pg_dump read a file on our server by naming it in the URL
+  assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=verify-full&sslrootcert=/etc/passwd').env.PGSSLROOTCERT, 'system');
+  assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=require&sslrootcert=/etc/passwd').env.PGSSLROOTCERT, undefined);
+  assert.equal(directConnection(parsePgUrl('postgresql://u:p@ep-a-pooler.r.aws.neon.tech/db?sslmode=verify-full')).env.PGSSLROOTCERT, 'system', 'kept when the pooler host is swapped');
 });

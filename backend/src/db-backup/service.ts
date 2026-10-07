@@ -164,7 +164,7 @@ export async function snapshots() { return listSnapshots(await access()); }
 export async function tick(): Promise<void> {
   const s = await getSettings();
   const sum = await summary();
-  if (!active && !sum.running && isDue({ enabled: s.enabled, repo: s.repo, intervalHours: s.intervalHours, lastSuccessAt: sum.lastSuccessAt, lastStartedAt: sum.lastStartedAt })) {
+  if (!active && !sum.running && isDue({ enabled: s.enabled, repo: s.repo, intervalHours: s.intervalHours, lastSuccessAt: sum.lastSuccessAt, lastStartedAt: sum.lastStartedAt, lastState: sum.lastBackupState })) {
     try { await startBackup("schedule", null); } catch (error) { console.error("scheduled database backup could not start:", (error as Error).message); }
   }
   if (["overdue", "never", "failed"].includes(sum.health) && mailConfigured()

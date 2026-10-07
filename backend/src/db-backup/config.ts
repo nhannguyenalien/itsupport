@@ -43,6 +43,10 @@ export function parsePgUrl(raw: string): PgConnection {
   if (url.password) env.PGPASSWORD = decodeURIComponent(url.password);
   const sslmode = url.searchParams.get("sslmode");
   if (sslmode && SSLMODES.has(sslmode)) env.PGSSLMODE = sslmode;
+  // verify-ca / verify-full need a CA bundle and libpq looks for ~/.postgresql/root.crt,
+  // which does not exist in the container. Use the operating system's trusted roots.
+  // (Only the literal "system": a URL must never name a file path on our server.)
+  if (sslmode === "verify-ca" || sslmode === "verify-full") env.PGSSLROOTCERT = "system";
   const binding = url.searchParams.get("channel_binding");
   if (binding && CHANNEL_BINDING.has(binding)) env.PGCHANNELBINDING = binding;
   const options = url.searchParams.get("options");
@@ -103,11 +107,13 @@ export function dbBackupHealth(s: { enabled: boolean; intervalHours: number; las
   return s.lastBackupState === "error" ? "failed" : "ok";
 }
 
-/** A backup is due when none succeeded within the interval and none was started
- * recently (a failing job is retried every 30 minutes, not every minute). */
-export function isDue(s: { enabled: boolean; repo: string; intervalHours: number; lastSuccessAt: Date | null; lastStartedAt: Date | null }, now: Date = new Date()): boolean {
+/** A backup is due when none succeeded within the interval. After a FAILED run it
+ * waits two hours before trying again, so a persistent problem leaves a few
+ * error rows instead of dozens a day. */
+export function isDue(s: { enabled: boolean; repo: string; intervalHours: number; lastSuccessAt: Date | null; lastStartedAt: Date | null; lastState?: string | null }, now: Date = new Date()): boolean {
   if (!s.enabled || !s.repo) return false;
-  if (s.lastStartedAt && now.getTime() - s.lastStartedAt.getTime() < 30 * 60_000) return false;
+  const pause = s.lastState === "error" ? 2 * 3_600_000 : 30 * 60_000;
+  if (s.lastStartedAt && now.getTime() - s.lastStartedAt.getTime() < pause) return false;
   if (!s.lastSuccessAt) return true;
   return now.getTime() - s.lastSuccessAt.getTime() >= s.intervalHours * 3_600_000;
 }

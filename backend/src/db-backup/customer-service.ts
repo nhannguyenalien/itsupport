@@ -242,7 +242,7 @@ export async function tick(): Promise<void> {
     FROM tenant_db_backups b WHERE b.enabled`);
   for (const b of due.rows) {
     if (!b.busy && running < limits().maxConcurrent &&
-        isDue({ enabled: true, repo: "x", intervalHours: b.interval_hours, lastSuccessAt: b.last_success, lastStartedAt: b.last_started })) {
+        isDue({ enabled: true, repo: "x", intervalHours: b.interval_hours, lastSuccessAt: b.last_success, lastStartedAt: b.last_started, lastState: b.last_state })) {
       try { await startBackup(b, "schedule"); } catch (error) { console.error("scheduled customer backup could not start:", (error as Error).message); }
     }
     const health = dbBackupHealth({ enabled: true, intervalHours: b.interval_hours, lastSuccessAt: b.last_success, lastBackupState: b.last_state, updatedAt: b.created_at });
