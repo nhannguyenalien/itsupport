@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { countTables } from '../src/db-backup/runner.js';
 import {
   DUMP_NAME, dbBackupHealth, directConnection, isDue, isPlatformAdmin, parsePgUrl, platformAdminEmails, retentionArgs, sameDatabase, scrub,
 } from '../src/db-backup/config.js';
@@ -102,4 +103,14 @@ test('verify-ca / verify-full use the operating system trust store; weaker modes
   assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=verify-full&sslrootcert=/etc/passwd').env.PGSSLROOTCERT, 'system');
   assert.equal(parsePgUrl('postgresql://u:p@h/db?sslmode=require&sslrootcert=/etc/passwd').env.PGSSLROOTCERT, undefined);
   assert.equal(directConnection(parsePgUrl('postgresql://u:p@ep-a-pooler.r.aws.neon.tech/db?sslmode=verify-full')).env.PGSSLROOTCERT, 'system', 'kept when the pooler host is swapped');
+});
+
+test('table count ignores TABLE DATA and other entries', () => {
+  const listing = [
+    '; Archive created at 2026-10-07', '215; 1259 16431 TABLE public devices owner', '4012; 0 16431 TABLE DATA public devices owner',
+    '216; 1259 16440 TABLE public tickets owner', '4013; 0 16440 TABLE DATA public tickets owner', '3900; 2606 16500 CONSTRAINT public devices devices_pkey owner',
+    '3901; 3256 16501 POLICY public devices tenant_isolation owner', '230; 1259 16600 SEQUENCE public some_seq owner',
+  ].join('\n');
+  assert.equal(countTables(listing), 2);
+  assert.equal(countTables(''), 0);
 });

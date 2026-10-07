@@ -88,6 +88,12 @@ export function secretsOf(access: RepoAccess, extra: string[] = []): string[] {
 
 export interface BackupResult { snapshotId: string; bytesAdded: number; dumpBytes: number; tablesFound: number; warnings: string[] }
 
+/** Tables in a `pg_restore --list` listing: `… TABLE public name owner` lines only,
+ * not the `TABLE DATA` entries that follow each of them. */
+export function countTables(listing: string): number {
+  return listing.split("\n").filter((l) => /\sTABLE\s(?!DATA\b)\S+\s+\S+/.test(l)).length;
+}
+
 /** Counts the TABLE entries of the dump stored in a snapshot by streaming it
  * through `pg_restore -l`: proves the archive is readable end to end. */
 export async function verifySnapshot(access: RepoAccess, snapshotId: string, timeoutMs = 30 * 60_000): Promise<number> {
@@ -99,7 +105,7 @@ export async function verifySnapshot(access: RepoAccess, snapshotId: string, tim
   );
   if (res.producer.code !== 0) throw new Error("cannot read snapshot: " + scrub(res.producer.stderr, secretsOf(access)));
   if (res.consumer.code !== 0) throw new Error("dump is not a readable PostgreSQL archive: " + scrub(res.consumer.stderr, secretsOf(access)));
-  return res.consumer.stdout.split("\n").filter((l) => / TABLE /.test(l)).length;
+  return countTables(res.consumer.stdout);
 }
 
 export async function forgetSnapshot(access: RepoAccess, snapshotId: string): Promise<void> {
