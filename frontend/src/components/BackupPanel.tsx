@@ -32,7 +32,7 @@ export default function BackupPanel({ deviceId, online, platform }: { deviceId: 
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
-    enabled: true, repo: "", password: "", keyId: "", keySecret: "",
+    enabled: true, storage: "custom" as "custom" | "system", repo: "", password: "", keyId: "", keySecret: "",
     paths: DEFAULTS[platform].paths, excludes: DEFAULTS[platform].excludes, dumps: "",
     interval: 24, daily: 7, weekly: 4, monthly: 6, vss: platform === "windows",
   });
@@ -46,9 +46,11 @@ export default function BackupPanel({ deviceId, online, platform }: { deviceId: 
       setInfo(data);
       const p = data.policy;
       if (p) setForm((f) => loadedPolicy ? f : ({
-        ...f, enabled: p.enabled, repo: p.repo, paths: p.paths.join("\n"), excludes: p.excludes.join("\n"), dumps: (p.db_dumps ?? []).map((d) => `${d.container}:${d.user}:${d.database}`).join("\n"),
+        ...f, enabled: p.enabled, storage: p.storage ?? "custom", repo: p.repo, paths: p.paths.join("\n"), excludes: p.excludes.join("\n"), dumps: (p.db_dumps ?? []).map((d) => `${d.container}:${d.user}:${d.database}`).join("\n"),
         interval: p.interval_hours, daily: p.keep_daily, weekly: p.keep_weekly, monthly: p.keep_monthly, vss: p.use_vss,
       }));
+      // A workspace without a policy yet starts on the system storage when it is available.
+      if (!p && data.system_storage_ready && !loadedPolicy) setForm((f) => ({ ...f, storage: "system" }));
       setLoadedPolicy(true);
       if (data.policy) setSnaps(await api.backupSnapshots(deviceId).catch(() => null));
     } catch (e) { setMessage({ text: e instanceof Error ? e.message : String(e), error: true }); }
@@ -80,7 +82,7 @@ export default function BackupPanel({ deviceId, online, platform }: { deviceId: 
   const lines = (text: string) => text.split("\n").map((l) => l.trim()).filter(Boolean);
   const save = () => run(async () => {
     await api.saveBackupPolicy(deviceId, {
-      enabled: form.enabled, repo: form.repo.trim(), env: envFromForm(), paths: lines(form.paths), excludes: lines(form.excludes),
+      enabled: form.enabled, storage: form.storage, repo: form.storage === "system" ? "" : form.repo.trim(), env: form.storage === "system" ? {} : envFromForm(), paths: lines(form.paths), excludes: lines(form.excludes),
       interval_hours: form.interval, keep_daily: form.daily, keep_weekly: form.weekly, keep_monthly: form.monthly, use_vss: platform === "windows" && form.vss, db_dumps: platform === "linux" ? parseDumps(form.dumps) : [],
     });
     setForm((f) => ({ ...f, password: "", keyId: "", keySecret: "" }));
@@ -113,15 +115,34 @@ export default function BackupPanel({ deviceId, online, platform }: { deviceId: 
       {info?.supported && (
         <div style={{ display: "grid", gap: 8, maxWidth: 640 }}>
           <label><input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> {tx("Bật backup tự động")}</label>
+          <fieldset style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+            <legend>{tx("Nơi lưu bản sao")}</legend>
+            <label style={{ display: "block" }}><input type="radio" name={`storage-${deviceId}`} checked={form.storage === "system"} disabled={!info.system_storage_ready}
+              onChange={() => setForm({ ...form, storage: "system" })} /> {tx("Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn")}</label>
+            <label style={{ display: "block" }}><input type="radio" name={`storage-${deviceId}`} checked={form.storage === "custom"}
+              onChange={() => setForm({ ...form, storage: "custom" })} /> {tx("Kho riêng của tôi (S3, B2, rest-server…)")}</label>
+            {!info.system_storage_ready && <p className="muted">{tx("Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.")}</p>}
+          </fieldset>
+          {form.storage === "system" && (
+            <>
+              <p className="muted">{tx("Gói {plan}: đã dùng {used} / {limit}.", { plan: info.quota.plan === "pro" ? "Pro" : "Free", used: formatBytes(info.quota.used_bytes), limit: formatBytes(info.quota.limit_bytes) })}</p>
+              {info.quota.over && <p style={{ color: "#b91c1c" }}>{tx("Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.")}</p>}
+              {!info.system_agent_ok && <p style={{ color: "#b91c1c" }}>{tx("Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.", { version: info.system_min_agent_version })}</p>}
+            </>
+          )}
+          {form.storage === "custom" && (
+            <>
           <label>{tx("Repository (rest:https://…, s3:https://…, b2:bucket:path)")}
-            <input style={{ width: "100%" }} value={form.repo} onChange={(e) => setForm({ ...form, repo: e.target.value })} /></label>
-          <label>{tx("Mật khẩu mã hoá repository")}
-            <input style={{ width: "100%" }} type="password" autoComplete="new-password" value={form.password}
+              <input style={{ width: "100%" }} value={form.repo} onChange={(e) => setForm({ ...form, repo: e.target.value })} /></label>
+            <label>{tx("Mật khẩu mã hoá repository")}
+              <input style={{ width: "100%" }} type="password" autoComplete="new-password" value={form.password}
               placeholder={hasPassword ? tx("Đã lưu — để trống nếu giữ nguyên") : ""} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
-          <label>{tx("Tài khoản / Access key ID (nếu có)")}
-            <input style={{ width: "100%" }} autoComplete="off" value={form.keyId} onChange={(e) => setForm({ ...form, keyId: e.target.value })} /></label>
-          <label>{tx("Mật khẩu / Secret key (nếu có)")}
-            <input style={{ width: "100%" }} type="password" autoComplete="new-password" value={form.keySecret} onChange={(e) => setForm({ ...form, keySecret: e.target.value })} /></label>
+            <label>{tx("Tài khoản / Access key ID (nếu có)")}
+              <input style={{ width: "100%" }} autoComplete="off" value={form.keyId} onChange={(e) => setForm({ ...form, keyId: e.target.value })} /></label>
+            <label>{tx("Mật khẩu / Secret key (nếu có)")}
+              <input style={{ width: "100%" }} type="password" autoComplete="new-password" value={form.keySecret} onChange={(e) => setForm({ ...form, keySecret: e.target.value })} /></label>
+            </>
+          )}
           <label>{tx("Thư mục cần backup (mỗi dòng một đường dẫn)")}
             <textarea style={{ width: "100%" }} rows={3} value={form.paths} onChange={(e) => setForm({ ...form, paths: e.target.value })} /></label>
           <label>{tx("Loại trừ (mỗi dòng một mẫu)")}

@@ -538,5 +538,12 @@
   "Gói": "Plan",
   "Số database": "Databases",
   "Đã dùng / Giới hạn": "Used / Limit",
-  "Đã đổi gói.": "Plan changed."
+  "Đã đổi gói.": "Plan changed.",
+  "Nơi lưu bản sao": "Where backups are stored",
+  "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn": "System storage (recommended): nothing to enter, counts against your plan's storage",
+  "Kho riêng của tôi (S3, B2, rest-server…)": "My own storage (S3, B2, rest-server…)",
+  "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "The system storage is not configured yet. Contact your administrator or use your own storage.",
+  "Gói {plan}: đã dùng {used} / {limit}.": "{plan} plan: used {used} / {limit}.",
+  "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "You are over your plan's storage: new backups are paused until you free space or upgrade.",
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Using the system storage needs agent {version} or newer. Update the agent first."
 }

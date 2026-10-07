@@ -538,5 +538,12 @@
   "Gói": "요금제",
   "Số database": "데이터베이스 수",
   "Đã dùng / Giới hạn": "사용량 / 한도",
-  "Đã đổi gói.": "요금제를 변경했습니다."
+  "Đã đổi gói.": "요금제를 변경했습니다.",
+  "Nơi lưu bản sao": "백업 저장 위치",
+  "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn": "시스템 저장소(권장): 입력할 것이 없으며 요금제 용량에 포함됩니다",
+  "Kho riêng của tôi (S3, B2, rest-server…)": "내 저장소(S3, B2, rest-server…)",
+  "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "시스템 저장소가 아직 설정되지 않았습니다. 관리자에게 문의하거나 내 저장소를 사용하세요.",
+  "Gói {plan}: đã dùng {used} / {limit}.": "{plan} 요금제: 사용량 {used} / {limit}.",
+  "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "요금제 용량을 초과했습니다. 공간을 확보하거나 업그레이드할 때까지 새 백업이 일시 중지됩니다.",
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "시스템 저장소를 사용하려면 에이전트 {version} 이상이 필요합니다. 먼저 에이전트를 업데이트하세요."
 }

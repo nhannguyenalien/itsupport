@@ -47,6 +47,7 @@ var backupEnvAllowlist = map[string]bool{
 	"RESTIC_PASSWORD":       true,
 	"AWS_ACCESS_KEY_ID":     true,
 	"AWS_SECRET_ACCESS_KEY": true,
+	"AWS_SESSION_TOKEN":     true, // temporary, prefix-scoped credentials from the platform storage
 	"AWS_DEFAULT_REGION":    true,
 	"B2_ACCOUNT_ID":         true,
 	"B2_ACCOUNT_KEY":        true,

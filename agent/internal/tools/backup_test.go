@@ -114,3 +114,29 @@ func TestRestoreRejectsCoolifyDir(t *testing.T) {
 		t.Fatal("restore into /data/coolify must be refused")
 	}
 }
+
+func TestParseAccessTakesTemporaryCredentials(t *testing.T) {
+	params := validBackupParams()
+	params["repo"] = "s3:https://acct.r2.cloudflarestorage.com/bucket/files-tenant-device"
+	params["env"] = map[string]any{
+		"RESTIC_PASSWORD": "generated-password-xyz", "AWS_ACCESS_KEY_ID": "tmpid", "AWS_SECRET_ACCESS_KEY": "tmpsecret",
+		"AWS_SESSION_TOKEN": "tmpsession", "AWS_DEFAULT_REGION": "auto",
+	}
+	r, err := parseAccess(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, kv := range r.env {
+		if kv == "AWS_SESSION_TOKEN=tmpsession" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("session token not passed to restic: %v", r.env)
+	}
+	// the token is a secret: it must be scrubbed from error text like the others
+	if got := scrub("denied for token tmpsession", r.secrets); got != "denied for token ***" {
+		t.Fatalf("session token leaked: %q", got)
+	}
+}

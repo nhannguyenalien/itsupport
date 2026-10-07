@@ -538,5 +538,12 @@
   "Gói": "Offre",
   "Số database": "Bases",
   "Đã dùng / Giới hạn": "Utilisé / Limite",
-  "Đã đổi gói.": "Offre modifiée."
+  "Đã đổi gói.": "Offre modifiée.",
+  "Nơi lưu bản sao": "Où sont stockées les sauvegardes",
+  "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn": "Stockage du système (recommandé) : rien à saisir, compte dans l’espace de votre offre",
+  "Kho riêng của tôi (S3, B2, rest-server…)": "Mon propre stockage (S3, B2, rest-server…)",
+  "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "Le stockage du système n’est pas encore configuré. Contactez votre administrateur ou utilisez votre propre stockage.",
+  "Gói {plan}: đã dùng {used} / {limit}.": "Offre {plan} : utilisé {used} / {limit}.",
+  "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "Vous avez dépassé l’espace de votre offre : les nouvelles sauvegardes sont suspendues jusqu’à ce que vous libériez de l’espace ou passiez à l’offre supérieure.",
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Le stockage du système nécessite l’agent {version} ou plus récent. Mettez d’abord l’agent à jour."
 }

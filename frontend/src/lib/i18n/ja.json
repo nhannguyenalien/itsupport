@@ -538,5 +538,12 @@
   "Gói": "プラン",
   "Số database": "データベース数",
   "Đã dùng / Giới hạn": "使用量 / 上限",
-  "Đã đổi gói.": "プランを変更しました。"
+  "Đã đổi gói.": "プランを変更しました。",
+  "Nơi lưu bản sao": "バックアップの保存先",
+  "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn": "システムのストレージ（推奨）: 入力は不要で、プランの容量に含まれます",
+  "Kho riêng của tôi (S3, B2, rest-server…)": "自分のストレージ（S3、B2、rest-server…）",
+  "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "システムのストレージはまだ設定されていません。管理者に連絡するか、自分のストレージを使用してください。",
+  "Gói {plan}: đã dùng {used} / {limit}.": "{plan} プラン: 使用量 {used} / {limit}。",
+  "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "プランの容量を超えています。空き容量を確保するかアップグレードするまで、新しいバックアップは一時停止されます。",
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "システムのストレージを使うにはエージェント {version} 以降が必要です。先にエージェントを更新してください。"
 }

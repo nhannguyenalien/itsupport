@@ -127,6 +127,14 @@ Mỗi workspace có một gói, giới hạn **tổng kích thước các databa
 - Đổi hạn mức bằng biến `PLAN_FREE_DB_GB` (mặc định 1) và `PLAN_PRO_DB_GB` (mặc định 20).
 - Số bản giữ lại (7 ngày + 4 tuần + 6 tháng) như nhau cho cả hai gói, nên dung lượng thật trong R2 lớn hơn dung lượng nguồn; nếu cần siết chi phí, giảm số bản giữ của gói Free.
 
+### Sao lưu file của máy lên kho hệ thống
+Máy có agent từ **0.4.2** có thể chọn "Kho của hệ thống" trong bảng Sao lưu của thiết bị: khách **không nhập repository hay khoá nào**.
+- Mỗi thiết bị có kho riêng `<kho gốc>/files-<tenant>-<thiết bị>`; mật khẩu restic do hệ thống sinh và giữ (mã hoá bằng `OAUTH_TOKEN_ENC_KEY`, không đổi khi lưu lại cấu hình).
+- Khi giao lệnh cho agent, backend xin Cloudflare **khoá tạm** (R2 temp-access-credentials, `object-read-write`, giới hạn đúng prefix của thiết bị, hiệu lực 12 giờ, dùng lại tới nửa vòng đời) và truyền kèm `AWS_SESSION_TOKEN`. Khoá R2 của vận hành **không bao giờ** rời server; dữ liệu đi thẳng từ máy lên R2.
+- Dung lượng tính chung vào hạn mức gói cùng với database (lấy từ lần sao lưu thành công gần nhất). Đây là hạn mức "mềm": kiểm tra **trước** mỗi lần chạy (thủ công trả 402, lịch tự bỏ qua), đo **sau** khi chạy.
+- Biến môi trường cần có trên server: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` (quyền Workers R2 Storage: Edit), `R2_PARENT_ACCESS_KEY_ID` (Access Key ID của token R2 giới hạn theo bucket). Thiếu một trong ba thì lựa chọn này ẩn đi.
+- Máy agent cũ hơn 0.4.2 chỉ dùng được kho tự cấu hình (`custom`).
+
 ### Chống lạm dụng
 Máy chủ của ta kết nối tới địa chỉ do khách nhập, nên có các chốt chặn (đều có test):
 - **Chỉ địa chỉ công khai**: từ chối localhost, mạng riêng (10/8, 172.16/12, 192.168/16), CGNAT/Tailscale (100.64/10), link-local và metadata đám mây (169.254/16), IPv6 nội bộ và dạng IPv4 nhúng trong IPv6; kết nối tới đúng địa chỉ đã kiểm tra (`PGHOSTADDR`) nên DNS không đổi được giữa chừng.
@@ -141,7 +149,7 @@ Image backend phải có `pg_dump` và `restic`: bản Coolify dùng `backend/Do
 Khôi phục luôn vào một database khác (ví dụ một nhánh Neon mới). Việc đổi ứng dụng sang database đó là bước thủ công có chủ ý (sửa `EXTERNAL_DATABASE_URL`/`EXTERNAL_DATABASE_ADMIN_URL` rồi deploy lại cho hệ thống; khách tự đổi cấu hình của họ).
 
 ### Kiểm thử
-`backend/tests/db-backup.e2e.test.ts` (database hệ thống) và `backend/tests/customer-db-backup.e2e.test.ts` (database khách) chạy `pg_dump`/`restic`/`pg_restore` thật; cần Postgres bật TLS có schema dự án, một restic REST server (`rest-server`) và công cụ trong `PATH`, chỉ chạy khi `DBBACKUP_E2E=1` (xem biến `DBBACKUP_E2E_*` đầu mỗi file; `DBBACKUP_ALLOW_PRIVATE=1` chỉ có hiệu lực khi `NODE_ENV` không phải `production`).
+`backend/tests/system-storage.e2e.test.ts` (file thiết bị trên kho hệ thống; chỉ cần Postgres có schema, không cần restic) cùng `backend/tests/db-backup.e2e.test.ts` (database hệ thống) và `backend/tests/customer-db-backup.e2e.test.ts` (database khách) chạy `pg_dump`/`restic`/`pg_restore` thật; cần Postgres bật TLS có schema dự án, một restic REST server (`rest-server`) và công cụ trong `PATH`, chỉ chạy khi `DBBACKUP_E2E=1` (xem biến `DBBACKUP_E2E_*` đầu mỗi file; `DBBACKUP_ALLOW_PRIVATE=1` chỉ có hiệu lực khi `NODE_ENV` không phải `production`).
 
 ## Email cảnh báo
 

@@ -2,6 +2,8 @@ import { adminPool, queryTenantScoped } from "../db/pool.js";
 import { decryptToken, encryptToken } from "../oauth/crypto.js";
 import { compareVersions } from "../devices/agent-updates.js";
 import { emailBackupAlerts } from "./alerts.js";
+import { agentSupportsSystemStorage, systemAccess } from "./system-storage.js";
+import { fileBackupAllowed } from "../db-backup/usage.js";
 import { BACKUP_ROWS_SQL, PROBLEM_HEALTH, withHealth } from "./health.js";
 
 // Proactive backup through restic (agent/internal/tools/backup.go). The backend
@@ -33,6 +35,7 @@ interface PolicyRow {
   repo: string; secrets_enc: string; paths: string[]; excludes: string[];
   keep_daily: number; keep_weekly: number; keep_monthly: number;
   use_vss: boolean; limit_upload_kbps: number; db_dumps: unknown[];
+  storage: "custom" | "system"; repo_password_enc: string | null;
 }
 
 /** Pinned restic downloads per agent platform; the agent picks its own GOOS-GOARCH. */
@@ -52,17 +55,30 @@ const SECRET_TOOLS = new Set(["backup.run", "backup.snapshots", "backup.restore"
  * for a policy that has since been disabled (you still need your data back);
  * only scheduled/manual runs require it to be enabled. Anything that cannot be
  * resolved is left without secrets, which the agent rejects. */
-export async function hydrateBackupParams<T extends { tool: string; params: Record<string, unknown> }>(
+export async function hydrateBackupParams<T extends { id?: string; tool: string; params: Record<string, unknown> }>(
   tenantId: string, deviceId: string, calls: T[],
 ): Promise<T[]> {
   if (!calls.some((c) => SECRET_TOOLS.has(c.tool))) return calls;
   const res = await queryTenantScoped<PolicyRow & { enabled: boolean }>(tenantId,
-    `SELECT enabled, repo, secrets_enc, paths, excludes, keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps, db_dumps
+    `SELECT enabled, repo, secrets_enc, paths, excludes, keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps, db_dumps, storage, repo_password_enc
      FROM backup_policies WHERE device_id = $1`, [deviceId]);
   const p = res.rows[0];
-  return calls.map((c) => {
+  const out = await Promise.all(calls.map(async (c): Promise<T | null> => {
     if (!SECRET_TOOLS.has(c.tool) || !p || (c.tool === "backup.run" && !p.enabled)) return c;
-    const access: Record<string, unknown> = { repo: p.repo, env: decryptEnv(p.secrets_enc) };
+    const access: Record<string, unknown> = {};
+    if (p.storage === "system" && p.repo_password_enc) {
+      try { Object.assign(access, await systemAccess(tenantId, deviceId, p.repo_password_enc)); }
+      catch (error) {
+        // Do not hand the agent a half-filled request, and do not block the other
+        // calls in this poll: fail just this one, with a message the user can read.
+        const reason = "Không cấp được quyền truy cập kho lưu trữ của hệ thống: " + (error instanceof Error ? error.message : String(error));
+        console.error("system storage credentials failed for device", deviceId, "-", reason);
+        if (c.id) await adminPool.query(`UPDATE tool_calls SET executed_at = now(), result = 'error', error_message = $2 WHERE id = $1 AND executed_at IS NULL`, [c.id, reason.slice(0, 500)]);
+        return null;
+      }
+    } else {
+      Object.assign(access, { repo: p.repo, env: decryptEnv(p.secrets_enc) });
+    }
     const downloads = resticDownloads();
     if (Object.keys(downloads).length) access.restic_downloads = downloads;
     // Legacy single pair, kept so 0.4.0 Windows agents can still self-install restic.
@@ -76,7 +92,8 @@ export async function hydrateBackupParams<T extends { tool: string; params: Reco
     }
     // Stored params (snapshot_id/target/include) are non-secret; credentials always win.
     return { ...c, params: { ...c.params, ...access } };
-  });
+  }));
+  return out.filter((c): c is Awaited<T> => c !== null) as T[];
 }
 
 /** One pass of the scheduler: queue backup.run for devices whose interval has
@@ -84,18 +101,25 @@ export async function hydrateBackupParams<T extends { tool: string; params: Reco
  * Runs on the admin pool (cross-tenant) and only inserts tool_calls rows. */
 export async function backupSchedulerTick(): Promise<void> {
   // Due backups: online, not revoked/paused, nothing already queued.
-  await adminPool.query(`
-    WITH due AS (
-      SELECT bp.device_id FROM backup_policies bp JOIN devices d ON d.id = bp.device_id
-      WHERE bp.enabled AND d.status = 'online' AND d.cert_revoked_at IS NULL AND NOT d.actions_paused
-        AND d.platform IN ('windows', 'linux', 'mac')
-        AND (bp.last_run_requested_at IS NULL OR bp.last_run_requested_at < now() - make_interval(hours => bp.interval_hours))
-        AND NOT EXISTS (SELECT 1 FROM tool_calls t WHERE t.device_id = bp.device_id AND t.tool = 'backup.run' AND t.executed_at IS NULL)
-    ), queued AS (
-      INSERT INTO tool_calls (device_id, tool, risk, params)
-      SELECT device_id, 'backup.run', 'medium', '{}'::jsonb FROM due RETURNING device_id
-    )
-    UPDATE backup_policies SET last_run_requested_at = now() WHERE device_id IN (SELECT device_id FROM queued)`);
+  const due = await adminPool.query(`
+    SELECT bp.device_id, bp.tenant_id, bp.storage, d.agent_version
+    FROM backup_policies bp JOIN devices d ON d.id = bp.device_id
+    WHERE bp.enabled AND d.status = 'online' AND d.cert_revoked_at IS NULL AND NOT d.actions_paused
+      AND d.platform IN ('windows', 'linux', 'mac')
+      AND (bp.last_run_requested_at IS NULL OR bp.last_run_requested_at < now() - make_interval(hours => bp.interval_hours))
+      AND NOT EXISTS (SELECT 1 FROM tool_calls t WHERE t.device_id = bp.device_id AND t.tool = 'backup.run' AND t.executed_at IS NULL)`);
+  const overQuota = new Map<string, boolean>();
+  for (const r of due.rows) {
+    if (r.storage === "system") {
+      // The system storage needs a newer agent, and counts against the plan: a
+      // workspace already over its cap gets no new runs until it frees space.
+      if (!agentSupportsSystemStorage(r.agent_version)) continue;
+      if (!overQuota.has(r.tenant_id)) overQuota.set(r.tenant_id, !(await fileBackupAllowed(r.tenant_id)).ok);
+      if (overQuota.get(r.tenant_id)) continue;
+    }
+    await adminPool.query(`INSERT INTO tool_calls (device_id, tool, risk, params) VALUES ($1, 'backup.run', 'medium', '{}'::jsonb)`, [r.device_id]);
+    await adminPool.query(`UPDATE backup_policies SET last_run_requested_at = now() WHERE device_id = $1`, [r.device_id]);
+  }
 
   // Status polling: every 2 minutes while a run is in flight, otherwise every 6 hours.
   await adminPool.query(`

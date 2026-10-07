@@ -466,6 +466,10 @@ CREATE TABLE backup_policies (
     use_vss                BOOLEAN NOT NULL DEFAULT true,
     limit_upload_kbps      INTEGER NOT NULL DEFAULT 0,
     db_dumps               JSONB NOT NULL DEFAULT '[]',
+    -- 'custom': the customer's own repository + keys (repo/secrets_enc). 'system': the
+    -- operator's shared storage; repo_password_enc is a platform-generated restic password.
+    storage                TEXT NOT NULL DEFAULT 'custom' CHECK (storage IN ('custom', 'system')),
+    repo_password_enc      TEXT,
     last_run_requested_at  TIMESTAMPTZ,
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -4,6 +4,8 @@ import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 import { mailConfigured, sendMail } from "./alerts.js";
 import { BACKUP_ROWS_SQL, withHealth } from "./health.js";
+import { agentSupportsSystemStorage, newRepoPassword, SYSTEM_STORAGE_MIN_AGENT_VERSION, systemStorageReady } from "./system-storage.js";
+import { fileBackupAllowed, usage } from "../db-backup/usage.js";
 import { BACKUP_ENV_KEYS, BACKUP_MIN_AGENT_VERSION, agentSupportsBackup, platformSupportsBackup, decryptEnv, encryptEnv } from "./index.js";
 
 const deviceParams = z.object({ deviceId: z.string().uuid() });
@@ -24,7 +26,10 @@ const dbDump = z.object({
 
 const policyBody = z.object({
   enabled: z.boolean(),
-  repo,
+  // "custom": the customer's own repository and keys. "system": the operator's shared
+  // storage (no repository or keys to enter; space counts against the workspace plan).
+  storage: z.enum(["custom", "system"]).default("custom"),
+  repo: z.string().max(500).default(""),
   // Omitted values keep what is stored; "" clears an optional key.
   env: z.record(envKey, z.string().max(500)).default({}),
   paths: z.array(absolutePath).min(1).max(20),
@@ -36,17 +41,21 @@ const policyBody = z.object({
   use_vss: z.boolean().default(true),
   limit_upload_kbps: z.number().int().min(0).max(10_000_000).default(0),
   db_dumps: z.array(dbDump).max(20).default([]),
-}).refine((v) => v.keep_daily + v.keep_weekly + v.keep_monthly > 0, "Retention must keep at least one snapshot");
+}).superRefine((v, ctx) => {
+  if (v.keep_daily + v.keep_weekly + v.keep_monthly <= 0) ctx.addIssue({ code: "custom", message: "Retention must keep at least one snapshot" });
+  if (v.storage === "custom" && !repo.safeParse(v.repo).success) ctx.addIssue({ code: "custom", path: ["repo"], message: "Repository must start with rest:, s3: or b2:" });
+});
 
 const SELECT_POLICY = `SELECT enabled, repo, secrets_enc, paths, excludes, interval_hours, keep_daily, keep_weekly, keep_monthly,
-  use_vss, limit_upload_kbps, db_dumps, last_run_requested_at, updated_at FROM backup_policies WHERE device_id = $1`;
+  use_vss, limit_upload_kbps, db_dumps, storage, last_run_requested_at, updated_at FROM backup_policies WHERE device_id = $1`;
 
 function publicPolicy(row: Record<string, unknown> | undefined) {
   if (!row) return null;
   const { secrets_enc, ...rest } = row;
   let configured: string[] = [];
   try { configured = Object.keys(decryptEnv(String(secrets_enc))); } catch { /* key rotated or missing */ }
-  return { ...rest, env_configured: configured };
+  // On the system storage the repository is an internal detail the customer never needs.
+  return { ...rest, repo: rest.storage === "system" ? "" : rest.repo, env_configured: configured };
 }
 
 export async function backupRoutes(app: FastifyInstance) {
@@ -78,6 +87,10 @@ export async function backupRoutes(app: FastifyInstance) {
       supported: platformSupportsBackup(device.platform) && agentSupportsBackup(device.agent_version),
       platform: device.platform,
       min_agent_version: BACKUP_MIN_AGENT_VERSION,
+      system_storage_ready: await systemStorageReady(),
+      system_min_agent_version: SYSTEM_STORAGE_MIN_AGENT_VERSION,
+      system_agent_ok: agentSupportsSystemStorage(device.agent_version),
+      quota: await usage(tenantId).then((u) => ({ plan: u.plan, used_bytes: u.usedBytes, limit_bytes: u.limitBytes, over: u.usedBytes > u.limitBytes })),
       policy: publicPolicy(policy.rows[0]),
       status: status.rows[0]?.result_data ?? null,
       status_at: status.rows[0]?.executed_at ?? null,
@@ -94,27 +107,40 @@ export async function backupRoutes(app: FastifyInstance) {
     if (!platformSupportsBackup(device.platform)) return reply.code(409).send({ error: "Backup hiện chỉ hỗ trợ máy Windows, macOS và Linux." });
 
     const existing = await queryTenantScoped(user.tenantId, SELECT_POLICY, [deviceId]);
-    let stored: Record<string, string> = {};
-    if (existing.rows[0]) { try { stored = decryptEnv(existing.rows[0].secrets_enc); } catch { /* re-enter secrets */ } }
-    const env = { ...stored };
-    for (const [k, v] of Object.entries(body.env)) { if (v === "") delete env[k]; else env[k] = v; }
-    if (!env.RESTIC_PASSWORD) return reply.code(400).send({ error: "Cần đặt mật khẩu mã hoá repository (RESTIC_PASSWORD)." });
-    if (body.repo.startsWith("s3:") && !(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY)) return reply.code(400).send({ error: "Repository S3 cần AWS_ACCESS_KEY_ID và AWS_SECRET_ACCESS_KEY." });
-    if (body.repo.startsWith("b2:") && !(env.B2_ACCOUNT_ID && env.B2_ACCOUNT_KEY)) return reply.code(400).send({ error: "Repository B2 cần B2_ACCOUNT_ID và B2_ACCOUNT_KEY." });
     let secrets: string;
-    try { secrets = encryptEnv(env); } catch (e) { return reply.code(503).send({ error: e instanceof Error ? e.message : "Cannot encrypt backup credentials" }); }
+    let repoToStore = body.repo;
+    let repoPasswordEnc: string | null = null;
+    if (body.storage === "system") {
+      if (!(await systemStorageReady())) return reply.code(409).send({ error: "Kho lưu trữ của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng." });
+      if (!agentSupportsSystemStorage(device.agent_version)) return reply.code(409).send({ error: `Dùng kho của hệ thống cần agent ${SYSTEM_STORAGE_MIN_AGENT_VERSION} trở lên. Hãy cập nhật agent trước.` });
+      repoToStore = "";
+      secrets = encryptEnv({});
+      // Keep the existing password when saving again: changing it would orphan earlier backups.
+      const keep = await queryTenantScoped(user.tenantId, `SELECT repo_password_enc FROM backup_policies WHERE device_id = $1 AND storage = 'system'`, [deviceId]);
+      repoPasswordEnc = keep.rows[0]?.repo_password_enc ?? newRepoPassword();
+    } else {
+      let stored: Record<string, string> = {};
+      if (existing.rows[0] && existing.rows[0].storage === "custom") { try { stored = decryptEnv(existing.rows[0].secrets_enc); } catch { /* re-enter secrets */ } }
+      const env = { ...stored };
+      for (const [k, v] of Object.entries(body.env)) { if (v === "") delete env[k]; else env[k] = v; }
+      if (!env.RESTIC_PASSWORD) return reply.code(400).send({ error: "Cần đặt mật khẩu mã hoá repository (RESTIC_PASSWORD)." });
+      if (body.repo.startsWith("s3:") && !(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY)) return reply.code(400).send({ error: "Repository S3 cần AWS_ACCESS_KEY_ID và AWS_SECRET_ACCESS_KEY." });
+      if (body.repo.startsWith("b2:") && !(env.B2_ACCOUNT_ID && env.B2_ACCOUNT_KEY)) return reply.code(400).send({ error: "Repository B2 cần B2_ACCOUNT_ID và B2_ACCOUNT_KEY." });
+      try { secrets = encryptEnv(env); } catch (e) { return reply.code(503).send({ error: e instanceof Error ? e.message : "Cannot encrypt backup credentials" }); }
+    }
 
     await queryTenantScoped(user.tenantId, `
       INSERT INTO backup_policies (device_id, tenant_id, enabled, repo, secrets_enc, paths, excludes, interval_hours,
-        keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps, db_dumps)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        keep_daily, keep_weekly, keep_monthly, use_vss, limit_upload_kbps, db_dumps, storage, repo_password_enc)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       ON CONFLICT (device_id) DO UPDATE SET enabled = $3, repo = $4, secrets_enc = $5, paths = $6, excludes = $7,
-        interval_hours = $8, keep_daily = $9, keep_weekly = $10, keep_monthly = $11, use_vss = $12, limit_upload_kbps = $13, db_dumps = $14, updated_at = now()`,
-      [deviceId, user.tenantId, body.enabled, body.repo, secrets, JSON.stringify(body.paths), JSON.stringify(body.excludes), body.interval_hours,
-       body.keep_daily, body.keep_weekly, body.keep_monthly, body.use_vss, body.limit_upload_kbps, JSON.stringify(body.db_dumps)]);
+        interval_hours = $8, keep_daily = $9, keep_weekly = $10, keep_monthly = $11, use_vss = $12, limit_upload_kbps = $13, db_dumps = $14,
+        storage = $15, repo_password_enc = $16, updated_at = now()`,
+      [deviceId, user.tenantId, body.enabled, repoToStore, secrets, JSON.stringify(body.paths), JSON.stringify(body.excludes), body.interval_hours,
+       body.keep_daily, body.keep_weekly, body.keep_monthly, body.use_vss, body.limit_upload_kbps, JSON.stringify(body.db_dumps), body.storage, repoPasswordEnc]);
     // Never log credentials — only that the policy changed and what it targets.
     await recordAudit({ tenantId: user.tenantId, actorType: "user", actorId: user.id, eventType: "device.backup_policy_updated",
-      eventData: { enabled: body.enabled, repo: body.repo, paths: body.paths, interval_hours: body.interval_hours, db_dumps: body.db_dumps.map((d) => `${d.container}/${d.database || "*"}`) }, deviceId });
+      eventData: { enabled: body.enabled, storage: body.storage, repo: repoToStore, paths: body.paths, interval_hours: body.interval_hours, db_dumps: body.db_dumps.map((d) => `${d.container}/${d.database || "*"}`) }, deviceId });
     const saved = await queryTenantScoped(user.tenantId, SELECT_POLICY, [deviceId]);
     return publicPolicy(saved.rows[0]);
   });
@@ -128,8 +154,13 @@ export async function backupRoutes(app: FastifyInstance) {
     if (device.status !== "online") return reply.code(409).send({ error: "Máy đang ngoại tuyến. Hãy bật máy rồi thử lại." });
     if (tool === "backup.run") {
       if (device.actions_paused) return reply.code(409).send({ error: "Thao tác trên máy này đang bị tạm dừng." });
-      const policy = await queryTenantScoped(user.tenantId, `SELECT 1 FROM backup_policies WHERE device_id = $1 AND enabled`, [deviceId]);
+      const policy = await queryTenantScoped(user.tenantId, `SELECT storage FROM backup_policies WHERE device_id = $1 AND enabled`, [deviceId]);
       if (!policy.rowCount) return reply.code(409).send({ error: "Chưa bật chính sách backup cho máy này." });
+      if (policy.rows[0].storage === "system") {
+        if (!agentSupportsSystemStorage(device.agent_version)) return reply.code(409).send({ error: `Dùng kho của hệ thống cần agent ${SYSTEM_STORAGE_MIN_AGENT_VERSION} trở lên. Hãy cập nhật agent trước.` });
+        const quota = await fileBackupAllowed(user.tenantId);
+        if (!quota.ok) return reply.code(402).send({ error: quota.message });
+      }
     }
     if (tool === "backup.snapshots") {
       const policy = await queryTenantScoped(user.tenantId, `SELECT 1 FROM backup_policies WHERE device_id = $1`, [deviceId]);

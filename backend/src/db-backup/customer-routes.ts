@@ -38,7 +38,7 @@ export async function customerDbBackupRoutes(app: FastifyInstance) {
     reply.header("Cache-Control", "no-store");
     const u = await usage(req.authUser!.tenantId);
     return {
-      storage_ready: !!(await getStorage()), plan: u.plan, used_bytes: u.usedBytes, limit_bytes: u.limitBytes,
+      storage_ready: !!(await getStorage()), plan: u.plan, used_bytes: u.usedBytes, limit_bytes: u.limitBytes, database_bytes: u.databaseBytes, file_bytes: u.fileBytes,
       limits: { max_targets: limits().maxTargets }, targets: await listTargets(req.authUser!.tenantId),
     };
   });

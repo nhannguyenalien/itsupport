@@ -538,5 +538,12 @@
   "Gói": "Gói",
   "Số database": "Số database",
   "Đã dùng / Giới hạn": "Đã dùng / Giới hạn",
-  "Đã đổi gói.": "Đã đổi gói."
+  "Đã đổi gói.": "Đã đổi gói.",
+  "Nơi lưu bản sao": "Nơi lưu bản sao",
+  "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn": "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn",
+  "Kho riêng của tôi (S3, B2, rest-server…)": "Kho riêng của tôi (S3, B2, rest-server…)",
+  "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.",
+  "Gói {plan}: đã dùng {used} / {limit}.": "Gói {plan}: đã dùng {used} / {limit}.",
+  "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.",
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước."
 }

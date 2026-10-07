@@ -538,5 +538,12 @@
   "Gói": "Plan",
   "Số database": "Bases",
   "Đã dùng / Giới hạn": "Usado / Límite",
-  "Đã đổi gói.": "Plan cambiado."
+  "Đã đổi gói.": "Plan cambiado.",
+  "Nơi lưu bản sao": "Dónde se guardan las copias",
+  "Kho của hệ thống (khuyên dùng): không cần nhập gì, tính vào dung lượng gói của bạn": "Almacenamiento del sistema (recomendado): nada que introducir, cuenta en el espacio de su plan",
+  "Kho riêng của tôi (S3, B2, rest-server…)": "Mi propio almacenamiento (S3, B2, rest-server…)",
+  "Kho của hệ thống chưa được cấu hình. Hãy liên hệ quản trị viên hoặc dùng kho riêng.": "El almacenamiento del sistema aún no está configurado. Contacte con su administrador o use su propio almacenamiento.",
+  "Gói {plan}: đã dùng {used} / {limit}.": "Plan {plan}: usado {used} / {limit}.",
+  "Đã vượt dung lượng gói: các lần backup mới tạm dừng cho tới khi bạn giải phóng dung lượng hoặc nâng cấp.": "Ha superado el espacio de su plan: las copias nuevas se pausan hasta que libere espacio o mejore el plan.",
+  "Dùng kho của hệ thống cần agent {version} trở lên. Hãy cập nhật agent trước.": "El almacenamiento del sistema requiere el agente {version} o posterior. Actualice primero el agente."
 }

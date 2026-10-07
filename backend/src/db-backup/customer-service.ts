@@ -7,7 +7,8 @@ import { dbBackupHealth, isDue, parsePgUrl, sameDatabase, scrub, type DbBackupHe
 import { validateCustomerUrl, type ValidatedTarget } from "./net-guard.js";
 import { listSnapshots, performBackup, purgeRepository, restoreInto, secretsOf, verifySnapshot, type RepoAccess } from "./runner.js";
 import { getStorage, repoJoin } from "./service.js";
-import { checkQuota, isPlan, planLimitBytes, type Plan } from "./plans.js";
+import { checkQuota } from "./plans.js";
+import { databaseBytes, fileBytes, tenantPlan } from "./usage.js";
 
 // A customer pastes the URL of THEIR PostgreSQL database; the platform backs it
 // up on a schedule into the operator's shared storage. Each database gets its own
@@ -79,23 +80,12 @@ export async function loadRow(tenantId: string, id: string): Promise<Row> {
   return r.rows[0];
 }
 
-export async function tenantPlan(tenantId: string): Promise<Plan> {
-  const r = await adminPool.query(`SELECT plan FROM tenants WHERE id = $1`, [tenantId]);
-  return isPlan(r.rows[0]?.plan) ? r.rows[0].plan : "free";
-}
-
-/** Bytes already protected by the workspace's OTHER databases (last measured size). */
+/** Bytes already protected by the workspace's OTHER databases and its device files. */
 async function usedByOthers(tenantId: string, excludeId: string | null): Promise<number> {
-  const r = await adminPool.query(
-    `SELECT COALESCE(sum(last_size_bytes), 0)::bigint AS n FROM tenant_db_backups WHERE tenant_id = $1 AND ($2::uuid IS NULL OR id <> $2)`,
-    [tenantId, excludeId]);
-  return Number(r.rows[0].n);
+  return (await databaseBytes(tenantId, excludeId)) + (await fileBytes(tenantId));
 }
 
-export async function usage(tenantId: string) {
-  const plan = await tenantPlan(tenantId);
-  return { plan, usedBytes: await usedByOthers(tenantId, null), limitBytes: planLimitBytes(plan) };
-}
+export { usage } from "./usage.js";
 
 async function accessFor(row: Row): Promise<RepoAccess> {
   const storage = await getStorage();

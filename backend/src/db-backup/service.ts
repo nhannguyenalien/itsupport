@@ -4,6 +4,7 @@ import { sendMail, mailConfigured } from "../backup/alerts.js";
 import {
   dbBackupHealth, directConnection, isDue, parsePgUrl, platformAdminEmails, scrub, type DbBackupHealth, type PgConnection, type Retention,
 } from "./config.js";
+import { getStorage, repoJoin } from "./storage.js";
 import { listSnapshots, performBackup, restoreInto, secretsOf, verifySnapshot, type RepoAccess } from "./runner.js";
 
 export interface Settings {
@@ -39,18 +40,7 @@ export async function getSettings(): Promise<Settings> {
   };
 }
 
-/** `base/a/b`, tolerant of a trailing slash on the base (also works for b2:bucket:path). */
-export function repoJoin(base: string, ...parts: string[]): string {
-  return [base.replace(/\/+$/, ""), ...parts].join("/");
-}
-
-/** The operator's shared storage: where every backup lives. The settings hold its
- * base path and credentials; each backup gets its own sub-repository below it. */
-export async function getStorage(): Promise<{ base: string; env: Record<string, string> } | null> {
-  const r = await row();
-  if (!r.repo || !r.secrets_enc) return null;
-  try { return { base: r.repo, env: decryptEnv(r.secrets_enc) }; } catch { return null; }
-}
+export { getStorage, repoJoin } from "./storage.js";
 
 export async function access(): Promise<RepoAccess> {
   const storage = await getStorage();

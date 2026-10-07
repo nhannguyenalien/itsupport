@@ -55,6 +55,7 @@ export interface Device {
 
 export interface BackupPolicy {
   enabled: boolean;
+  storage: "custom" | "system";
   repo: string;
   paths: string[];
   excludes: string[];
@@ -115,7 +116,7 @@ export interface CustomerDbTarget {
   health: DbBackupHealth; running: boolean; last_success_at: string | null; last_error: string | null; next_run_at: string | null; created_at: string;
 }
 export type Plan = "free" | "pro";
-export interface CustomerDbList { storage_ready: boolean; plan: Plan; used_bytes: number; limit_bytes: number; limits: { max_targets: number }; targets: CustomerDbTarget[] }
+export interface CustomerDbList { storage_ready: boolean; plan: Plan; used_bytes: number; limit_bytes: number; database_bytes: number; file_bytes: number; limits: { max_targets: number }; targets: CustomerDbTarget[] }
 export interface PlatformTenant { id: string; name: string; plan: Plan; databases: number; used_bytes: number; limit_bytes: number; created_at: string }
 export interface CustomerDbRun {
   id: string; kind: "backup" | "verify" | "restore"; trigger: "schedule" | "manual"; state: "running" | "success" | "error";
@@ -144,6 +145,10 @@ export interface BackupOverview {
 export interface BackupInfo {
   supported: boolean;
   min_agent_version: string;
+  system_storage_ready: boolean;
+  system_min_agent_version: string;
+  system_agent_ok: boolean;
+  quota: { plan: Plan; used_bytes: number; limit_bytes: number; over: boolean };
   policy: BackupPolicy | null;
   status: BackupStatus | null;
   status_at: string | null;
@@ -151,6 +156,7 @@ export interface BackupInfo {
 
 export interface BackupPolicyInput {
   enabled: boolean;
+  storage: "custom" | "system";
   repo: string;
   env: Record<string, string>;
   paths: string[];
