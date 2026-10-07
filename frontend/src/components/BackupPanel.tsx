@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, type BackupInfo, type BackupSnapshots } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
@@ -56,8 +57,7 @@ export default function BackupPanel({ deviceId, online, platform }: { deviceId: 
   useEffect(() => {
     if (!open) return;
     void load();
-    const timer = setInterval(() => void load(), 10_000);
-    return () => clearInterval(timer);
+    return pollWhileVisible(load, () => 30_000);
   }, [open, load]);
 
   function envFromForm() {

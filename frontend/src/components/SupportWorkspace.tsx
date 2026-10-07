@@ -5,6 +5,7 @@ import { useLanguage, LanguageSwitcher } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, type Device, type Ticket } from "@/lib/api";
 import { useTenant } from "@/lib/useTenant";
 import TicketChat from "./TicketChat";
@@ -49,8 +50,8 @@ export default function SupportWorkspace({ initialTicketId }: { initialTicketId?
       finally { if (active) setLoading(false); }
     }
     void refresh();
-    const timer = window.setInterval(refresh, 10000);
-    return () => { active = false; window.clearInterval(timer); };
+    const stop = pollWhileVisible(refresh, () => 30_000);
+    return () => { active = false; stop(); };
   }, [tenantId, initialTicketId]);
 
   function openSession(id: string, deviceId?: string | null) {

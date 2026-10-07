@@ -8,6 +8,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, type BackupOverview, type Device, type EnrollmentToken } from "@/lib/api";
 
 type Platform = "windows" | "mac" | "linux";
@@ -59,8 +60,7 @@ export default function DevicesPage() {
     load();
     // Poll — no push/websocket layer yet, matches the agent's own poll-based
     // pending-call model (see agent/README.md known gaps).
-    const interval = setInterval(load, 10_000);
-    return () => clearInterval(interval);
+    return pollWhileVisible(load, () => 30_000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 

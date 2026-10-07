@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, type DbBackupInfo, type DbBackupRun, type DbBackupSnapshot, type PlatformTenant, type Plan } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
@@ -40,8 +41,7 @@ export default function DatabaseBackup() {
 
   useEffect(() => {
     void load();
-    const timer = setInterval(() => void load(), info?.running ? 3000 : 10_000);
-    return () => clearInterval(timer);
+    return pollWhileVisible(load, () => (info?.running ? 3000 : 30_000));
   }, [load, info?.running]);
 
   async function act(action: () => Promise<unknown>, success: string) {

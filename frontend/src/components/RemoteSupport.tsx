@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { pollWhileVisible } from "@/lib/poll";
 import { api } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
@@ -24,8 +25,8 @@ export default function RemoteSupport({ deviceId, compact = false }: { deviceId:
       } catch { if (current === generation.current && revision === requestVersion.current && !busy.current) setError(true); }
     }
     void refresh();
-    const timer = setInterval(() => void refresh(), 10000);
-    return () => { ++generation.current; clearInterval(timer); };
+    const stop = pollWhileVisible(refresh, () => 30_000);
+    return () => { ++generation.current; stop(); };
   }, [deviceId]);
 
   async function toggle() {

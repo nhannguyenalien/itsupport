@@ -4,6 +4,7 @@ import { useLanguage } from "@/lib/i18n";
 
 import { useEffect, useState } from "react";
 import { useTenant } from "@/lib/useTenant";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, type Metrics } from "@/lib/api";
 
 export default function MetricsPage() {
@@ -34,10 +35,10 @@ export default function MetricsPage() {
     }
     load();
     // Same poll cadence as the other dashboards — no push layer yet.
-    const interval = setInterval(load, 15_000);
+    const stop = pollWhileVisible(load, () => 60_000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stop();
     };
   }, [tenantId]);
 

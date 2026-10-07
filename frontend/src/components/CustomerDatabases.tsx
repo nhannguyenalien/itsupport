@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, type CustomerDbList, type CustomerDbRun, type CustomerDbTarget, type DbBackupSnapshot } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
@@ -24,8 +25,7 @@ function Target({ t, reload }: { t: CustomerDbTarget; reload: () => Promise<void
   useEffect(() => {
     if (!open) return;
     void loadRuns();
-    const timer = setInterval(() => void loadRuns(), t.running ? 3000 : 10_000);
-    return () => clearInterval(timer);
+    return pollWhileVisible(loadRuns, () => (t.running ? 3000 : 30_000));
   }, [open, loadRuns, t.running]);
 
   async function act(action: () => Promise<unknown>, success: string) {
@@ -138,8 +138,7 @@ export default function CustomerDatabases() {
   }, []);
   useEffect(() => {
     void load();
-    const timer = setInterval(() => void load(), data?.targets.some((x) => x.running) ? 3000 : 15_000);
-    return () => clearInterval(timer);
+    return pollWhileVisible(load, () => (data?.targets.some((x) => x.running) ? 3000 : 30_000));
   }, [load, data?.targets]);
 
   async function add() {
