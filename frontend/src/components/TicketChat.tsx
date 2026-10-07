@@ -5,7 +5,18 @@ import { useLanguage } from "@/lib/i18n";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ToolActivity } from "./ToolActivity";
+import { pollWhileVisible } from "@/lib/poll";
 import { api, ApiError, type Approval, type TicketDetail } from "@/lib/api";
+
+function AttachmentView({ ticketId, messageId, index, attachment }: { ticketId: string; messageId: string; index: number; attachment: { name: string; size: number; text?: string } }) {
+  const { tx } = useLanguage();
+  const [text, setText] = useState(attachment.text ?? null);
+  async function load() {
+    if (text !== null) return;
+    try { setText((await api.getAttachmentText(ticketId, messageId, index)).text); } catch { setText(tx("Có lỗi")); }
+  }
+  return <details onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open) void load(); }}><summary>📎 {attachment.name} · {Math.ceil(attachment.size / 1024)} {tx("KB")}</summary><pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{text ?? "…"}</pre></details>;
+}
 
 const statusText: Record<string, string> = {
   open: "Sẵn sàng hỗ trợ", diagnosing: "Đang kiểm tra", awaiting_approval: "Cần bạn xác nhận",
@@ -53,6 +64,8 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [localBusy, setBusy] = useState(false);
   const busy = localBusy || ticket?.aiWorkflow?.status === "running";
+  const busyRef = useRef(busy);
+  busyRef.current = busy || !!ticket?.computerUseSession;
   const [messageSaved, setMessageSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -64,8 +77,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
 
   useEffect(() => {
     void load();
-    const interval = window.setInterval(() => void load(true), 3000);
-    return () => window.clearInterval(interval);
+    return pollWhileVisible(() => load(true), () => (busyRef.current ? 3000 : 15_000));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
@@ -170,7 +182,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
           return (
           <div key={item.id} className={`support-message ${item.author_type === "user" ? "from-user" : "from-support"}`}>
             {item.author_type !== "user" && <span className="support-avatar">✦</span>}
-            <div><p>{item.body}</p>{item.attachments?.map((attachment, index) => <details key={index}><summary>📎 {attachment.name} · {Math.ceil(attachment.size / 1024)} {tx("KB")}</summary><pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{attachment.text}</pre></details>)}<time>{new Date(item.created_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</time></div>
+            <div><p>{item.body}</p>{item.attachments?.map((attachment, index) => <AttachmentView key={index} ticketId={ticketId} messageId={item.id} index={index} attachment={attachment} />)}<time>{new Date(item.created_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</time></div>
           </div>
         ); })}
         {approvals.map((approval) => (

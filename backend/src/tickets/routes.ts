@@ -29,6 +29,7 @@ const addMessageBody = z.object({
 });
 
 const listQuery = z.object({ tenantId: z.string().uuid() });
+const RESULT_INLINE_BYTES = 16 * 1024;
 const ticketParams = z.object({ ticketId: z.string().uuid() });
 
 export async function ticketRoutes(app: FastifyInstance) {
@@ -69,12 +70,21 @@ export async function ticketRoutes(app: FastifyInstance) {
     if (ticket.rowCount === 0) return reply.code(404).send({ error: "ticket not found" });
 
     const messages = await pool.query(
-      `SELECT * FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC`,
+      // Attachment text is fetched on demand (GET .../attachments/:index): the
+      // page polls this route, and re-sending whole documents each time is costly.
+      `SELECT id, ticket_id, author_type, author_id, body, created_at,
+              COALESCE((SELECT jsonb_agg(a - 'text') FROM jsonb_array_elements(attachments) a), '[]'::jsonb) AS attachments
+         FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC`,
       [ticketId],
     );
+    // Big result_data is likewise fetched on demand (GET /tool-calls/:id/result).
     const toolCalls = await pool.query(
-      `SELECT * FROM tool_calls WHERE ticket_id = $1 ORDER BY requested_at ASC`,
-      [ticketId],
+      `SELECT id, ticket_id, device_id, platform_connection_id, tool, risk, params, parent_tool_call_id, approval_id,
+              requested_at, executed_at, result, error_message, verification_status, verification_detail,
+              CASE WHEN pg_column_size(result_data) > $2 THEN NULL ELSE result_data END AS result_data,
+              pg_column_size(result_data) > $2 AS result_truncated
+         FROM tool_calls WHERE ticket_id = $1 ORDER BY requested_at ASC`,
+      [ticketId, RESULT_INLINE_BYTES],
     );
     // Pending write actions have an approvals row but NO tool_calls row yet
     // (that's only created once approved, see tool-calls/routes.ts) — without
@@ -86,6 +96,23 @@ export async function ticketRoutes(app: FastifyInstance) {
 
     const session = await pool.query(`SELECT * FROM computer_use_sessions WHERE ticket_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1`, [ticketId]);
     reply.send({ aiWorkflow: getWorkflowState(ticketId), computerUseSession: session.rows[0] ?? null, ...ticket.rows[0], messages: messages.rows, toolCalls: toolCalls.rows, approvals: approvals.rows });
+  });
+
+  app.get("/tickets/:ticketId/messages/:messageId/attachments/:index", async (req, reply) => {
+    const { ticketId, messageId, index } = z.object({ ticketId: z.string().uuid(), messageId: z.string().uuid(), index: z.coerce.number().int().min(0) }).parse(req.params);
+    const r = await pool.query(
+      `SELECT attachments -> $3::int ->> 'text' AS text FROM ticket_messages WHERE id = $1 AND ticket_id = $2`,
+      [messageId, ticketId, index],
+    );
+    if (r.rowCount === 0 || r.rows[0].text === null) return reply.code(404).send({ error: "attachment not found" });
+    reply.send({ text: r.rows[0].text });
+  });
+
+  app.get("/tool-calls/:toolCallId/result", async (req, reply) => {
+    const { toolCallId } = z.object({ toolCallId: z.string().uuid() }).parse(req.params);
+    const r = await pool.query(`SELECT result_data FROM tool_calls WHERE id = $1`, [toolCallId]);
+    if (r.rowCount === 0) return reply.code(404).send({ error: "tool call not found" });
+    reply.send({ result_data: r.rows[0].result_data });
   });
 
   app.post("/tickets/:ticketId/messages", { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req, reply) => {

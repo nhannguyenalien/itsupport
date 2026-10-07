@@ -114,11 +114,24 @@ Khách còn có: tải danh sách bản sao, kiểm tra một bản, **khôi ph�
 
 **Mật khẩu mã hoá do hệ thống giữ** (mã hoá AES-GCM bằng `OAUTH_TOKEN_ENC_KEY`): khách không phải nhớ, nhưng quản trị nền tảng về mặt kỹ thuật có thể giải mã. URL của khách cũng được mã hoá và **không bao giờ** trả lại qua API.
 
+### Gói dịch vụ (Free / Pro)
+Mỗi workspace có một gói, giới hạn **tổng kích thước các database nguồn** (`pg_database_size`, cộng dồn mọi database của khách):
+
+| Gói | Dung lượng sao lưu |
+|---|---|
+| Free (mặc định cho mọi workspace) | 1 GB |
+| Pro | 20 GB |
+
+- Kiểm tra **lúc thêm database** (vượt thì từ chối với thông báo nêu rõ đang dùng bao nhiêu và gợi ý nâng cấp) và **mỗi lần sao lưu** (database lớn lên vượt gói thì lần chạy đó báo lỗi `Vượt dung lượng gói …` và **không** tạo bản sao). Hạ gói thấp hơn dung lượng đang dùng cũng cho kết quả như vậy.
+- Chưa có thanh toán: quản trị nền tảng đổi gói từng khách trong **Thêm → Sao lưu database → Gói của khách hàng** (API `GET /platform/tenants`, `PUT /platform/tenants/:id/plan`, ghi audit `tenant.plan_changed`). Khách thấy gói và mức đã dùng trong trang **Database của bạn**.
+- Đổi hạn mức bằng biến `PLAN_FREE_DB_GB` (mặc định 1) và `PLAN_PRO_DB_GB` (mặc định 20).
+- Số bản giữ lại (7 ngày + 4 tuần + 6 tháng) như nhau cho cả hai gói, nên dung lượng thật trong R2 lớn hơn dung lượng nguồn; nếu cần siết chi phí, giảm số bản giữ của gói Free.
+
 ### Chống lạm dụng
 Máy chủ của ta kết nối tới địa chỉ do khách nhập, nên có các chốt chặn (đều có test):
 - **Chỉ địa chỉ công khai**: từ chối localhost, mạng riêng (10/8, 172.16/12, 192.168/16), CGNAT/Tailscale (100.64/10), link-local và metadata đám mây (169.254/16), IPv6 nội bộ và dạng IPv4 nhúng trong IPv6; kết nối tới đúng địa chỉ đã kiểm tra (`PGHOSTADDR`) nên DNS không đổi được giữa chừng.
 - **Bắt buộc TLS** (`sslmode=require` trở lên).
-- Giới hạn **số database mỗi khách** (`CUSTOMER_DB_MAX_PER_TENANT`, mặc định 5), **dung lượng** (`CUSTOMER_DB_MAX_GB`, mặc định 20), và số lần chạy đồng thời (`CUSTOMER_DB_MAX_CONCURRENT`, mặc định 2).
+- Giới hạn **số database mỗi khách** (`CUSTOMER_DB_MAX_PER_TENANT`, mặc định 5), **dung lượng theo gói** (xem trên) và số lần chạy đồng thời (`CUSTOMER_DB_MAX_CONCURRENT`, mặc định 2).
 - **Cô lập khách hàng**: bảng có RLS theo `tenant_id` *và* mọi truy vấn lọc theo khách; test đầu-cuối dùng role ứng dụng không phải superuser để chứng minh khách B không thấy gì của khách A.
 
 ### Cần gì trên server

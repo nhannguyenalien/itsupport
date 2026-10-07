@@ -6,6 +6,7 @@ import { REPO_PATTERN, directConnection, isPlatformAdmin, parsePgUrl, platformAd
 import { run, tools, toolVersions, resticEnv, secretsOf } from "./runner.js";
 import { access, getSettings, listRuns, liveConnection, saveSettings, snapshots, startBackup, startRestore, startVerify, summary } from "./service.js";
 import { recordAudit } from "../audit/index.js";
+import { isPlan, planLimitBytes, PLANS } from "./plans.js";
 
 const settingsBody = z.object({
   enabled: z.boolean(),
@@ -123,5 +124,27 @@ export async function dbBackupRoutes(app: FastifyInstance) {
     await recordAudit({ tenantId: req.authUser!.tenantId, actorType: "user", actorId: req.authUser!.id, eventType: "platform.db_restore_requested",
       eventData: { snapshot_id: b.snapshot_id, target: `${t.host}/${t.database}` } });
     return reply.code(202).send({ runId: id });
+  });
+
+  // ---- Service plans (platform operator only): which workspace may back up how much ----
+  app.get("/platform/tenants", async (req, reply) => {
+    if (!guard(req, reply)) return;
+    const r = await adminPool.query(
+      `SELECT t.id, t.name, t.plan, t.created_at,
+              (SELECT count(*)::int FROM tenant_db_backups b WHERE b.tenant_id = t.id) AS databases,
+              (SELECT COALESCE(sum(last_size_bytes), 0)::bigint FROM tenant_db_backups b WHERE b.tenant_id = t.id) AS used_bytes
+       FROM tenants t ORDER BY t.created_at`);
+    reply.header("Cache-Control", "no-store");
+    return r.rows.map((t) => ({ ...t, used_bytes: Number(t.used_bytes), limit_bytes: planLimitBytes(t.plan) }));
+  });
+
+  app.put("/platform/tenants/:id/plan", async (req, reply) => {
+    if (!guard(req, reply)) return;
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const { plan } = z.object({ plan: z.string().refine(isPlan, `plan must be one of ${PLANS.join(", ")}`) }).parse(req.body);
+    const r = await adminPool.query(`UPDATE tenants SET plan = $2 WHERE id = $1 RETURNING name`, [id, plan]);
+    if (!r.rowCount) return reply.code(404).send({ error: "workspace not found" });
+    await recordAudit({ tenantId: id, actorType: "user", actorId: req.authUser!.id, eventType: "tenant.plan_changed", eventData: { plan, by: req.authUser!.email } });
+    return { ok: true, plan };
   });
 }

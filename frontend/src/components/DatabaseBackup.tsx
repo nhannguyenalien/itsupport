@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, type DbBackupInfo, type DbBackupRun, type DbBackupSnapshot } from "@/lib/api";
+import { api, type DbBackupInfo, type DbBackupRun, type DbBackupSnapshot, type PlatformTenant, type Plan } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 
 function formatBytes(value?: number | string | null) {
@@ -22,6 +22,7 @@ export default function DatabaseBackup() {
   const [loaded, setLoaded] = useState(false);
   const [form, setForm] = useState({ enabled: true, repo: "", password: "", keyId: "", keySecret: "", interval: 24, daily: 7, weekly: 4, monthly: 6 });
   const [restore, setRestore] = useState({ snapshot: "", target: "", confirm: "" });
+  const [tenants, setTenants] = useState<PlatformTenant[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -30,6 +31,7 @@ export default function DatabaseBackup() {
       setForm((f) => loaded ? f : ({ ...f, enabled: data.enabled, repo: data.repo, interval: data.interval_hours, daily: data.keep_daily, weekly: data.keep_weekly, monthly: data.keep_monthly }));
       setLoaded(true);
       setRuns(await api.dbBackupRuns());
+      setTenants(await api.platformTenants());
     } catch (e) {
       const status = (e as { status?: number }).status;
       if (status === 403) setDenied(true); else setMessage({ text: e instanceof Error ? e.message : String(e), error: true });
@@ -126,6 +128,22 @@ export default function DatabaseBackup() {
           </div>
           <div><button className="primary" disabled={busy || !form.repo} onClick={() => void save()}>{tx("Lưu cài đặt")}</button></div>
         </div>
+      </div>
+
+      <div className="card">
+        <strong>{tx("Gói của khách hàng")}</strong>
+        <p className="muted">{tx("Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.")}</p>
+        <table style={{ width: "100%", fontSize: "0.9rem" }}>
+          <thead><tr><th align="left">{tx("Khách hàng")}</th><th align="left">{tx("Gói")}</th><th align="right">{tx("Số database")}</th><th align="right">{tx("Đã dùng / Giới hạn")}</th></tr></thead>
+          <tbody>{tenants.map((t) => (
+            <tr key={t.id}>
+              <td>{t.name}</td>
+              <td><select value={t.plan} disabled={busy} onChange={(e) => void act(() => api.setTenantPlan(t.id, e.target.value as Plan), tx("Đã đổi gói."))}>
+                <option value="free">Free</option><option value="pro">Pro</option></select></td>
+              <td align="right">{t.databases}</td>
+              <td align="right">{formatBytes(t.used_bytes)} / {formatBytes(t.limit_bytes)}</td>
+            </tr>))}</tbody>
+        </table>
       </div>
 
       <div className="card">

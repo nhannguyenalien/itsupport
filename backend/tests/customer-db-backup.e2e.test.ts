@@ -33,10 +33,19 @@ t('customer database backups: add by URL, schedule, isolation, restore, delete, 
   const userA = { tenantId: tenantA, id: randomUUID() }, userB = { tenantId: tenantB, id: randomUUID() };
   await platform.saveSettings({ enabled: false, repo: repoBase, env: { RESTIC_PASSWORD: 'platform-password-xyz' }, intervalHours: 24, retention: { keepDaily: 7, keepWeekly: 4, keepMonthly: 6 } });
 
+  // Free allows ~10 KB here, so any real database exceeds it; Pro keeps the default 20 GB
+  process.env.PLAN_FREE_DB_GB = '0.00001';
   const runFinished = async (tenant: string, backupId: string, pick: (r: any) => boolean) => waitFor('run', async () => {
     const runs = await svc.listRuns(tenant, backupId);
     return runs.find((r: any) => pick(r) && r.state !== 'running');
   });
+
+  // 0. plans: a Free workspace is refused with a clear message, a Pro one is accepted
+  assert.equal((await svc.usage(tenantB)).plan, 'free', 'new workspaces start on Free');
+  await assert.rejects(() => svc.createTarget(userB, { name: 'Too big for Free', url: customerUrl }),
+    (e: any) => e.statusCode === 402 && /gói Free/.test(e.message) && /Nâng cấp lên Pro/.test(e.message));
+  assert.deepEqual(await svc.listTargets(tenantB), [], 'a refused database leaves nothing behind');
+  await adminPool.query(`UPDATE tenants SET plan = 'pro' WHERE id = $1`, [tenantA]);
 
   // 1. the customer only pastes a URL; the first backup starts by itself
   const created = await svc.createTarget(userA, { name: 'Production DB', url: customerUrl });
@@ -88,6 +97,16 @@ t('customer database backups: add by URL, schedule, isolation, restore, delete, 
   await svc.tick();
   const scheduled: any = await runFinished(tenantA, created.id, r => r.trigger === 'schedule');
   assert.equal(scheduled.state, 'success', scheduled.error);
+
+  // 5b. downgrading below the data size makes the next run fail clearly, without a new snapshot
+  assert.ok((await svc.usage(tenantA)).usedBytes > 0 && (await svc.usage(tenantA)).plan === 'pro');
+  const snapsBeforeDowngrade = (await svc.snapshotsOf(row)).length;
+  await adminPool.query(`UPDATE tenants SET plan = 'free' WHERE id = $1`, [tenantA]);
+  const deniedId = await svc.startBackup(row, 'manual');
+  const deniedRun: any = await runFinished(tenantA, created.id, r => r.id === deniedId);
+  assert.equal(deniedRun.state, 'error'); assert.match(deniedRun.error, /Vượt dung lượng gói Free/);
+  assert.equal((await svc.snapshotsOf(row)).length, snapsBeforeDowngrade, 'no snapshot is created over the cap');
+  await adminPool.query(`UPDATE tenants SET plan = 'pro' WHERE id = $1`, [tenantA]);
 
   // 6. the stored backup is encrypted with a key of its own, not the platform's
   const storage = await platform.getStorage();

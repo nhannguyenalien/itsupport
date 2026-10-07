@@ -34,6 +34,9 @@ t('database backup: backup, retention, verify, restore, and the failure paths', 
   const configure = (password = 'e2e-password-123') => svc.saveSettings({ enabled: true, repo, env: { RESTIC_PASSWORD: password }, intervalHours: 24, retention: { keepDaily: 2, keepWeekly: 0, keepMonthly: 0 } });
 
   await adminPool.query('DELETE FROM platform_db_backup_runs');
+  // the test brings its own sample rows, so it does not depend on what the database already holds
+  await adminPool.query(`DELETE FROM tenants WHERE name LIKE 'Backup sample %'`);
+  await adminPool.query(`INSERT INTO tenants (name) SELECT 'Backup sample ' || g FROM generate_series(1,3) g`);
   await configure();
 
   // 1. first backup streams pg_dump into restic and is verified
@@ -74,6 +77,7 @@ t('database backup: backup, retention, verify, restore, and the failure paths', 
   }
   assert.ok((await out.query(`SELECT count(*)::int AS n FROM tenants`)).rows[0].n >= 3, 'sample rows came across');
   await src.end(); await out.end();
+  await adminPool.query(`DELETE FROM tenants WHERE name LIKE 'Backup sample %'`);
 
   // 6. restoring over the live database is refused and nothing in it changes
   const before = (await adminPool.query('SELECT count(*)::int AS n FROM tenants')).rows[0].n;

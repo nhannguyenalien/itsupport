@@ -527,5 +527,16 @@
   "Đã đạt giới hạn.": "한도에 도달했습니다.",
   "Chưa có database nào.": "아직 데이터베이스가 없습니다.",
   "Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.": "저장소 루트(s3:https://…/bucket, rest:https://…, b2:bucket:path). 시스템 백업은 platform 폴더에 저장되며, 고객 데이터베이스마다 그 아래에 별도 폴더가 생깁니다.",
-  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "시스템 자체 백업의 암호화 비밀번호(고객 데이터베이스는 시스템이 생성한 별도 비밀번호를 사용)"
+  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "시스템 자체 백업의 암호화 비밀번호(고객 데이터베이스는 시스템이 생성한 별도 비밀번호를 사용)",
+  "Gói {plan}": "{plan} 요금제",
+  "Đã dùng {used} / {limit}": "사용량 {used} / {limit}",
+  "Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.": "더 많은 데이터를 백업하려면 Pro로 업그레이드하세요. 관리자에게 문의하세요.",
+  "Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.": "요구 사항: 데이터베이스가 인터넷에서 TLS(?sslmode=require 포함)로 접속 가능해야 하며, 최대 {count}개, 요금제의 총 용량 이내여야 합니다. URL은 저장 시 암호화되며 다시 표시되지 않습니다.",
+  "Gói của khách hàng": "고객 요금제",
+  "Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.": "Free는 1GB, Pro는 20GB의 데이터를 백업할 수 있습니다(고객의 모든 데이터베이스 합계). 아직 결제 기능이 없어 여기서 요금제를 변경합니다.",
+  "Khách hàng": "고객",
+  "Gói": "요금제",
+  "Số database": "데이터베이스 수",
+  "Đã dùng / Giới hạn": "사용량 / 한도",
+  "Đã đổi gói.": "요금제를 변경했습니다."
 }

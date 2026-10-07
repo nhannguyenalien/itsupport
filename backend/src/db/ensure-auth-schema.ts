@@ -142,6 +142,12 @@ export async function ensureAuthSchema(): Promise<void> {
         CREATE POLICY tenant_isolation ON ${table} USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
       END IF; END $$`);
   }
+  await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'`);
+  await pool.query(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tenants_plan_check') THEN
+      ALTER TABLE tenants ADD CONSTRAINT tenants_plan_check CHECK (plan IN ('free', 'pro'));
+    END IF; END $$`);
+  await pool.query(`ALTER TABLE tenant_db_backups ADD COLUMN IF NOT EXISTS last_size_bytes BIGINT`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_policies_tenant ON backup_policies(tenant_id)`);
   await pool.query(`ALTER TABLE backup_policies ENABLE ROW LEVEL SECURITY`);
   await pool.query(`DO $$ BEGIN

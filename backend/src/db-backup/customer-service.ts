@@ -7,6 +7,7 @@ import { dbBackupHealth, isDue, parsePgUrl, sameDatabase, scrub, type DbBackupHe
 import { validateCustomerUrl, type ValidatedTarget } from "./net-guard.js";
 import { listSnapshots, performBackup, purgeRepository, restoreInto, secretsOf, verifySnapshot, type RepoAccess } from "./runner.js";
 import { getStorage, repoJoin } from "./service.js";
+import { checkQuota, isPlan, planLimitBytes, type Plan } from "./plans.js";
 
 // A customer pastes the URL of THEIR PostgreSQL database; the platform backs it
 // up on a schedule into the operator's shared storage. Each database gets its own
@@ -15,7 +16,6 @@ import { getStorage, repoJoin } from "./service.js";
 
 export const limits = () => ({
   maxTargets: Number(process.env.CUSTOMER_DB_MAX_PER_TENANT ?? 5),
-  maxBytes: Number(process.env.CUSTOMER_DB_MAX_GB ?? 20) * 2 ** 30,
   maxConcurrent: Number(process.env.CUSTOMER_DB_MAX_CONCURRENT ?? 2),
 });
 
@@ -79,6 +79,24 @@ export async function loadRow(tenantId: string, id: string): Promise<Row> {
   return r.rows[0];
 }
 
+export async function tenantPlan(tenantId: string): Promise<Plan> {
+  const r = await adminPool.query(`SELECT plan FROM tenants WHERE id = $1`, [tenantId]);
+  return isPlan(r.rows[0]?.plan) ? r.rows[0].plan : "free";
+}
+
+/** Bytes already protected by the workspace's OTHER databases (last measured size). */
+async function usedByOthers(tenantId: string, excludeId: string | null): Promise<number> {
+  const r = await adminPool.query(
+    `SELECT COALESCE(sum(last_size_bytes), 0)::bigint AS n FROM tenant_db_backups WHERE tenant_id = $1 AND ($2::uuid IS NULL OR id <> $2)`,
+    [tenantId, excludeId]);
+  return Number(r.rows[0].n);
+}
+
+export async function usage(tenantId: string) {
+  const plan = await tenantPlan(tenantId);
+  return { plan, usedBytes: await usedByOthers(tenantId, null), limitBytes: planLimitBytes(plan) };
+}
+
 async function accessFor(row: Row): Promise<RepoAccess> {
   const storage = await getStorage();
   if (!storage) throw new UserError("Hệ thống chưa cấu hình kho lưu trữ. Hãy liên hệ quản trị viên.", 503);
@@ -89,7 +107,7 @@ async function accessFor(row: Row): Promise<RepoAccess> {
 
 export async function listTargets(tenantId: string) {
   const targets = (await queryTenantScoped(tenantId,
-    `SELECT id, name, source_label, enabled, interval_hours, keep_daily, keep_weekly, keep_monthly, created_at, updated_at
+    `SELECT id, name, source_label, enabled, interval_hours, keep_daily, keep_weekly, keep_monthly, last_size_bytes, created_at, updated_at
      FROM tenant_db_backups ORDER BY created_at`)).rows;
   const out = [];
   for (const t of targets) {
@@ -152,7 +170,9 @@ export async function startBackup(row: Row, trigger: "schedule" | "manual"): Pro
     // Re-validate on every run: the address behind a name can change, and the cap can be exceeded later.
     const target = await validateCustomerUrl(url, { direct: true });
     const info = await probeDatabase(target);
-    if (info.sizeBytes > limits().maxBytes) throw new Error(`Database ${(info.sizeBytes / 2 ** 30).toFixed(1)} GB vượt giới hạn ${(limits().maxBytes / 2 ** 30).toFixed(0)} GB.`);
+    await adminPool.query(`UPDATE tenant_db_backups SET last_size_bytes = $2 WHERE id = $1`, [row.id, info.sizeBytes]);
+    const quota = checkQuota(await tenantPlan(row.tenant_id), await usedByOthers(row.tenant_id, row.id), info.sizeBytes);
+    if (!quota.ok) throw new Error(quota.message);
     const res = await performBackup(acc, target.conn, { keepDaily: row.keep_daily, keepWeekly: row.keep_weekly, keepMonthly: row.keep_monthly });
     return { state: "success", snapshotId: res.snapshotId, bytesAdded: res.bytesAdded, dumpBytes: res.dumpBytes, tablesFound: res.tablesFound, detail: { warnings: res.warnings } };
   }, [...secretsOf(acc), url, parsePgUrl(url).env.PGPASSWORD ?? ""]);
@@ -193,12 +213,13 @@ export async function createTarget(user: { tenantId: string; id: string }, input
   const dup = await queryTenantScoped(user.tenantId, `SELECT 1 FROM tenant_db_backups WHERE source_label = $1`, [label]);
   if (dup.rowCount) throw new UserError("Database này đã được thêm.", 409);
   const info = await probeDatabase(target);
-  if (info.sizeBytes > limits().maxBytes) throw new UserError(`Database ${(info.sizeBytes / 2 ** 30).toFixed(1)} GB vượt giới hạn ${(limits().maxBytes / 2 ** 30).toFixed(0)} GB.`, 413);
+  const quota = checkQuota(await tenantPlan(user.tenantId), await usedByOthers(user.tenantId, null), info.sizeBytes);
+  if (!quota.ok) throw new UserError(quota.message!, 402);
 
   const r = await queryTenantScoped(user.tenantId,
-    `INSERT INTO tenant_db_backups (tenant_id, name, source_label, source_enc, repo_password_enc, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [user.tenantId, input.name.trim(), label, encryptToken(input.url), encryptToken(randomBytes(32).toString("base64url")), user.id]);
+    `INSERT INTO tenant_db_backups (tenant_id, name, source_label, source_enc, repo_password_enc, created_by, last_size_bytes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [user.tenantId, input.name.trim(), label, encryptToken(input.url), encryptToken(randomBytes(32).toString("base64url")), user.id, info.sizeBytes]);
   const id: string = r.rows[0].id;
   // First backup right away, so the customer sees it work (and a bad grant fails now, not tomorrow night).
   try { await startBackup(await loadRow(user.tenantId, id), "manual"); } catch (error) { console.error("first customer backup could not start:", (error as Error).message); }

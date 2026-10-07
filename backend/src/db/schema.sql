@@ -12,6 +12,10 @@ CREATE TABLE tenants (
     name            TEXT NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
 
+    -- Service plan: caps how much database data the workspace may back up
+    -- (db-backup/plans.ts). Changed by the platform operator; no billing yet.
+    plan            TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro')),
+
     -- Day-one kill switch (spec: "Disable Tenant AI" button)
     ai_enabled      BOOLEAN NOT NULL DEFAULT true,
 
@@ -576,6 +580,7 @@ CREATE TABLE tenant_db_backups (
     keep_weekly       INTEGER NOT NULL DEFAULT 4,
     keep_monthly      INTEGER NOT NULL DEFAULT 6,
     created_by        UUID,
+    last_size_bytes   BIGINT,
     last_alert_at     TIMESTAMPTZ,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { recordAudit } from "../audit/index.js";
 import { getStorage } from "./service.js";
 import {
-  UserError, createTarget, deleteTarget, limits, listRuns, listTargets, loadRow, snapshotsOf, startBackup, startRestore, startVerify, updateTarget,
+  UserError, createTarget, deleteTarget, limits, listRuns, listTargets, loadRow, snapshotsOf, startBackup, startRestore, startVerify, updateTarget, usage,
 } from "./customer-service.js";
 
 const idParams = z.object({ id: z.string().uuid() });
@@ -36,8 +36,11 @@ export async function customerDbBackupRoutes(app: FastifyInstance) {
   app.get("/db-backups", async (req, reply) => {
     if (!allowed(req, reply)) return;
     reply.header("Cache-Control", "no-store");
-    const l = limits();
-    return { storage_ready: !!(await getStorage()), limits: { max_targets: l.maxTargets, max_gb: Math.round(l.maxBytes / 2 ** 30) }, targets: await listTargets(req.authUser!.tenantId) };
+    const u = await usage(req.authUser!.tenantId);
+    return {
+      storage_ready: !!(await getStorage()), plan: u.plan, used_bytes: u.usedBytes, limit_bytes: u.limitBytes,
+      limits: { max_targets: limits().maxTargets }, targets: await listTargets(req.authUser!.tenantId),
+    };
   });
 
   app.post("/db-backups", { config: { rateLimit: { max: 6, timeWindow: "1 minute" } } }, async (req, reply) => {

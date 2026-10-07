@@ -527,5 +527,16 @@
   "Đã đạt giới hạn.": "Đã đạt giới hạn.",
   "Chưa có database nào.": "Chưa có database nào.",
   "Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.": "Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.",
-  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)"
+  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)",
+  "Gói {plan}": "Gói {plan}",
+  "Đã dùng {used} / {limit}": "Đã dùng {used} / {limit}",
+  "Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.": "Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.",
+  "Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.": "Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.",
+  "Gói của khách hàng": "Gói của khách hàng",
+  "Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.": "Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.",
+  "Khách hàng": "Khách hàng",
+  "Gói": "Gói",
+  "Số database": "Số database",
+  "Đã dùng / Giới hạn": "Đã dùng / Giới hạn",
+  "Đã đổi gói.": "Đã đổi gói."
 }

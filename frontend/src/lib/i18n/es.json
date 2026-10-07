@@ -527,5 +527,16 @@
   "Đã đạt giới hạn.": "Límite alcanzado.",
   "Chưa có database nào.": "Aún no hay bases.",
   "Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.": "Raíz del almacenamiento (s3:https://…/bucket, rest:https://…, b2:bucket:path). La copia del sistema va en la carpeta platform; cada base de cliente tiene su propia carpeta debajo.",
-  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "Contraseña de cifrado de las copias del propio sistema (las bases de clientes usan sus propias contraseñas, generadas por el sistema)"
+  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "Contraseña de cifrado de las copias del propio sistema (las bases de clientes usan sus propias contraseñas, generadas por el sistema)",
+  "Gói {plan}": "Plan {plan}",
+  "Đã dùng {used} / {limit}": "Usado {used} / {limit}",
+  "Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.": "Pase a Pro para copiar más datos. Contacte con su administrador.",
+  "Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.": "Requisitos: la base debe ser accesible desde Internet por TLS (con ?sslmode=require), máximo {count} bases, dentro del tamaño total de su plan. La URL se cifra al guardarse y no se vuelve a mostrar.",
+  "Gói của khách hàng": "Planes de los clientes",
+  "Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.": "Free copia 1 GB de datos, Pro 20 GB (total de las bases de un cliente). Aún no hay facturación, así que cambia los planes aquí.",
+  "Khách hàng": "Cliente",
+  "Gói": "Plan",
+  "Số database": "Bases",
+  "Đã dùng / Giới hạn": "Usado / Límite",
+  "Đã đổi gói.": "Plan cambiado."
 }

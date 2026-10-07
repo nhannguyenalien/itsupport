@@ -155,6 +155,8 @@ export default function CustomerDatabases() {
 
   if (!data) return <p className="muted">{error ?? tx("Đang tải…")}</p>;
   const full = data.targets.length >= data.limits.max_targets;
+  const pct = Math.min(100, Math.round((data.used_bytes / Math.max(1, data.limit_bytes)) * 100));
+  const planName = data.plan === "pro" ? "Pro" : "Free";
 
   return (
     <div>
@@ -162,6 +164,14 @@ export default function CustomerDatabases() {
       <p className="muted">{tx("Dán URL PostgreSQL của database cần bảo vệ. Hệ thống tự kiểm tra kết nối, sao lưu ngay và sau đó sao lưu theo lịch, lưu vào kho mã hoá của hệ thống.")}</p>
       {error && <div className="card" style={{ color: "#b91c1c" }}>{error}</div>}
       {notice && <div className="card">{notice}</div>}
+      <div className="card">
+        <strong>{tx("Gói {plan}", { plan: planName })}</strong>{" "}
+        <span className="muted">{tx("Đã dùng {used} / {limit}", { used: formatBytes(data.used_bytes), limit: formatBytes(data.limit_bytes) })}</span>
+        <div style={{ height: 8, background: "#e5e7eb", borderRadius: 4, marginTop: 8 }} aria-hidden="true">
+          <div style={{ width: `${pct}%`, height: 8, borderRadius: 4, background: pct >= 90 ? "#dc2626" : "#16a34a" }} />
+        </div>
+        {data.plan === "free" && <p className="muted" style={{ marginBottom: 0 }}>{tx("Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.")}</p>}
+      </div>
       {!data.storage_ready && <div className="card" style={{ color: "#b91c1c" }}>{tx("Hệ thống chưa cấu hình kho lưu trữ. Hãy liên hệ quản trị viên.")}</div>}
 
       <div className="card">
@@ -171,7 +181,7 @@ export default function CustomerDatabases() {
             <input style={{ width: "100%" }} maxLength={80} placeholder={tx("Ví dụ: Database bán hàng")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
           <label>{tx("URL PostgreSQL")}
             <input style={{ width: "100%" }} type="password" autoComplete="off" placeholder="postgresql://user:password@host/dbname?sslmode=require" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} /></label>
-          <p className="muted">{tx("Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {gb} GB, tối đa {count} database. URL được mã hoá khi lưu và không hiển thị lại.", { gb: data.limits.max_gb, count: data.limits.max_targets })}</p>
+          <p className="muted">{tx("Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.", { count: data.limits.max_targets })}</p>
           <div><button className="primary" disabled={adding || full || !data.storage_ready || !form.name.trim() || !form.url.trim()} onClick={() => void add()}>{adding ? tx("Đang kiểm tra kết nối…") : tx("Thêm và sao lưu ngay")}</button>
             {full && <span className="muted"> {tx("Đã đạt giới hạn.")}</span>}</div>
         </div>

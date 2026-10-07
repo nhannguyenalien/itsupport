@@ -527,5 +527,16 @@
   "Đã đạt giới hạn.": "上限に達しました。",
   "Chưa có database nào.": "まだデータベースがありません。",
   "Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.": "ストレージのルート（s3:https://…/bucket、rest:https://…、b2:bucket:path）。システム自身のバックアップは platform フォルダに、各顧客データベースはその下の専用フォルダに保存されます。",
-  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "システム自身のバックアップの暗号化パスワード（顧客データベースはシステムが生成した専用パスワードを使用）"
+  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "システム自身のバックアップの暗号化パスワード（顧客データベースはシステムが生成した専用パスワードを使用）",
+  "Gói {plan}": "{plan} プラン",
+  "Đã dùng {used} / {limit}": "使用量 {used} / {limit}",
+  "Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.": "より多くのデータをバックアップするには Pro にアップグレードしてください。管理者にお問い合わせください。",
+  "Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.": "要件: データベースが TLS（?sslmode=require 付き）でインターネットから接続可能で、最大 {count} 件、プランの合計サイズ内であること。URL は保存時に暗号化され、再表示されません。",
+  "Gói của khách hàng": "顧客のプラン",
+  "Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.": "Free は 1 GB、Pro は 20 GB のデータをバックアップできます（顧客の全データベースの合計）。まだ課金機能がないため、ここでプランを変更します。",
+  "Khách hàng": "顧客",
+  "Gói": "プラン",
+  "Số database": "データベース数",
+  "Đã dùng / Giới hạn": "使用量 / 上限",
+  "Đã đổi gói.": "プランを変更しました。"
 }

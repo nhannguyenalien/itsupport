@@ -2,7 +2,8 @@
 
 import { useLanguage } from "@/lib/i18n";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { pollWhileVisible } from "@/lib/poll";
 import { useParams } from "next/navigation";
 import { api, type TicketDetail } from "@/lib/api";
 
@@ -45,6 +46,9 @@ export default function CustomerTicketPage() {
 
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const activeRef = useRef(true);
+  activeRef.current = !ticket || ticket.aiWorkflow?.status === "running" || !!ticket.computerUseSession
+    || ticket.approvals.some((a) => a.status === "pending") || ticket.toolCalls.some((tc) => tc.executed_at === null);
   const [messageBody, setMessageBody] = useState("");
 
   async function load() {
@@ -57,8 +61,7 @@ export default function CustomerTicketPage() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 4000);
-    return () => clearInterval(interval);
+    return pollWhileVisible(load, () => (activeRef.current ? 4000 : 15_000));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 

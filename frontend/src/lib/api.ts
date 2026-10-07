@@ -114,7 +114,9 @@ export interface CustomerDbTarget {
   id: string; name: string; source_label: string; enabled: boolean; interval_hours: number;
   health: DbBackupHealth; running: boolean; last_success_at: string | null; last_error: string | null; next_run_at: string | null; created_at: string;
 }
-export interface CustomerDbList { storage_ready: boolean; limits: { max_targets: number; max_gb: number }; targets: CustomerDbTarget[] }
+export type Plan = "free" | "pro";
+export interface CustomerDbList { storage_ready: boolean; plan: Plan; used_bytes: number; limit_bytes: number; limits: { max_targets: number }; targets: CustomerDbTarget[] }
+export interface PlatformTenant { id: string; name: string; plan: Plan; databases: number; used_bytes: number; limit_bytes: number; created_at: string }
 export interface CustomerDbRun {
   id: string; kind: "backup" | "verify" | "restore"; trigger: "schedule" | "manual"; state: "running" | "success" | "error";
   started_at: string; finished_at: string | null; snapshot_id: string | null; dump_bytes: string | null; tables_found: number | null; error: string | null;
@@ -184,7 +186,7 @@ export interface TicketMessage {
   id: string;
   author_type: "user" | "ai" | "system" | "technician";
   body: string;
-  attachments?: { name: string; size: number; text: string }[];
+  attachments?: { name: string; size: number; text?: string }[];
   created_at: string;
 }
 
@@ -195,6 +197,7 @@ export interface ToolCall {
   params: Record<string, unknown>;
   result: "success" | "error" | "timeout" | null;
   result_data: Record<string, unknown> | null;
+  result_truncated?: boolean;
   error_message: string | null;
   verification_status: "not_required" | "pending" | "passed" | "failed";
   requested_at: string;
@@ -349,6 +352,8 @@ export const api = {
   verifyDbBackup: (snapshotId: string) => request<{ runId: string }>(`/platform/db-backup/verify`, { method: "POST", body: JSON.stringify({ snapshot_id: snapshotId }) }),
   restoreDbBackup: (body: { snapshot_id: string; target_url: string; confirm: "KHOI PHUC" }) =>
     request<{ runId: string }>(`/platform/db-backup/restore`, { method: "POST", body: JSON.stringify(body) }),
+  platformTenants: () => request<PlatformTenant[]>(`/platform/tenants`),
+  setTenantPlan: (id: string, plan: Plan) => request<{ ok: true; plan: Plan }>(`/platform/tenants/${id}/plan`, { method: "PUT", body: JSON.stringify({ plan }) }),
   customerDbs: () => request<CustomerDbList>(`/db-backups`),
   addCustomerDb: (body: { name: string; url: string }) => request<{ id: string; label: string; sizeBytes: number; tables: number; serverVersion: string }>(`/db-backups`, { method: "POST", body: JSON.stringify(body) }),
   updateCustomerDb: (id: string, body: { enabled?: boolean; interval_hours?: number }) => request<{ ok: true }>(`/db-backups/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -374,6 +379,9 @@ export const api = {
 
   listTickets: (tenantId: string) => request<Ticket[]>(`/tickets?tenantId=${tenantId}`),
   getTicket: (ticketId: string) => request<TicketDetail>(`/tickets/${ticketId}`),
+  getAttachmentText: (ticketId: string, messageId: string, index: number) =>
+    request<{ text: string }>(`/tickets/${ticketId}/messages/${messageId}/attachments/${index}`),
+  getToolCallResult: (toolCallId: string) => request<{ result_data: Record<string, unknown> | null }>(`/tool-calls/${toolCallId}/result`),
   createTicket: (body: { tenantId: string; deviceId?: string; platformConnectionId?: string; title: string; scenario?: string }) =>
     request<Ticket>(`/tickets`, { method: "POST", body: JSON.stringify(body) }),
   addMessage: (ticketId: string, body: { authorType: string; body: string; attachments?: { name: string; base64: string }[] }) =>

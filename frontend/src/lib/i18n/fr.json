@@ -527,5 +527,16 @@
   "Đã đạt giới hạn.": "Limite atteinte.",
   "Chưa có database nào.": "Aucune base pour l’instant.",
   "Kho lưu trữ gốc (s3:https://…/bucket, rest:https://…, b2:bucket:path). Bản sao hệ thống nằm ở thư mục platform; mỗi database của khách có thư mục riêng bên dưới.": "Racine du stockage (s3:https://…/bucket, rest:https://…, b2:bucket:path). La sauvegarde du système va dans le dossier platform ; chaque base client a son propre dossier en dessous.",
-  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "Mot de passe de chiffrement des sauvegardes du système (les bases clients utilisent leurs propres mots de passe, générés par le système)"
+  "Mật khẩu mã hoá bản sao của hệ thống (database của khách dùng mật khẩu riêng do hệ thống sinh)": "Mot de passe de chiffrement des sauvegardes du système (les bases clients utilisent leurs propres mots de passe, générés par le système)",
+  "Gói {plan}": "Offre {plan}",
+  "Đã dùng {used} / {limit}": "Utilisé {used} / {limit}",
+  "Nâng cấp lên Pro để sao lưu nhiều dữ liệu hơn. Hãy liên hệ quản trị viên.": "Passez à Pro pour sauvegarder plus de données. Contactez votre administrateur.",
+  "Yêu cầu: database truy cập được từ Internet qua TLS (có ?sslmode=require), tối đa {count} database, tổng dung lượng theo gói của bạn. URL được mã hoá khi lưu và không hiển thị lại.": "Prérequis : base accessible depuis Internet via TLS (avec ?sslmode=require), {count} bases maximum, dans la limite de taille totale de votre offre. L’URL est chiffrée au stockage et n’est plus jamais affichée.",
+  "Gói của khách hàng": "Offres des clients",
+  "Free sao lưu được 1 GB dữ liệu, Pro 20 GB (tổng các database của một khách). Chưa có thanh toán nên bạn đổi gói ở đây.": "Free sauvegarde 1 Go de données, Pro 20 Go (total des bases d’un client). Il n’y a pas encore de facturation : vous changez l’offre ici.",
+  "Khách hàng": "Client",
+  "Gói": "Offre",
+  "Số database": "Bases",
+  "Đã dùng / Giới hạn": "Utilisé / Limite",
+  "Đã đổi gói.": "Offre modifiée."
 }

@@ -17,6 +17,7 @@ const base = { id: 'u1', tenantId: 't1', tenantName: 'T', role: 'admin' };
 const endpoints: Array<[string, string]> = [
   ['GET', '/platform/db-backup'], ['PUT', '/platform/db-backup'], ['POST', '/platform/db-backup/test'], ['POST', '/platform/db-backup/run'],
   ['GET', '/platform/db-backup/runs'], ['GET', '/platform/db-backup/snapshots'], ['POST', '/platform/db-backup/verify'], ['POST', '/platform/db-backup/restore'],
+  ['GET', '/platform/tenants'], ['PUT', '/platform/tenants/11111111-1111-4111-8111-111111111111/plan'],
 ];
 
 test('every database backup endpoint refuses everyone but the platform operator', async () => {
