@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  DUMP_NAME, dbBackupHealth, isDue, isPlatformAdmin, parsePgUrl, platformAdminEmails, retentionArgs, sameDatabase, scrub,
+  DUMP_NAME, dbBackupHealth, directConnection, isDue, isPlatformAdmin, parsePgUrl, platformAdminEmails, retentionArgs, sameDatabase, scrub,
 } from '../src/db-backup/config.js';
 
 const NEON = 'postgresql://app_owner:p%40ss%3Aw0rd@ep-cool-dew-123456.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
@@ -75,4 +75,18 @@ test('scheduling: due after the interval, retried every 30 minutes at most', () 
   assert.equal(isDue({ ...s, enabled: false }, now), false);
   assert.equal(isDue({ ...s, repo: '' }, now), false);
   assert.equal(DUMP_NAME, 'support-agent-db.dump');
+});
+
+test('Neon pooled endpoints are swapped for the direct one for pg_dump, other hosts untouched', () => {
+  const pooled = parsePgUrl('postgresql://u:p@ep-rapid-union-ayauxcuk-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require');
+  const direct = directConnection(pooled);
+  assert.equal(direct.host, 'ep-rapid-union-ayauxcuk.c-5.us-east-2.aws.neon.tech');
+  assert.equal(direct.env.PGHOST, direct.host);
+  assert.equal(direct.env.PGPASSWORD, 'p'); assert.equal(direct.env.PGSSLMODE, 'require'); assert.equal(direct.database, 'neondb');
+  assert.equal(pooled.host.includes('-pooler'), true, 'the original connection is not modified');
+  const direct2 = parsePgUrl('postgresql://u:p@ep-abc.c-5.us-east-2.aws.neon.tech/neondb');
+  assert.equal(directConnection(direct2), direct2);
+  const other = parsePgUrl('postgresql://u:p@db-pooler.internal.example.com/app');
+  assert.equal(directConnection(other), other, 'only Neon hosts are rewritten');
+  assert.equal(sameDatabase(direct, pooled), true, 'the restore guard still recognises both as the live database');
 });

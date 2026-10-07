@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { adminPool } from "../db/pool.js";
 import { BACKUP_ENV_KEYS } from "../backup/env-keys.js";
-import { REPO_PATTERN, isPlatformAdmin, parsePgUrl, platformAdminEmails, scrub } from "./config.js";
+import { REPO_PATTERN, directConnection, isPlatformAdmin, parsePgUrl, platformAdminEmails, scrub } from "./config.js";
 import { run, tools, toolVersions, resticEnv, secretsOf } from "./runner.js";
 import { access, getSettings, listRuns, liveConnection, saveSettings, snapshots, startBackup, startRestore, startVerify, summary } from "./service.js";
 import { recordAudit } from "../audit/index.js";
@@ -74,7 +74,8 @@ export async function dbBackupRoutes(app: FastifyInstance) {
       const server = String(r.rows[0].server_version);
       const clientMajor = Number((v.pgDump ?? "").match(/(\d+)\./)?.[1] ?? 0);
       const serverMajor = Number(server.match(/^(\d+)/)?.[1] ?? 0);
-      checks.push({ name: "database", ok: true, detail: `${live.host}/${live.database}, PostgreSQL ${server}` });
+      const direct = directConnection(live);
+      checks.push({ name: "database", ok: true, detail: `${live.host}/${live.database}, PostgreSQL ${server}` + (direct.host !== live.host ? `; sao lưu sẽ dùng endpoint trực tiếp ${direct.host}` : "") });
       if (clientMajor && serverMajor) checks.push({ name: "version", ok: clientMajor >= serverMajor, detail: clientMajor >= serverMajor ? `pg_dump ${clientMajor} đọc được server ${serverMajor}` : `pg_dump ${clientMajor} cũ hơn server ${serverMajor}: cần nâng client` });
     } catch (e) { checks.push({ name: "database", ok: false, detail: e instanceof Error ? e.message : String(e) }); }
     try {

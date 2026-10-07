@@ -52,6 +52,17 @@ export function parsePgUrl(raw: string): PgConnection {
   return { host: url.hostname, port: env.PGPORT, database, user, env };
 }
 
+/** Neon serves the same database on a PgBouncer endpoint (`ep-xxx-pooler.…`) and a
+ * direct one (`ep-xxx.…`). pg_dump needs session features pooled connections do
+ * not guarantee, and Neon recommends the direct endpoint for it, so backups go
+ * straight to the database while the application keeps using the pooler. */
+export function directConnection(c: PgConnection): PgConnection {
+  const m = c.host.match(/^([^.]+)-pooler(\.[^]*neon\.tech)$/i);
+  if (!m) return c;
+  const host = m[1] + m[2];
+  return { ...c, host, env: { ...c.env, PGHOST: host } };
+}
+
 function normalizedHost(host: string): string {
   const [first, ...rest] = host.toLowerCase().split(".");
   return [first.replace(/-pooler$/, ""), ...rest].join(".");

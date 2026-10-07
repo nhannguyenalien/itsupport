@@ -2,7 +2,7 @@ import { adminPool } from "../db/pool.js";
 import { decryptEnv, encryptEnv } from "../backup/index.js";
 import { sendMail, mailConfigured } from "../backup/alerts.js";
 import {
-  dbBackupHealth, isDue, parsePgUrl, platformAdminEmails, scrub, type DbBackupHealth, type PgConnection, type Retention,
+  dbBackupHealth, directConnection, isDue, parsePgUrl, platformAdminEmails, scrub, type DbBackupHealth, type PgConnection, type Retention,
 } from "./config.js";
 import { listSnapshots, performBackup, restoreInto, secretsOf, verifySnapshot, type RepoAccess } from "./runner.js";
 
@@ -119,7 +119,7 @@ export async function startBackup(trigger: "schedule" | "manual", by: string | n
   const live = liveConnection();
   const id = await startRun("backup", trigger, by);
   background(id, async () => {
-    const res = await performBackup(acc, live, s.retention);
+    const res = await performBackup(acc, directConnection(live), s.retention);
     return { state: "success", snapshotId: res.snapshotId, bytesAdded: res.bytesAdded, dumpBytes: res.dumpBytes, tablesFound: res.tablesFound, detail: { warnings: res.warnings } };
   }, secretsOf(acc, [live.env.PGPASSWORD ?? ""]));
   return id;
