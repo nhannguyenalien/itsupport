@@ -558,5 +558,17 @@
   "Chưa có file nào.": "No files yet.",
   "Xoá file {name}? Không thể hoàn tác.": "Delete {name}? This cannot be undone.",
   "Đã xoá {name}.": "Deleted {name}.",
-  "Tệp": "Files"
+  "Tệp": "Files",
+  "Gói dịch vụ": "Plan",
+  "lượt chat với trợ lý trong tháng này": "chats with the assistant this month",
+  "Nâng cấp Pro: ": "Upgrade to Pro: ",
+  "lượt chat/tháng": "chats/month",
+  "tháng": "month",
+  "Nâng cấp lên Pro": "Upgrade to Pro",
+  "Chỉ quản trị viên mới nâng cấp được gói.": "Only administrators can upgrade the plan.",
+  "Workspace đã ở gói Pro.": "This workspace is already on Pro.",
+  "Thanh toán chưa được cấu hình.": "Payments are not configured.",
+  "Không kết nối được cổng thanh toán, vui lòng thử lại.": "Could not reach the payment gateway, please try again.",
+  "Không tải được thông tin gói.": "Could not load plan information.",
+  "Không thể tạo thanh toán.": "Could not start the payment."
 }

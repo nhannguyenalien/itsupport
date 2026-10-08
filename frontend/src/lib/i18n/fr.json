@@ -558,5 +558,17 @@
   "Chưa có file nào.": "Aucun fichier pour l'instant.",
   "Xoá file {name}? Không thể hoàn tác.": "Supprimer {name} ? Cette action est irréversible.",
   "Đã xoá {name}.": "{name} a été supprimé.",
-  "Tệp": "Fichiers"
+  "Tệp": "Fichiers",
+  "Gói dịch vụ": "Offre",
+  "lượt chat với trợ lý trong tháng này": "discussions avec l'assistant ce mois-ci",
+  "Nâng cấp Pro: ": "Passez à Pro : ",
+  "lượt chat/tháng": "discussions/mois",
+  "tháng": "mois",
+  "Nâng cấp lên Pro": "Passer à Pro",
+  "Chỉ quản trị viên mới nâng cấp được gói.": "Seuls les administrateurs peuvent changer d'offre.",
+  "Workspace đã ở gói Pro.": "Cet espace de travail est déjà en Pro.",
+  "Thanh toán chưa được cấu hình.": "Les paiements ne sont pas configurés.",
+  "Không kết nối được cổng thanh toán, vui lòng thử lại.": "Impossible de joindre la passerelle de paiement, veuillez réessayer.",
+  "Không tải được thông tin gói.": "Impossible de charger les informations de l'offre.",
+  "Không thể tạo thanh toán.": "Impossible de démarrer le paiement."
 }

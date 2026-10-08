@@ -21,6 +21,7 @@ import { computerUseRoutes } from "./computer-use/routes.js";
 import { oauthRoutes } from "./oauth/routes.js";
 import { metricsRoutes } from "./metrics/routes.js";
 import { supportChatRoutes } from "./support-chat/routes.js";
+import { billingRoutes } from "./billing/routes.js";
 import { registryVersion, registryHash, allTools } from "./tool-registry/index.js";
 import { authRoutes } from "./auth/routes.js";
 import { registerAuth } from "./auth/plugin.js";
@@ -82,6 +83,7 @@ await app.register(backupRoutes);
 await app.register(dbBackupRoutes);
 await app.register(customerDbBackupRoutes);
 await app.register(uploadRoutes);
+await app.register(billingRoutes);
 
 // Devices go offline if the telemetry process stops heartbeating — without
 // this sweep, "online" would just mean "was online at some point," making the

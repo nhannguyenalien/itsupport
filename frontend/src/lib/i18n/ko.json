@@ -558,5 +558,17 @@
   "Chưa có file nào.": "아직 파일이 없습니다.",
   "Xoá file {name}? Không thể hoàn tác.": "{name} 파일을 삭제할까요? 되돌릴 수 없습니다.",
   "Đã xoá {name}.": "{name} 삭제됨.",
-  "Tệp": "파일"
+  "Tệp": "파일",
+  "Gói dịch vụ": "요금제",
+  "lượt chat với trợ lý trong tháng này": "이번 달 어시스턴트 채팅",
+  "Nâng cấp Pro: ": "Pro로 업그레이드: ",
+  "lượt chat/tháng": "채팅/월",
+  "tháng": "월",
+  "Nâng cấp lên Pro": "Pro로 업그레이드",
+  "Chỉ quản trị viên mới nâng cấp được gói.": "관리자만 요금제를 업그레이드할 수 있습니다.",
+  "Workspace đã ở gói Pro.": "이 워크스페이스는 이미 Pro입니다.",
+  "Thanh toán chưa được cấu hình.": "결제가 설정되지 않았습니다.",
+  "Không kết nối được cổng thanh toán, vui lòng thử lại.": "결제 게이트웨이에 연결할 수 없습니다. 다시 시도해 주세요.",
+  "Không tải được thông tin gói.": "요금제 정보를 불러올 수 없습니다.",
+  "Không thể tạo thanh toán.": "결제를 시작할 수 없습니다."
 }

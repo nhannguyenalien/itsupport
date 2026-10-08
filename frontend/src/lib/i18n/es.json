@@ -558,5 +558,17 @@
   "Chưa có file nào.": "Aún no hay archivos.",
   "Xoá file {name}? Không thể hoàn tác.": "¿Eliminar {name}? No se puede deshacer.",
   "Đã xoá {name}.": "Se eliminó {name}.",
-  "Tệp": "Archivos"
+  "Tệp": "Archivos",
+  "Gói dịch vụ": "Plan",
+  "lượt chat với trợ lý trong tháng này": "chats con el asistente este mes",
+  "Nâng cấp Pro: ": "Mejora a Pro: ",
+  "lượt chat/tháng": "chats/mes",
+  "tháng": "mes",
+  "Nâng cấp lên Pro": "Mejorar a Pro",
+  "Chỉ quản trị viên mới nâng cấp được gói.": "Solo los administradores pueden mejorar el plan.",
+  "Workspace đã ở gói Pro.": "Este espacio de trabajo ya está en Pro.",
+  "Thanh toán chưa được cấu hình.": "Los pagos no están configurados.",
+  "Không kết nối được cổng thanh toán, vui lòng thử lại.": "No se pudo conectar con la pasarela de pago, inténtalo de nuevo.",
+  "Không tải được thông tin gói.": "No se pudo cargar la información del plan.",
+  "Không thể tạo thanh toán.": "No se pudo iniciar el pago."
 }

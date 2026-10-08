@@ -6,7 +6,9 @@ import { checkQuota, isPlan, planLimitBytes, type Plan, type QuotaResult } from 
 // source size the last successful backup scanned) and files uploaded from the web. Both are "bytes of data protected".
 
 export async function tenantPlan(tenantId: string): Promise<Plan> {
-  const r = await adminPool.query(`SELECT plan FROM tenants WHERE id = $1`, [tenantId]);
+  // plan_expires_at is set by the billing sync; a lapsed subscription falls back to Free.
+  const r = await adminPool.query(`SELECT plan, plan_expires_at < now() AS expired FROM tenants WHERE id = $1`, [tenantId]);
+  if (r.rows[0]?.expired) return "free";
   return isPlan(r.rows[0]?.plan) ? r.rows[0].plan : "free";
 }
 

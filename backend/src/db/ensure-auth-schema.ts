@@ -179,4 +179,14 @@ export async function ensureAuthSchema(): Promise<void> {
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tenant_files' AND policyname = 'tenant_isolation') THEN
       CREATE POLICY tenant_isolation ON tenant_files USING (tenant_id = app_tenant_id()) WITH CHECK (tenant_id = app_tenant_id());
     END IF; END $$`);
+  await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tenant_chat_usage (
+      tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      period TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (tenant_id, period)
+    )
+  `);
+  await pool.query(`CREATE TABLE IF NOT EXISTS billing_events (event_id TEXT PRIMARY KEY, received_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
 }

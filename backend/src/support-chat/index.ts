@@ -3,6 +3,8 @@ import { queryTenantScoped } from "../db/pool.js";
 import { recordAudit } from "../audit/index.js";
 import { applyDataPolicy, type AiDataPolicy } from "../ai-orchestration/redact.js";
 import type { AuthUser } from "../auth/types.js";
+import { tenantPlan } from "../db-backup/usage.js";
+import { chatLimit, consumeChat, refundChat } from "../billing/quota.js";
 import { chat } from "./schoolsai.js";
 import { runSupportTool, toolCatalog, type Proposal } from "./tools.js";
 
@@ -104,6 +106,20 @@ export async function runAccountChat(user: AuthUser, input: ChatTurnInput): Prom
     throw Object.assign(new Error("AI đã bị tắt cho workspace này. Quản trị viên có thể bật lại ở trang Tổng quan."), { statusCode: 409 });
   }
   const policy = tenant.rows[0].ai_data_policy as AiDataPolicy;
+  const plan = await tenantPlan(user.tenantId);
+  if (!(await consumeChat(user.tenantId, plan))) {
+    const upgrade = plan === "free" ? ` Nâng cấp lên Pro để có ${chatLimit("pro")} lượt/tháng.` : "";
+    throw Object.assign(new Error(`Workspace đã dùng hết ${chatLimit(plan)} lượt chat của gói ${plan === "pro" ? "Pro" : "Free"} trong tháng này.${upgrade}`), { statusCode: 402 });
+  }
+  try {
+    return await accountTurn(user, input, policy);
+  } catch (err) {
+    await refundChat(user.tenantId);
+    throw err;
+  }
+}
+
+async function accountTurn(user: AuthUser, input: ChatTurnInput, policy: AiDataPolicy): Promise<AccountChatResult> {
   const session = sessionId("acct", user.tenantId, user.id, input.conversationId);
 
   const toolsUsed: string[] = [];

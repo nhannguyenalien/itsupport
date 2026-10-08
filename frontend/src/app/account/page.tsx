@@ -3,7 +3,8 @@
 import { useLanguage } from "@/lib/i18n";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { api, type BillingStatus } from "@/lib/api";
 import { EmailAuthProvider, GoogleAuthProvider, linkWithCredential, reauthenticateWithCredential, reauthenticateWithPopup, updatePassword, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -16,6 +17,41 @@ function friendlyError(reason: unknown): string {
   if (code === "auth/too-many-requests") return "Bạn thử quá nhiều lần. Vui lòng đợi ít phút rồi thử lại.";
   if (code === "auth/network-request-failed") return "Không kết nối được Google. Hãy kiểm tra mạng rồi thử lại.";
   return "Không thể xử lý yêu cầu. Vui lòng thử lại.";
+}
+
+function PlanSection() {
+  const { tx } = useLanguage();
+  const [status, setStatus] = useState<BillingStatus | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      // Coming back from checkout (?paid=1): ask BGate directly instead of waiting for the webhook.
+      if (new URLSearchParams(window.location.search).has("paid")) await api.billingRefresh().catch(() => undefined);
+      setStatus(await api.billingStatus());
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Không tải được thông tin gói."); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function upgrade() {
+    setBusy(true); setError("");
+    try { window.location.href = (await api.billingCheckout()).checkout_url; }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Không thể tạo thanh toán."); setBusy(false); }
+  }
+
+  if (!status) return error ? <div className="auth-error" role="alert">{tx(error)}</div> : null;
+  return (
+    <section>
+      <h2>{tx("Gói dịch vụ")}</h2>
+      <p className="auth-subtitle">
+        {status.plan === "pro" ? "Pro" : "Free"} — {status.chats_used}/{status.chats_limit} {tx("lượt chat với trợ lý trong tháng này")}
+      </p>
+      {status.plan === "free" && <p className="auth-subtitle">{tx("Nâng cấp Pro: ")}{status.limits.pro} {tx("lượt chat/tháng")} — ${status.price_usd}/{tx("tháng")}</p>}
+      {error && <div className="auth-error" role="alert">{tx(error)}</div>}
+      {status.plan === "free" && status.enabled && <button type="button" className="auth-submit" disabled={busy} onClick={upgrade}>{busy ? tx("Đang xử lý…") : tx("Nâng cấp lên Pro")}</button>}
+    </section>
+  );
 }
 
 export default function AccountPage() {
@@ -72,6 +108,7 @@ export default function AccountPage() {
     <main className="auth-panel">
       <h1>{tx("Tài khoản")}</h1>
       <p className="auth-subtitle">{user?.email}</p>
+      <PlanSection />
       <h2>{hasPassword ? tx("Đổi mật khẩu") : tx("Tạo mật khẩu")}</h2>
       {hasGoogle && <p className="auth-subtitle">{tx("Bạn đã đăng nhập bằng Google nên không cần nhập mật khẩu cũ.")}</p>}
       <form onSubmit={submit} className="auth-form">

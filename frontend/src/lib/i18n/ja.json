@@ -558,5 +558,17 @@
   "Chưa có file nào.": "まだファイルがありません。",
   "Xoá file {name}? Không thể hoàn tác.": "{name} を削除しますか？元に戻せません。",
   "Đã xoá {name}.": "{name} を削除しました。",
-  "Tệp": "ファイル"
+  "Tệp": "ファイル",
+  "Gói dịch vụ": "プラン",
+  "lượt chat với trợ lý trong tháng này": "今月のアシスタントとのチャット",
+  "Nâng cấp Pro: ": "Proにアップグレード：",
+  "lượt chat/tháng": "チャット/月",
+  "tháng": "月",
+  "Nâng cấp lên Pro": "Proにアップグレード",
+  "Chỉ quản trị viên mới nâng cấp được gói.": "プランをアップグレードできるのは管理者のみです。",
+  "Workspace đã ở gói Pro.": "このワークスペースはすでにProです。",
+  "Thanh toán chưa được cấu hình.": "決済が設定されていません。",
+  "Không kết nối được cổng thanh toán, vui lòng thử lại.": "決済ゲートウェイに接続できません。もう一度お試しください。",
+  "Không tải được thông tin gói.": "プラン情報を読み込めませんでした。",
+  "Không thể tạo thanh toán.": "決済を開始できませんでした。"
 }

@@ -558,5 +558,17 @@
   "Chưa có file nào.": "Chưa có file nào.",
   "Xoá file {name}? Không thể hoàn tác.": "Xoá file {name}? Không thể hoàn tác.",
   "Đã xoá {name}.": "Đã xoá {name}.",
-  "Tệp": "Tệp"
+  "Tệp": "Tệp",
+  "Gói dịch vụ": "Gói dịch vụ",
+  "lượt chat với trợ lý trong tháng này": "lượt chat với trợ lý trong tháng này",
+  "Nâng cấp Pro: ": "Nâng cấp Pro: ",
+  "lượt chat/tháng": "lượt chat/tháng",
+  "tháng": "tháng",
+  "Nâng cấp lên Pro": "Nâng cấp lên Pro",
+  "Chỉ quản trị viên mới nâng cấp được gói.": "Chỉ quản trị viên mới nâng cấp được gói.",
+  "Workspace đã ở gói Pro.": "Workspace đã ở gói Pro.",
+  "Thanh toán chưa được cấu hình.": "Thanh toán chưa được cấu hình.",
+  "Không kết nối được cổng thanh toán, vui lòng thử lại.": "Không kết nối được cổng thanh toán, vui lòng thử lại.",
+  "Không tải được thông tin gói.": "Không tải được thông tin gói.",
+  "Không thể tạo thanh toán.": "Không thể tạo thanh toán."
 }

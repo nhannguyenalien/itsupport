@@ -116,6 +116,7 @@ export interface CustomerDbTarget {
   health: DbBackupHealth; running: boolean; last_success_at: string | null; last_error: string | null; next_run_at: string | null; created_at: string;
 }
 export type Plan = "free" | "pro";
+export interface BillingStatus { enabled: boolean; plan: Plan; price_usd: number; period: string; chats_used: number; chats_limit: number; limits: { free: number; pro: number } }
 export interface CustomerDbList { storage_ready: boolean; plan: Plan; used_bytes: number; limit_bytes: number; database_bytes: number; file_bytes: number; limits: { max_targets: number }; targets: CustomerDbTarget[] }
 export interface TenantFile { id: string; name: string; content_type: string; size_bytes: number; status: "ready"; created_at: string }
 export interface TenantFileList { storage_ready: boolean; max_file_bytes: number; plan: Plan; used_bytes: number; limit_bytes: number; upload_bytes: number; files: TenantFile[] }
@@ -326,6 +327,9 @@ export const api = {
   supportChatStatus: () => request<{ enabled: boolean }>(`/support-chat/status`),
   supportChat: (tier: SupportTier, body: { conversationId: string; message: string; language?: string }) =>
     request<SupportChatReply>(`/support-chat/${tier}`, { method: "POST", body: JSON.stringify(body) }),
+  billingStatus: () => request<BillingStatus>(`/billing/status`),
+  billingCheckout: () => request<{ checkout_url: string }>(`/billing/checkout`, { method: "POST", body: "{}" }),
+  billingRefresh: () => request<{ plan: Plan }>(`/billing/refresh`, { method: "POST", body: "{}" }),
   listTools: () => request<{ version: number; tools: ToolDefinition[] }>(`/tool-registry`),
 
   getTenant: (tenantId: string) => request<Tenant>(`/tenants/${tenantId}`),
