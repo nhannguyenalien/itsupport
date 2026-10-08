@@ -80,6 +80,9 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SCHOOLSAI_API_URL: ${SCHOOLSAI_API_URL:-https://apic.schoolsai.work}
       SCHOOLSAI_API_KEY: ${SCHOOLSAI_API_KEY:-}
+      BGATE_API_URL: ${BGATE_API_URL:-https://billing.schoolsai.work}
+      BGATE_API_KEY: ${BGATE_API_KEY:-}
+      BGATE_WEBHOOK_SECRET: ${BGATE_WEBHOOK_SECRET:-}
       # Read through Caddy so the published (host-mounted) manifests are seen.
       AGENT_DOWNLOADS_URL: http://caddy:8080/downloads/agent
       OAUTH_TOKEN_ENC_KEY: ${OAUTH_TOKEN_ENC_KEY:-}
