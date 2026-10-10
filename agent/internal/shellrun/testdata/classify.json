@@ -2276,5 +2276,70 @@
 ],
 "class": "read",
 "note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/os-release"
+],
+"class": "read",
+"note": "symlink target is re-checked after resolution"
+},
+{
+"argv": [
+"cat",
+"/run/systemd/resolve/stub-resolv.conf"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/usr/lib/os-release"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"-la",
+"/run"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/run/credentials/foo.service/secret"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/run/secrets/db_password"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/usr/bin/../../root/x"
+],
+"class": "write",
+"note": "dotdot"
+},
+{
+"argv": [
+"cat",
+"/root/notes.txt"
+],
+"class": "write",
+"note": "outside content roots"
 }
 ]

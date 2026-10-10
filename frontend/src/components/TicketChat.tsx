@@ -5,6 +5,7 @@ import { useLanguage } from "@/lib/i18n";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ToolActivity } from "./ToolActivity";
+import { ShellApproval } from "./ShellApproval";
 import { pollWhileVisible } from "@/lib/poll";
 import { api, ApiError, type Approval, type TicketDetail } from "@/lib/api";
 
@@ -188,7 +189,7 @@ export default function TicketChat({ ticketId }: { ticketId: string }) {
         {approvals.map((approval) => (
           <div key={approval.id} className="support-message from-support support-confirmation">
             <span className="support-avatar">✦</span>
-            <div><p>{tx(approvalQuestion(approval))}</p>{approval.reasoning && <p>{approval.reasoning}</p>}<details><summary>{tx("Xem thao tác cụ thể:")} {approval.tool}</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(Object.fromEntries(Object.entries(approval.params).filter(([key]) => !key.startsWith("__"))), null, 2)}</pre></details><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>{tx("Đồng ý, tiếp tục")}</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>{tx("Không đồng ý")}</button></div></div>
+            {approval.tool === "shell.run" ? <ShellApproval approval={approval} busy={busy} onDecide={(approve) => void decide(approval.id, approve)} /> : <div><p>{tx(approvalQuestion(approval))}</p>{approval.reasoning && <p>{approval.reasoning}</p>}<details><summary>{tx("Xem thao tác cụ thể:")} {approval.tool}</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(Object.fromEntries(Object.entries(approval.params).filter(([key]) => !key.startsWith("__"))), null, 2)}</pre></details><div className="support-confirm-actions"><button className="primary" onClick={() => void decide(approval.id, true)} disabled={busy}>{tx("Đồng ý, tiếp tục")}</button><button onClick={() => void decide(approval.id, false)} disabled={busy}>{tx("Không đồng ý")}</button></div></div>}
           </div>
         ))}
         {isWorking && <div className="support-message from-support support-typing"><span className="support-avatar">✦</span><div><i /><i /><i /><span>{tx("Đang kiểm tra và xử lý…")}</span></div></div>}

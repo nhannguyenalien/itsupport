@@ -570,5 +570,21 @@
   "Thanh toán chưa được cấu hình.": "決済が設定されていません。",
   "Không kết nối được cổng thanh toán, vui lòng thử lại.": "決済ゲートウェイに接続できません。もう一度お試しください。",
   "Không tải được thông tin gói.": "プラン情報を読み込めませんでした。",
-  "Không thể tạo thanh toán.": "決済を開始できませんでした。"
+  "Không thể tạo thanh toán.": "決済を開始できませんでした。",
+  "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.": "このマシンでコマンドを実行することを提案します。マシンが変更される可能性があります。",
+  "Mục đích:": "目的:",
+  "Lệnh sẽ chạy": "実行するコマンド",
+  "Chạy đúng như trên, không qua shell. Gồm {count} phần.": "表示のとおり、シェルを介さずに実行されます。{count} 個の要素。",
+  "Không đọc được lệnh. Hãy từ chối.": "コマンドを読み取れません。拒否してください。",
+  "Lệnh kiểm tra sau khi chạy": "実行後の確認コマンド",
+  "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.": "内容を理解している場合のみ承認してください。15分以内にマシンが実行しない場合は期限切れになります。",
+  "Đồng ý, chạy lệnh này": "承認してこのコマンドを実行",
+  "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.": "AI がこのマシンでコマンドを実行できるようにします。概要ページのスイッチも必要です。",
+  "Tắt chạy lệnh": "コマンド実行をオフ",
+  "Bật chạy lệnh": "コマンド実行をオン",
+  "Chạy lệnh đang bật": "コマンド実行オン",
+  "Chạy lệnh trên máy Linux:": "Linux マシンでのコマンド実行:",
+  "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.": "AI が Linux マシンでコマンドを実行できるようにします。各マシンも個別にオンにする必要があります。読み取り専用のコマンドはすぐに実行され、それ以外は毎回承認が必要です。",
+  "Mã thoát: {code}": "終了コード: {code}",
+  "Đầu ra đã bị cắt bớt": "出力は切り詰められました"
 }

@@ -3,7 +3,7 @@
   "_comment": "Shared by agent/internal/shellrun (Go, authoritative) and backend/src/shell-run (TypeScript, mirror). Keep byte-identical: backend/tests/shell-run.test.ts fails when they differ. Docs: docs/v0.3-linux-shell-addendum.md. Anything not matched by a read rule is write; anything matched by deny is rejected.",
   "execDirs": ["/usr/sbin", "/usr/bin", "/sbin", "/bin"],
   "limits": { "maxArgs": 64, "maxArgLen": 4096 },
-  "contentRoots": ["/proc", "/sys", "/var/log", "/etc", "/opt"],
+  "contentRoots": ["/proc", "/sys", "/var/log", "/etc", "/opt", "/usr/lib", "/usr/share", "/run"],
   "deny": {
     "binaries": [
       "sh", "bash", "dash", "zsh", "fish", "ksh", "csh", "tcsh", "ash", "busybox",
@@ -22,7 +22,7 @@
       "/etc/sudoers", "service.env", "_history", "/.aws", "/.kube", "/.docker/config", "/.gnupg"
     ],
     "argSuffixes": [".pem", ".key", ".p12", ".pfx"],
-    "pathRegex": ["^/proc/[^/]+/(environ|mem)$", "^/proc/kcore$"],
+    "pathRegex": ["^/proc/[^/]+/(environ|mem)$", "^/proc/kcore$", "^/run/(credentials|secrets)(/|$)"],
     "argPrefixes": ["of=/dev/"],
     "systemctl": {
       "bins": ["systemctl", "service"],

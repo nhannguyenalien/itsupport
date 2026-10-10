@@ -30,6 +30,16 @@ export default function DashboardPage() {
     }
   }
 
+  async function toggleShellRun() {
+    if (!tenant) return;
+    try {
+      await api.setTenantShellRun(tenant.id, !tenant.shell_run_enabled);
+      setTenant(await api.getTenant(tenant.id));
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
   async function toggleComputerUseAutonomous() {
     if (!tenant) return;
     try {
@@ -68,6 +78,14 @@ export default function DashboardPage() {
               <div className="muted">{tx("Autonomous click/type actions run without pausing, except detected card numbers.")}</div>
             </div>
             <button className={tenant.computer_use_autonomous_enabled ? "danger" : "primary"} onClick={toggleComputerUseAutonomous}>{tenant.computer_use_autonomous_enabled ? tx("Require approval for every action") : tx("Enable autonomous computer-use")}</button>
+          </div>
+          <hr className="divider" />
+          <div className="row">
+            <div>
+              <div>{tx("Chạy lệnh trên máy Linux:")} <span className={tenant.shell_run_enabled ? "badge badge-online" : "badge badge-offline"}>{tenant.shell_run_enabled ? tx("enabled") : tx("disabled")}</span></div>
+              <div className="muted">{tx("Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.")}</div>
+            </div>
+            <button className={tenant.shell_run_enabled ? "danger" : "primary"} onClick={toggleShellRun}>{tenant.shell_run_enabled ? tx("Tắt chạy lệnh") : tx("Bật chạy lệnh")}</button>
           </div>
         </div>
       )}

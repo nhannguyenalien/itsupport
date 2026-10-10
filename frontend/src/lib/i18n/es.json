@@ -570,5 +570,21 @@
   "Thanh toán chưa được cấu hình.": "Los pagos no están configurados.",
   "Không kết nối được cổng thanh toán, vui lòng thử lại.": "No se pudo conectar con la pasarela de pago, inténtalo de nuevo.",
   "Không tải được thông tin gói.": "No se pudo cargar la información del plan.",
-  "Không thể tạo thanh toán.": "No se pudo iniciar el pago."
+  "Không thể tạo thanh toán.": "No se pudo iniciar el pago.",
+  "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.": "Propongo ejecutar un comando en esta máquina. Puede modificarla.",
+  "Mục đích:": "Propósito:",
+  "Lệnh sẽ chạy": "Comando a ejecutar",
+  "Chạy đúng như trên, không qua shell. Gồm {count} phần.": "Se ejecuta exactamente como se muestra, sin shell. {count} partes.",
+  "Không đọc được lệnh. Hãy từ chối.": "No se pudo leer el comando. Recházalo.",
+  "Lệnh kiểm tra sau khi chạy": "Comando de comprobación posterior",
+  "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.": "Aprueba solo si entiendes el comando. Caduca a los 15 minutos si la máquina no lo ha ejecutado.",
+  "Đồng ý, chạy lệnh này": "Aprobar y ejecutar este comando",
+  "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.": "Permite que la IA ejecute comandos en esta máquina. También requiere el interruptor de la página Resumen.",
+  "Tắt chạy lệnh": "Desactivar comandos",
+  "Bật chạy lệnh": "Activar comandos",
+  "Chạy lệnh đang bật": "Comandos activados",
+  "Chạy lệnh trên máy Linux:": "Comandos en máquinas Linux:",
+  "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.": "Permite que la IA ejecute comandos en máquinas Linux. Cada máquina debe activarse por separado. Los comandos de solo lectura se ejecutan al instante; el resto requiere tu aprobación cada vez.",
+  "Mã thoát: {code}": "Código de salida: {code}",
+  "Đầu ra đã bị cắt bớt": "La salida se truncó"
 }

@@ -194,6 +194,7 @@ export default function DevicesPage() {
               <span className={d.status === "online" ? "badge badge-online" : "badge badge-offline"}>{d.status === "online" ? tx("Đang kết nối") : tx("Ngoại tuyến")}</span>
               {d.actions_paused && <span className="badge badge-risk-medium" style={{ marginLeft: 6 }}>{tx("Tạm dừng")}</span>}
               {d.revoked && <span className="badge badge-risk-high" style={{ marginLeft: 6 }}>{tx("Đã thu hồi")}</span>}
+              {d.shell_run_enabled && <span className="badge badge-risk-medium" style={{ marginLeft: 6 }}>{tx("Chạy lệnh đang bật")}</span>}
               <div className="muted">
                 {d.os_version ?? tx("Không rõ hệ điều hành")} {tx("· agent")} {d.agent_version ?? tx("không rõ")} {tx("· hoạt động lần cuối")}{" "}
                 {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString(locale) : tx("chưa có")}
@@ -221,6 +222,12 @@ export default function DevicesPage() {
                 <button onClick={() => act(() => api.pauseDevice(d.id))}>{tx("Tạm dừng")}</button>
               ) : (
                 <button onClick={() => act(() => api.unpauseDevice(d.id))}>{tx("Tiếp tục")}</button>
+              )}
+              {d.platform === "linux" && !d.revoked && (
+                <button title={tx("Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.")}
+                  onClick={() => act(() => api.setDeviceShellRun(d.id, !d.shell_run_enabled))}>
+                  {d.shell_run_enabled ? tx("Tắt chạy lệnh") : tx("Bật chạy lệnh")}
+                </button>
               )}
               <button className="danger" disabled={d.revoked} onClick={() => act(() => api.revokeDevice(d.id))}>{tx("Thu hồi")}</button>
               </details>

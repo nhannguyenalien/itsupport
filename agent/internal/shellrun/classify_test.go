@@ -48,12 +48,12 @@ func TestEveryReadRuleIsExercised(t *testing.T) {
 }
 
 func TestResolvedPathCheck(t *testing.T) {
-	for p, content := range map[string]bool{"/etc/shadow": true, "/root/.ssh/id_rsa": false, "/etc/itsupport-agent/config.json": true, "/proc/1/environ": true, "/tmp/x": true} {
+	for p, content := range map[string]bool{"/etc/shadow": true, "/root/.ssh/id_rsa": false, "/etc/itsupport-agent/config.json": true, "/proc/1/environ": true, "/tmp/x": true, "/run/credentials/x/y": true, "/root/notes.txt": true} {
 		if PathAllowedAfterResolve(p, content) {
 			t.Errorf("%s should be rejected after resolution", p)
 		}
 	}
-	for p, content := range map[string]bool{"/var/log/syslog": true, "/etc/hostname": true, "/home": false, "/": false} {
+	for p, content := range map[string]bool{"/var/log/syslog": true, "/etc/hostname": true, "/home": false, "/": false, "/usr/lib/os-release": true, "/run/systemd/resolve/stub-resolv.conf": true} {
 		if !PathAllowedAfterResolve(p, content) {
 			t.Errorf("%s should be allowed", p)
 		}

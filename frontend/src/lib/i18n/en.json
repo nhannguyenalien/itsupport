@@ -570,5 +570,21 @@
   "Thanh toán chưa được cấu hình.": "Payments are not configured.",
   "Không kết nối được cổng thanh toán, vui lòng thử lại.": "Could not reach the payment gateway, please try again.",
   "Không tải được thông tin gói.": "Could not load plan information.",
-  "Không thể tạo thanh toán.": "Could not start the payment."
+  "Không thể tạo thanh toán.": "Could not start the payment.",
+  "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.": "I suggest running a command on this machine. It can change the machine.",
+  "Mục đích:": "Purpose:",
+  "Lệnh sẽ chạy": "Command to run",
+  "Chạy đúng như trên, không qua shell. Gồm {count} phần.": "Runs exactly as shown, without a shell. {count} parts.",
+  "Không đọc được lệnh. Hãy từ chối.": "The command could not be read. Please decline.",
+  "Lệnh kiểm tra sau khi chạy": "Check command after it runs",
+  "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.": "Only approve if you understand the command. It expires after 15 minutes if the machine has not run it.",
+  "Đồng ý, chạy lệnh này": "Approve and run this command",
+  "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.": "Let the AI run commands on this machine. Also requires the switch on the Overview page.",
+  "Tắt chạy lệnh": "Turn off commands",
+  "Bật chạy lệnh": "Turn on commands",
+  "Chạy lệnh đang bật": "Commands on",
+  "Chạy lệnh trên máy Linux:": "Commands on Linux machines:",
+  "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.": "Lets the AI run commands on Linux machines. Each machine must also be turned on separately. Read-only commands run at once; anything else needs your approval each time.",
+  "Mã thoát: {code}": "Exit code: {code}",
+  "Đầu ra đã bị cắt bớt": "Output was truncated"
 }

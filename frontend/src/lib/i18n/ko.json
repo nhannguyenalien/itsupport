@@ -570,5 +570,21 @@
   "Thanh toán chưa được cấu hình.": "결제가 설정되지 않았습니다.",
   "Không kết nối được cổng thanh toán, vui lòng thử lại.": "결제 게이트웨이에 연결할 수 없습니다. 다시 시도해 주세요.",
   "Không tải được thông tin gói.": "요금제 정보를 불러올 수 없습니다.",
-  "Không thể tạo thanh toán.": "결제를 시작할 수 없습니다."
+  "Không thể tạo thanh toán.": "결제를 시작할 수 없습니다.",
+  "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.": "이 컴퓨터에서 명령을 실행할 것을 제안합니다. 컴퓨터가 변경될 수 있습니다.",
+  "Mục đích:": "목적:",
+  "Lệnh sẽ chạy": "실행할 명령",
+  "Chạy đúng như trên, không qua shell. Gồm {count} phần.": "표시된 그대로 셸 없이 실행됩니다. {count}개 항목.",
+  "Không đọc được lệnh. Hãy từ chối.": "명령을 읽을 수 없습니다. 거절해 주세요.",
+  "Lệnh kiểm tra sau khi chạy": "실행 후 확인 명령",
+  "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.": "명령을 이해한 경우에만 승인하세요. 컴퓨터가 15분 안에 실행하지 않으면 만료됩니다.",
+  "Đồng ý, chạy lệnh này": "승인하고 이 명령 실행",
+  "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.": "AI가 이 컴퓨터에서 명령을 실행하도록 허용합니다. 개요 페이지의 스위치도 필요합니다.",
+  "Tắt chạy lệnh": "명령 실행 끄기",
+  "Bật chạy lệnh": "명령 실행 켜기",
+  "Chạy lệnh đang bật": "명령 실행 켜짐",
+  "Chạy lệnh trên máy Linux:": "Linux 컴퓨터에서 명령 실행:",
+  "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.": "AI가 Linux 컴퓨터에서 명령을 실행하도록 허용합니다. 각 컴퓨터도 따로 켜야 합니다. 읽기 전용 명령은 바로 실행되고, 그 외에는 매번 승인이 필요합니다.",
+  "Mã thoát: {code}": "종료 코드: {code}",
+  "Đầu ra đã bị cắt bớt": "출력이 잘렸습니다"
 }

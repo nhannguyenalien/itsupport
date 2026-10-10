@@ -570,5 +570,21 @@
   "Thanh toán chưa được cấu hình.": "Thanh toán chưa được cấu hình.",
   "Không kết nối được cổng thanh toán, vui lòng thử lại.": "Không kết nối được cổng thanh toán, vui lòng thử lại.",
   "Không tải được thông tin gói.": "Không tải được thông tin gói.",
-  "Không thể tạo thanh toán.": "Không thể tạo thanh toán."
+  "Không thể tạo thanh toán.": "Không thể tạo thanh toán.",
+  "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.": "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.",
+  "Mục đích:": "Mục đích:",
+  "Lệnh sẽ chạy": "Lệnh sẽ chạy",
+  "Chạy đúng như trên, không qua shell. Gồm {count} phần.": "Chạy đúng như trên, không qua shell. Gồm {count} phần.",
+  "Không đọc được lệnh. Hãy từ chối.": "Không đọc được lệnh. Hãy từ chối.",
+  "Lệnh kiểm tra sau khi chạy": "Lệnh kiểm tra sau khi chạy",
+  "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.": "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.",
+  "Đồng ý, chạy lệnh này": "Đồng ý, chạy lệnh này",
+  "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.": "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.",
+  "Tắt chạy lệnh": "Tắt chạy lệnh",
+  "Bật chạy lệnh": "Bật chạy lệnh",
+  "Chạy lệnh đang bật": "Chạy lệnh đang bật",
+  "Chạy lệnh trên máy Linux:": "Chạy lệnh trên máy Linux:",
+  "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.": "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.",
+  "Mã thoát: {code}": "Mã thoát: {code}",
+  "Đầu ra đã bị cắt bớt": "Đầu ra đã bị cắt bớt"
 }

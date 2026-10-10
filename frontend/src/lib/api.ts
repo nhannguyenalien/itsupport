@@ -44,6 +44,7 @@ export interface Device {
   last_seen_at: string | null;
   actions_paused: boolean;
   revoked: boolean;
+  shell_run_enabled?: boolean;
   platform?: "windows" | "mac" | "linux";
   // Click-to-update (backend/src/devices/agent-updates.ts).
   update_supported?: boolean;
@@ -239,6 +240,7 @@ export interface Tenant {
   ai_data_policy: string;
   autonomous_low_risk_enabled: boolean;
   computer_use_autonomous_enabled: boolean;
+  shell_run_enabled?: boolean;
 }
 
 export interface PlatformConnection {
@@ -391,6 +393,10 @@ export const api = {
   runBackup: (deviceId: string) => request(`/devices/${deviceId}/backup/run`, { method: "POST", body: "{}" }),
   refreshBackup: (deviceId: string) => request(`/devices/${deviceId}/backup/refresh`, { method: "POST", body: "{}" }),
   revokeDevice: (deviceId: string) => request(`/devices/${deviceId}/revoke`, { method: "POST", body: "{}" }),
+  setTenantShellRun: (tenantId: string, enabled: boolean) =>
+    request(`/tenants/${tenantId}/${enabled ? "enable" : "disable"}-shell-run`, { method: "POST", body: "{}" }),
+  setDeviceShellRun: (deviceId: string, enabled: boolean) =>
+    request(`/devices/${deviceId}/${enabled ? "enable" : "disable"}-shell-run`, { method: "POST", body: "{}" }),
   pauseDevice: (deviceId: string) => request(`/devices/${deviceId}/pause`, { method: "POST", body: "{}" }),
   unpauseDevice: (deviceId: string) => request(`/devices/${deviceId}/unpause`, { method: "POST", body: "{}" }),
 

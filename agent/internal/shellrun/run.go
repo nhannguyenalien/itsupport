@@ -15,8 +15,10 @@ import (
 	"time"
 )
 
-const (
-	OutputLimit  = 64 << 10
+const OutputLimit = 64 << 10
+
+// Variables only so tests can shorten them; nothing else changes them.
+var (
 	ReadTimeout  = 30 * time.Second
 	WriteTimeout = 10 * time.Minute
 )

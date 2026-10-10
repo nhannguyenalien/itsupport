@@ -570,5 +570,21 @@
   "Thanh toán chưa được cấu hình.": "Les paiements ne sont pas configurés.",
   "Không kết nối được cổng thanh toán, vui lòng thử lại.": "Impossible de joindre la passerelle de paiement, veuillez réessayer.",
   "Không tải được thông tin gói.": "Impossible de charger les informations de l'offre.",
-  "Không thể tạo thanh toán.": "Impossible de démarrer le paiement."
+  "Không thể tạo thanh toán.": "Impossible de démarrer le paiement.",
+  "Tôi đề xuất chạy một lệnh trên máy này. Lệnh có thể thay đổi máy.": "Je propose d'exécuter une commande sur cette machine. Elle peut modifier la machine.",
+  "Mục đích:": "Objectif :",
+  "Lệnh sẽ chạy": "Commande à exécuter",
+  "Chạy đúng như trên, không qua shell. Gồm {count} phần.": "S'exécute exactement comme indiqué, sans shell. {count} éléments.",
+  "Không đọc được lệnh. Hãy từ chối.": "La commande est illisible. Veuillez refuser.",
+  "Lệnh kiểm tra sau khi chạy": "Commande de vérification après exécution",
+  "Chỉ đồng ý khi bạn hiểu rõ lệnh. Lệnh hết hạn sau 15 phút nếu máy chưa chạy.": "N'approuvez que si vous comprenez la commande. Elle expire après 15 minutes si la machine ne l'a pas exécutée.",
+  "Đồng ý, chạy lệnh này": "Approuver et exécuter cette commande",
+  "Cho phép AI chạy lệnh trên máy này. Cần bật thêm ở trang Tổng quan.": "Autoriser l'IA à exécuter des commandes sur cette machine. Nécessite aussi le réglage de la page Vue d'ensemble.",
+  "Tắt chạy lệnh": "Désactiver les commandes",
+  "Bật chạy lệnh": "Activer les commandes",
+  "Chạy lệnh đang bật": "Commandes activées",
+  "Chạy lệnh trên máy Linux:": "Commandes sur les machines Linux :",
+  "Cho AI chạy lệnh trên máy Linux. Mỗi máy còn phải được bật riêng. Lệnh chỉ đọc chạy ngay, lệnh khác cần bạn duyệt từng lần.": "Permet à l'IA d'exécuter des commandes sur les machines Linux. Chaque machine doit aussi être activée séparément. Les commandes en lecture seule s'exécutent aussitôt ; les autres demandent votre accord à chaque fois.",
+  "Mã thoát: {code}": "Code de sortie : {code}",
+  "Đầu ra đã bị cắt bớt": "La sortie a été tronquée"
 }
