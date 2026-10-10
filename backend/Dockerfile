@@ -8,7 +8,8 @@ COPY src ./src
 RUN npm run build
 # registry.json is read at runtime relative to the compiled file — tsc doesn't
 # copy non-TS assets, so place it next to dist/tool-registry/index.js.
-RUN mkdir -p dist/tool-registry && cp src/tool-registry/registry.json dist/tool-registry/registry.json
+RUN mkdir -p dist/tool-registry && cp src/tool-registry/registry.json dist/tool-registry/registry.json \
+ && mkdir -p dist/shell-run && cp src/shell-run/rules.json dist/shell-run/rules.json
 
 FROM node:22-alpine
 WORKDIR /app

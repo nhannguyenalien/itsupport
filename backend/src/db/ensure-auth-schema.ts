@@ -148,6 +148,8 @@ export async function ensureAuthSchema(): Promise<void> {
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'backup_policies_storage_check') THEN
       ALTER TABLE backup_policies ADD CONSTRAINT backup_policies_storage_check CHECK (storage IN ('custom', 'system'));
     END IF; END $$`);
+  await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS shell_run_enabled BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE devices ADD COLUMN IF NOT EXISTS shell_run_enabled BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'`);
   await pool.query(`DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tenants_plan_check') THEN

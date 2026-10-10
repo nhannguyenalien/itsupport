@@ -47,6 +47,19 @@ export async function tenantRoutes(app: FastifyInstance) {
     reply.send({ ok: true });
   });
 
+  // shell.run master switch (docs/v0.3-linux-shell-addendum.md). Default off;
+  // a device additionally needs its own flag. Admin only (auth/plugin.ts).
+  for (const [action, value] of [["enable", true], ["disable", false]] as const) {
+    app.post(`/tenants/:tenantId/${action}-shell-run`, async (req, reply) => {
+      const { tenantId } = tenantParams.parse(req.params);
+      const { actorId } = actorBody.parse(req.body ?? {});
+      const result = await pool.query(`UPDATE tenants SET shell_run_enabled = $2 WHERE id = $1 RETURNING id`, [tenantId, value]);
+      if (result.rowCount === 0) return reply.code(404).send({ error: "tenant not found" });
+      await recordAudit({ tenantId, actorType: "user", actorId: actorId ?? null, eventType: `tenant.shell_run_${value ? "enabled" : "disabled"}` });
+      reply.send({ ok: true });
+    });
+  }
+
   // Autonomous computer-use mode (docs/v0.1-computer-use-addendum.md) —
   // separate opt-in from the AI kill switch above and from
   // autonomous_low_risk_enabled (which only ever unlocks risk:"low" IT

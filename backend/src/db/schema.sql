@@ -40,6 +40,10 @@ CREATE TABLE tenants (
     -- exists yet (same as autonomous_low_risk_enabled) — set via SQL.
     computer_use_autonomous_enabled BOOLEAN NOT NULL DEFAULT false,
 
+    -- shell.run master switch (docs/v0.3-linux-shell-addendum.md). A device also
+    -- needs devices.shell_run_enabled. Both default off.
+    shell_run_enabled BOOLEAN NOT NULL DEFAULT false,
+
     -- v0.2 marketing-ops budget policy (docs/v0.2-marketing-ops-spec.md #12).
     -- ads.budget.update's risk is computed from these at evaluation time, not
     -- looked up statically from the tool registry — see policy-engine/index.ts.
@@ -120,6 +124,9 @@ CREATE TABLE devices (
     -- spec: "Pause Device Actions" — read tools still allowed, write tools blocked
     -- at the backend regardless of what the agent would otherwise accept.
     actions_paused      BOOLEAN NOT NULL DEFAULT false,
+
+    -- shell.run on this device (Linux only); needs tenants.shell_run_enabled too.
+    shell_run_enabled   BOOLEAN NOT NULL DEFAULT false,
 
     last_seen_at        TIMESTAMPTZ,
     status              TEXT NOT NULL DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'unknown')),

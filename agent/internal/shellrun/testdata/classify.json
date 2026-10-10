@@ -1,0 +1,2280 @@
+[
+{
+"argv": [
+"pveversion"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pveversion",
+"-v"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"list"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"status",
+"101"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"config",
+"101"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"listsnapshot",
+"101"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pct",
+"list"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pct",
+"status",
+"200"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvesm",
+"status"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvecm",
+"status"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"get",
+"/nodes"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"get",
+"/cluster/resources",
+"--output-format",
+"json"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"get",
+"/nodes/pve/qemu/100/status/current"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"/usr/sbin/qm",
+"list"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"zpool",
+"status"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"zpool",
+"status",
+"-v",
+"rpool"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"zpool",
+"list",
+"-H"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"zfs",
+"list",
+"-t",
+"snapshot"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"zfs",
+"get",
+"all",
+"rpool"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lsblk"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lsblk",
+"-f"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"df",
+"-h"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"df",
+"-h",
+"/"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"du",
+"-sh",
+"/var/lib/vz"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"findmnt"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"smartctl",
+"-H",
+"/dev/sda"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"ps"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"ps",
+"-a"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"logs",
+"--tail",
+"100",
+"coolify"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"inspect",
+"coolify"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"stats",
+"--no-stream"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"info"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"network",
+"ls"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"status",
+"pveproxy"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"is-active",
+"pvedaemon"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"list-units",
+"--failed"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"status",
+"itsupport-daemon"
+],
+"class": "read",
+"note": "status of the agent is fine"
+},
+{
+"argv": [
+"journalctl",
+"-u",
+"pveproxy",
+"-n",
+"50",
+"--no-pager"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"journalctl",
+"--since",
+"2 hours ago",
+"-p",
+"err"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"uname",
+"-a"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"uptime"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"free",
+"-h"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lscpu"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"hostnamectl"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"timedatectl"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ip",
+"a"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ip",
+"-br",
+"addr"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ip",
+"route"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ss",
+"-tulpn"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lsmod"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"who"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"last",
+"-n",
+"5"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"dmesg",
+"--notime"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ps",
+"aux"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ps",
+"-ef"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"id"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"hostname"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"whoami"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"date",
+"+%F"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"sensors"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"nproc"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"-la",
+"/var/log"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"-l",
+"/etc/pve"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"stat",
+"/etc/hostname"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/os-release"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/proc/meminfo"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"head",
+"-n",
+"20",
+"/var/log/syslog"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"tail",
+"-n",
+"100",
+"/var/log/syslog"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/pve/qemu-server/100.conf"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"start",
+"101"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"stop",
+"101"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"shutdown",
+"101"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"snapshot",
+"101",
+"before-upgrade"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"destroy",
+"101"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"pct",
+"start",
+"200"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"create",
+"/nodes/pve/qemu"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"set",
+"/nodes/pve/config"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"get",
+"/access/users"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"pvesh",
+"get",
+"/nodes/x/../../access/users"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"list",
+"--new-flag"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"status",
+"101;rm"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"status",
+"abc"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"qm",
+"list",
+"extra"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"exec",
+"coolify",
+"id"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"run",
+"-v",
+"/:/host",
+"alpine"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"rm",
+"-f",
+"x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"restart",
+"coolify"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"cp",
+"a:/x",
+"/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"compose",
+"up"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"ps",
+"--format",
+"{{.Names}}; id"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"restart",
+"pveproxy"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"stop",
+"nginx"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"daemon-reload"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"edit",
+"ssh"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"apt",
+"install",
+"-y",
+"htop"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"apt-get",
+"upgrade"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"reboot"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"poweroff"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-rf",
+"/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"/tmp/file"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"mkdir",
+"/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"touch",
+"/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"cp",
+"a",
+"b"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"mv",
+"a",
+"b"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"curl",
+"https://example.com"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"curl",
+"-o",
+"/tmp/x",
+"https://example.com"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"wget",
+"https://example.com"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ssh",
+"host",
+"id"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"scp",
+"a",
+"host:b"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"nc",
+"-l",
+"1234"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"find",
+"/",
+"-exec",
+"id",
+";"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"find",
+"/etc",
+"-name",
+"x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"tar",
+"xf",
+"a.tar"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"sed",
+"-i",
+"s/a/b/",
+"/etc/hosts"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"tee",
+"/etc/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"dd",
+"if=/dev/zero",
+"of=/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"chmod",
+"644",
+"/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"chown",
+"-R",
+"nobody",
+"/tmp/x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"-la",
+"/home"
+],
+"class": "read",
+"note": "metadata/stdin only"
+},
+{
+"argv": [
+"ls",
+"-la",
+"/root"
+],
+"class": "read",
+"note": "metadata/stdin only"
+},
+{
+"argv": [
+"cat",
+"/home/user/file"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/passwd",
+"-A"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"tail",
+"-f",
+"/var/log/syslog"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"tail",
+"-n",
+"5"
+],
+"class": "read",
+"note": "metadata/stdin only"
+},
+{
+"argv": [
+"journalctl",
+"--vacuum-size=1M"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"journalctl",
+"--rotate"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"journalctl",
+"-o",
+"export"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ip",
+"link",
+"set",
+"eth0",
+"down"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ip",
+"addr",
+"add",
+"1.2.3.4/24",
+"dev",
+"eth0"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ip",
+"-b",
+"file"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ss",
+"-K"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"dmesg",
+"--clear"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"dmesg",
+"-C"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"smartctl",
+"-t",
+"long",
+"/dev/sda"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"lsblk",
+"-O"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"zfs",
+"destroy",
+"rpool/data"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"zpool",
+"scrub",
+"rpool"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"date",
+"-s",
+"2020-01-01"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"hostname",
+"newname"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"hostnamectl",
+"set-hostname",
+"x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"timedatectl",
+"set-time",
+"x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"unknown-tool"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"/usr/bin/unknown-tool",
+"x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/var/log/../etc/hostname"
+],
+"class": "write",
+"note": "dotdot in a path"
+},
+{
+"argv": [
+"cat",
+"/tmp/x"
+],
+"class": "write",
+"note": "outside content roots"
+},
+{
+"argv": [
+"ls",
+"relative/path"
+],
+"class": "write",
+"note": "relative path under paths:meta"
+},
+{
+"argv": [
+"qm",
+"list",
+"$(id)"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"-la",
+"/var/log/*"
+],
+"class": "write",
+"note": "no globbing; * not in allowed charset"
+},
+{
+"argv": [
+"ps",
+"aux",
+"--sort",
+"-%mem"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"logs",
+"--tail",
+"10",
+"-f",
+"x"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"-A",
+"/etc/hostname"
+],
+"class": "write",
+"note": ""
+},
+{
+"argv": [
+"bash",
+"-c",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"sh",
+"-c",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"/bin/sh",
+"-c",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"python3",
+"-c",
+"print(1)"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"perl",
+"-e",
+"1"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"node",
+"-e",
+"1"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"awk",
+"BEGIN{}"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"env",
+"sh"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"timeout",
+"1",
+"sh"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"sudo",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"nice",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"nohup",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"xargs",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"watch",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"strace",
+"id"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"nsenter",
+"-t",
+"1"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"chroot",
+"/",
+"sh"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"busybox",
+"sh"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"passwd",
+"root"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"chpasswd"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"usermod",
+"-aG",
+"sudo",
+"x"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"useradd",
+"x"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"visudo"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"ssh-keygen",
+"-t",
+"ed25519"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"iptables",
+"-F"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"nft",
+"flush",
+"ruleset"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"ufw",
+"disable"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"pve-firewall",
+"stop"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"mkfs.ext4",
+"/dev/sdb"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"mkfs",
+"/dev/sdb"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"wipefs",
+"-a",
+"/dev/sda"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"fdisk",
+"/dev/sda"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"parted",
+"/dev/sda"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"shred",
+"/dev/sda"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"dd",
+"if=/dev/zero",
+"of=/dev/sda"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-rf",
+"/"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-rf",
+"/etc"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-rf",
+"/*"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-r",
+"/var/"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-rf",
+"--no-preserve-root",
+"/"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"-fr",
+"/home"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"rm",
+"--recursive",
+"/usr"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"chmod",
+"-R",
+"777",
+"/"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"chown",
+"-R",
+"nobody",
+"/etc"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"reboot",
+"-f"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"poweroff",
+"--force"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"halt",
+"-f"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"kill",
+"-9",
+"1"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"pkill",
+"sshd"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"killall",
+"pveproxy"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/shadow"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/gshadow"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/pve/priv/authkey.key"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/ssh/ssh_host_ed25519_key"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/root/.ssh/id_ed25519"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"/root/.ssh"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/root/.bash_history"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/itsupport-agent/config.json"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/opt/itsupport-agent/executor"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"ls",
+"/usr/local/mesh_services/meshagent"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/itsupport-agent/service.env"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/sudoers"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/proc/self/environ"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/proc/1/environ"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/proc/1/mem"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"head",
+"-c",
+"10",
+"/proc/kcore"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/etc/ssl/private/server.key"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/tmp/cert.pem"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/home/x/.aws/credentials"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"cat",
+"/root/.kube/config"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"stop",
+"itsupport-daemon"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"restart",
+"itsupport-executor.service"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"disable",
+"meshagent"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"service",
+"meshagent",
+"stop"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"mask",
+"itsupport-telemetry"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"curl",
+"https://x/y?f=/etc/shadow"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"/tmp/evil",
+"x"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"./evil"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"../bin/sh"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"/usr/local/bin/x"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+"/usr/bin/../bin/sh",
+"x"
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [
+""
+],
+"class": "deny",
+"note": ""
+},
+{
+"argv": [],
+"class": "deny",
+"note": "empty argv"
+},
+{
+"argv": [
+"ls",
+"a\u0000b"
+],
+"class": "deny",
+"note": "NUL byte"
+},
+{
+"argv": [
+"ls",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x",
+"x"
+],
+"class": "deny",
+"note": "too many args"
+},
+{
+"argv": [
+"cat",
+"/etc/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+],
+"class": "deny",
+"note": "too long arg"
+},
+{
+"argv": [
+"pct",
+"config",
+"200"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pct",
+"listsnapshot",
+"200"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvesm",
+"list",
+"local"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"pvecm",
+"nodes"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lsmem"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"hostnamectl",
+"status"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"timedatectl",
+"status"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lspci",
+"-nn"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"lsusb"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"is-enabled",
+"ssh"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"show",
+"pveproxy",
+"-p",
+"ActiveState"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"list-timers"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"systemctl",
+"list-unit-files",
+"--state",
+"enabled"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"images"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"version"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"volume",
+"ls"
+],
+"class": "read",
+"note": ""
+},
+{
+"argv": [
+"docker",
+"compose",
+"ls",
+"-a"
+],
+"class": "read",
+"note": ""
+}
+]

@@ -67,7 +67,7 @@ function requiredRole(req: FastifyRequest): "admin" | "technician" | null {
   if (path === "/billing/checkout") return null; // role check lives in the route (admin only)
   if (path === "/billing/refresh") return null;
   if (/^\/tenants\/[^/]+\/(?:enable|disable)-/.test(path)) return "admin";
-  if (/^\/devices\/[^/]+\/(?:revoke|pause|unpause)$/.test(path)) return "admin";
+  if (/^\/devices\/[^/]+\/(?:revoke|pause|unpause|enable-shell-run|disable-shell-run)$/.test(path)) return "admin";
   if (path === "/enrollment-tokens" || /^\/oauth\/[^/]+\/connect$/.test(path)) return "admin";
   return "technician";
 }

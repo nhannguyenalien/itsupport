@@ -6,6 +6,7 @@ import { requestToolCall } from "./service.js";
 import { recordToolCallResult } from "./execution.js";
 import { recordAudit } from "../audit/index.js";
 import { hydrateBackupParams } from "../backup/index.js";
+import { classifyShell } from "../shell-run/classify.js";
 
 const requestBody = z.object({
   initiatedBy: z.enum(["ai", "human"]),
@@ -56,6 +57,19 @@ export async function toolCallRoutes(app: FastifyInstance) {
     const approval = approvalRow.rows[0];
     const tool = getTool(approval.tool)!;
 
+    if (approval.tool === "shell.run") {
+      // Flags may have been switched off, and the rules may have changed,
+      // since the command was proposed. Re-check before queueing anything.
+      const flags = await pool.query(
+        `SELECT (tn.shell_run_enabled AND d.shell_run_enabled AND NOT d.actions_paused AND d.cert_revoked_at IS NULL) AS ok
+         FROM tickets t JOIN tenants tn ON tn.id = t.tenant_id JOIN devices d ON d.id = t.device_id WHERE t.id = $1`,
+        [approval.ticket_id],
+      );
+      if (flags.rows[0]?.ok !== true) return reply.code(409).send({ error: "shell.run is disabled, paused or revoked for this device" });
+      const verdict = classifyShell(Array.isArray(approval.params?.argv) ? approval.params.argv : []);
+      if (verdict.class === "deny") return reply.code(409).send({ error: `command is no longer allowed: ${verdict.reason ?? verdict.rule}` });
+    }
+
     const decided = await pool.query(
       `UPDATE approvals SET status = 'approved', decided_by = $1, decided_at = now() WHERE id = $2 AND status = 'pending' RETURNING id`,
       [actorId ?? null, approvalId],
@@ -73,7 +87,7 @@ export async function toolCallRoutes(app: FastifyInstance) {
       actorType: "user",
       actorId: actorId ?? null,
       eventType: "approval.granted",
-      eventData: { tool: approval.tool },
+      eventData: { tool: approval.tool, ...(approval.tool === "shell.run" ? { argv: approval.params?.argv } : {}) },
       ticketId: approval.ticket_id,
       deviceId: approval.device_id,
     });
@@ -119,14 +133,29 @@ export async function toolCallRoutes(app: FastifyInstance) {
   app.get("/devices/:deviceId/tool-calls/pending", async (req, reply) => {
     const { deviceId } = deviceParams.parse(req.params);
     if (!req.agentTenantId) return reply.code(401).send({ error: "agent tenant context required" });
-    const result = await queryTenantScoped(req.agentTenantId,
-      `SELECT id, tool, params, risk FROM tool_calls
-       WHERE device_id = $1 AND executed_at IS NULL
-       ORDER BY requested_at ASC`,
+    // A human approval for shell.run is only good for 15 minutes: a device
+    // that was offline must not run a stale command when it comes back.
+    await queryTenantScoped(req.agentTenantId,
+      `UPDATE tool_calls SET executed_at = now(), result = 'timeout', error_message = 'approval expired before the device ran the command'
+       WHERE device_id = $1 AND tool = 'shell.run' AND executed_at IS NULL AND requested_at < now() - interval '15 minutes'`,
       [deviceId],
     );
+    const result = await queryTenantScoped(req.agentTenantId,
+      `SELECT c.id, c.tool, c.params, c.risk,
+              (c.tool = 'shell.run' AND EXISTS (
+                 SELECT 1 FROM approvals a WHERE a.id = c.approval_id AND a.status = 'approved'
+                   AND a.tool = c.tool AND a.params = c.params)) AS shell_approved
+       FROM tool_calls c
+       WHERE c.device_id = $1 AND c.executed_at IS NULL
+       ORDER BY c.requested_at ASC`,
+      [deviceId],
+    );
+    // __approved exists only here, never in storage: the agent runs a
+    // write-class shell.run only when the backend vouches for this exact row.
+    const calls = (result.rows as Array<{ id: string; tool: string; params: Record<string, unknown>; risk: string; shell_approved: boolean }>)
+      .map(({ shell_approved, ...call }) => shell_approved ? { ...call, params: { ...call.params, __approved: true } } : call);
     reply.header("Cache-Control", "no-store");
-    reply.send(await hydrateBackupParams(req.agentTenantId, deviceId, result.rows as Array<{ id: string; tool: string; params: Record<string, unknown>; risk: string }>));
+    reply.send(await hydrateBackupParams(req.agentTenantId, deviceId, calls));
   });
 
   // Agent-facing: report execution result. Triggers verification enqueueing for

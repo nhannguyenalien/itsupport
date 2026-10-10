@@ -6,6 +6,7 @@ import { isOAuthPlatform } from "../oauth/providers.js";
 import { executeMarketingTool } from "../platform-clients/executor.js";
 import type { AiDataPolicy } from "../ai-orchestration/redact.js";
 import { looksLikePaymentCardNumber } from "../policy-engine/luhn.js";
+import { classifyShell, type ShellVerdict } from "../shell-run/classify.js";
 
 export interface RequestToolCallInput {
   ticketId: string;
@@ -41,6 +42,7 @@ interface TicketContext {
   budget_auto_pct_limit: number;
   budget_approval_pct_limit: number;
   absolute_budget_limit_cents: number | null;
+  shell_run_enabled: boolean; // tenant flag AND device flag (both default off)
 }
 
 /** Loads whatever the ticket actually targets (Windows device or marketing
@@ -54,7 +56,8 @@ async function loadTicketContext(ticketId: string): Promise<TicketContext | unde
             COALESCE(d.actions_paused, pc.actions_paused, false) AS actions_paused,
             COALESCE(d.cert_revoked_at IS NOT NULL, pc.status IS DISTINCT FROM 'active', false) AS target_blocked,
             tn.ai_enabled, tn.ai_data_policy, tn.autonomous_low_risk_enabled, tn.computer_use_autonomous_enabled,
-            tn.budget_auto_pct_limit, tn.budget_approval_pct_limit, tn.absolute_budget_limit_cents
+            tn.budget_auto_pct_limit, tn.budget_approval_pct_limit, tn.absolute_budget_limit_cents,
+            (tn.shell_run_enabled AND COALESCE(d.shell_run_enabled, false)) AS shell_run_enabled
      FROM tickets t
      LEFT JOIN devices d ON d.id = t.device_id
      LEFT JOIN platform_connections pc ON pc.id = t.platform_connection_id
@@ -79,6 +82,7 @@ async function loadTicketContext(ticketId: string): Promise<TicketContext | unde
     budget_auto_pct_limit: Number(r.budget_auto_pct_limit),
     budget_approval_pct_limit: Number(r.budget_approval_pct_limit),
     absolute_budget_limit_cents: r.absolute_budget_limit_cents === null ? null : Number(r.absolute_budget_limit_cents),
+    shell_run_enabled: r.shell_run_enabled === true,
   };
 }
 
@@ -95,6 +99,17 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   if (tool.domain === "agent") {
     // Agent updates only come from the device page's update button.
     return { outcome: "rejected", reason: "Agent updates are started from the Devices page" };
+  }
+  // "__"-prefixed params are reserved for the backend (e.g. __approved, set
+  // only on the pending-call response for a human-approved shell.run).
+  if (Object.keys(input.params).some((key) => key.startsWith("__"))) {
+    return { outcome: "rejected", reason: "parameter names starting with __ are reserved" };
+  }
+  let shellVerdict: ShellVerdict | undefined;
+  if (input.tool === "shell.run") {
+    const checked = validateShellParams(input.params);
+    if ("error" in checked) return { outcome: "rejected", reason: checked.error };
+    shellVerdict = checked.verdict;
   }
   if (input.tool.startsWith("package.") &&
       (typeof input.params.package_name !== "string" || !/^[a-z0-9][a-z0-9+.-]{1,127}$/.test(input.params.package_name))) {
@@ -205,6 +220,9 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
     budgetChange = { currentCents: current, requestedCents: requested, absoluteLimitCents: ctx.absolute_budget_limit_cents };
   }
 
+  const auditExtra = shellVerdict
+    ? { argv: input.params.argv, class: shellVerdict.class, rule: shellVerdict.rule }
+    : {};
   const decision = evaluate(input.tool, {
     initiatedBy: input.initiatedBy,
     tenantAiEnabled: ctx.ai_enabled,
@@ -213,6 +231,7 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
     computerUseAutonomousEnabled: ctx.computer_use_autonomous_enabled,
     looksLikePaymentCardNumber: typedTextLooksLikeCardNumber,
     deviceActionsPaused: ctx.actions_paused,
+    shell: shellVerdict ? { enabled: ctx.shell_run_enabled, class: shellVerdict.class, reason: shellVerdict.reason } : undefined,
     budgetChange,
     tenantBudgetPolicy: budgetChange
       ? { autoPctLimit: ctx.budget_auto_pct_limit, approvalPctLimit: ctx.budget_approval_pct_limit }
@@ -225,7 +244,7 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
       actorType: input.initiatedBy === "ai" ? "ai" : "user",
       actorId: input.actorId ?? null,
       eventType: "tool_call.rejected",
-      eventData: { tool: input.tool, reason: decision.reason },
+      eventData: { tool: input.tool, reason: decision.reason, ...auditExtra },
       ticketId: input.ticketId,
       deviceId: ctx.target_device_id,
     });
@@ -236,14 +255,15 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
     const approval = await pool.query(
       `INSERT INTO approvals (ticket_id, tool, params, proposed_by_ai, reasoning)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [input.ticketId, input.tool, JSON.stringify(input.params), input.initiatedBy === "ai", input.reasoning ?? null],
+      [input.ticketId, input.tool, JSON.stringify(input.params), input.initiatedBy === "ai",
+        input.reasoning ?? (input.tool === "shell.run" ? String(input.params.purpose) : null)],
     );
     await recordAudit({
       tenantId: ctx.tenant_id,
       actorType: input.initiatedBy === "ai" ? "ai" : "user",
       actorId: input.actorId ?? null,
       eventType: "approval.requested",
-      eventData: { tool: input.tool, risk: tool.risk },
+      eventData: { tool: input.tool, risk: tool.risk, ...auditExtra },
       ticketId: input.ticketId,
       deviceId: ctx.target_device_id,
     });
@@ -254,14 +274,16 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   const call = await pool.query(
     `INSERT INTO tool_calls (ticket_id, device_id, platform_connection_id, tool, risk, params)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [input.ticketId, ctx.target_device_id, ctx.target_platform_connection_id, input.tool, tool.risk, JSON.stringify(input.params)],
+    // A read-class shell.run is stored as risk "read" so it is not treated as
+    // a state change (no verification chain); a write-class one never gets here.
+    [input.ticketId, ctx.target_device_id, ctx.target_platform_connection_id, input.tool, shellVerdict?.class === "read" ? "read" : tool.risk, JSON.stringify(input.params)],
   );
   await recordAudit({
     tenantId: ctx.tenant_id,
     actorType: input.initiatedBy === "ai" ? "ai" : "user",
     actorId: input.actorId ?? null,
     eventType: "tool_call.queued",
-    eventData: { tool: input.tool },
+    eventData: { tool: input.tool, ...auditExtra },
     ticketId: input.ticketId,
     deviceId: ctx.target_device_id,
   });
@@ -279,4 +301,31 @@ export async function requestToolCall(input: RequestToolCallInput): Promise<Requ
   }
 
   return { outcome: "auto_execute", toolCall: call.rows[0] };
+}
+
+const SHELL_PARAM_KEYS = new Set(["argv", "purpose", "verify_argv"]);
+
+/** shell.run input checks that must hold before classification matters:
+ * exact shape (no extra keys), a purpose for the approver, and — for any
+ * command that is not read-only — a read-only verify_argv so success is
+ * proven by the machine, never by the model's say-so. */
+function validateShellParams(params: Record<string, unknown>): { verdict: ShellVerdict } | { error: string } {
+  const isArgv = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
+  if (Object.keys(params).some((key) => !SHELL_PARAM_KEYS.has(key))) {
+    return { error: "shell.run accepts only argv, purpose and verify_argv" };
+  }
+  if (!isArgv(params.argv) || params.argv.length === 0) return { error: "argv must be a non-empty array of strings" };
+  if (typeof params.purpose !== "string" || params.purpose.trim() === "" || params.purpose.length > 300) {
+    return { error: "purpose must be one short sentence for the approver" };
+  }
+  const verdict = classifyShell(params.argv);
+  if (verdict.class === "write") {
+    if (!isArgv(params.verify_argv) || params.verify_argv.length === 0) {
+      return { error: "a command that is not read-only must include verify_argv (a read-only command that proves it worked)" };
+    }
+    if (classifyShell(params.verify_argv).class !== "read") return { error: "verify_argv must itself be a read-only command" };
+  } else if (params.verify_argv !== undefined && !isArgv(params.verify_argv)) {
+    return { error: "verify_argv must be an array of strings" };
+  }
+  return { verdict };
 }

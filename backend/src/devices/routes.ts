@@ -102,11 +102,30 @@ export async function deviceRoutes(app: FastifyInstance) {
     reply.send({ ok: true });
   });
 
+  // shell.run (docs/v0.3-linux-shell-addendum.md): off by default, per device
+  // and per tenant; Linux devices only. Admin only (auth/plugin.ts).
+  for (const [action, value] of [["enable", true], ["disable", false]] as const) {
+    app.post(`/devices/:deviceId/${action}-shell-run`, async (req, reply) => {
+      const { deviceId } = deviceParams.parse(req.params);
+      const { actorId } = actorBody.parse(req.body ?? {});
+      const result = await queryTenantScoped(req.authUser!.tenantId,
+        `UPDATE devices SET shell_run_enabled = $2 WHERE id = $1 AND lower(platform) = 'linux' RETURNING tenant_id`,
+        [deviceId, value],
+      );
+      if (result.rowCount === 0) return reply.code(404).send({ error: "Linux device not found" });
+      await recordAudit({
+        tenantId: result.rows[0].tenant_id, actorType: "user", actorId: actorId ?? req.authUser!.id,
+        eventType: `device.shell_run_${value ? "enabled" : "disabled"}`, deviceId,
+      });
+      reply.send({ ok: true });
+    });
+  }
+
   app.get("/devices", async (req, reply) => {
     const { tenantId } = listQuery.parse(req.query);
     const result = await queryTenantScoped(req.authUser!.tenantId,
       `SELECT id, hostname, platform, os_version, agent_version, status, last_seen_at,
-              actions_paused, cert_revoked_at IS NOT NULL AS revoked
+              actions_paused, shell_run_enabled, cert_revoked_at IS NOT NULL AS revoked
        FROM devices WHERE tenant_id = $1 ORDER BY hostname`,
       [tenantId],
     );

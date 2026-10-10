@@ -5,6 +5,8 @@
     { "tool": "package.status", "risk": "read", "params": ["package_name"], "verification": [], "domain": "linux" },
     { "tool": "package.install", "risk": "high", "params": ["package_name"], "verification": ["package.status"], "domain": "linux" },
     { "tool": "system.temperature", "risk": "read", "params": [], "verification": [], "domain": "linux" },
+    { "tool": "shell.run", "risk": "high", "params": ["argv", "purpose", "verify_argv"], "verification": [], "domain": "linux",
+      "_note": "Free-form Linux command (docs/v0.3-linux-shell-addendum.md). Static risk is high; shell-run/classify.ts decides per command: read auto-runs, write needs approval, deny is rejected." },
     { "tool": "service.status",        "risk": "read", "params": ["service_name"], "verification": [] },
     { "tool": "process.list",          "risk": "read", "params": [], "verification": [] },
     { "tool": "network.ping",          "risk": "read", "params": ["target"], "verification": [] },

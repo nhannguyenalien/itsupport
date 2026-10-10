@@ -143,7 +143,7 @@ func callExecutor(httpClient *http.Client, addr, secret string, call transport.P
 
 	client := *httpClient
 	switch call.Tool {
-	case "package.install":
+	case "package.install", "shell.run":
 		client.Timeout = 12 * time.Minute
 	case "disk.space_report", "windows_update.clear_cache", "agent.update":
 		// Bounded scans/deletes that legitimately run past the default.

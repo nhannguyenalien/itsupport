@@ -14,6 +14,23 @@ async function enqueueVerification(
   toolName: string,
   parentParams: Record<string, unknown>,
 ) {
+  if (toolName === "shell.run") {
+    // The proposal carries its own read-only verification command (validated
+    // in tool-calls/service.ts); it runs like any other read call.
+    const verifyArgv = parentParams.verify_argv;
+    if (!Array.isArray(verifyArgv) || verifyArgv.length === 0) {
+      await pool.query(`UPDATE tool_calls SET verification_status = 'failed' WHERE id = $1`, [parentId]);
+      return;
+    }
+    await pool.query(`UPDATE tool_calls SET verification_status = 'pending' WHERE id = $1`, [parentId]);
+    await pool.query(
+      `INSERT INTO tool_calls (ticket_id, device_id, platform_connection_id, tool, risk, params, parent_tool_call_id)
+       VALUES ($1, $2, $3, 'shell.run', 'read', $4, $5)`,
+      [ticketId, target.deviceId, target.platformConnectionId,
+        JSON.stringify({ argv: verifyArgv, purpose: "Verify the previous change" }), parentId],
+    );
+    return;
+  }
   const tool = getTool(toolName);
   if (!tool || tool.verification.length === 0) {
     await pool.query(`UPDATE tool_calls SET verification_status = 'not_required' WHERE id = $1`, [parentId]);
@@ -43,6 +60,7 @@ async function maybeFinalizeVerification(parentId: string) {
   const allPassed = children.rows.every((r) => r.result === "success" &&
     (r.tool !== "service.status" || r.result_data?.state === "RUNNING") &&
     (r.tool !== "package.status" || r.result_data?.installed === true) &&
+    (r.tool !== "shell.run" || (r.result_data?.exit_code === 0 && r.result_data?.timed_out !== true)) &&
     (r.tool !== "printer.details" || r.result_data?.spooler_state === "RUNNING"));
   await pool.query(`UPDATE tool_calls SET verification_status = $1 WHERE id = $2`, [allPassed ? "passed" : "failed", parentId]);
 }

@@ -27,6 +27,10 @@ export interface PolicyContext {
   // context in service.ts, consume it here" pattern as budgetChange below).
   // Unconditional hard block regardless of computerUseAutonomousEnabled.
   looksLikePaymentCardNumber?: boolean;
+  // docs/v0.3-linux-shell-addendum.md — required for shell.run, absent for every
+  // other tool. `enabled` is tenant flag AND device flag; `class` comes from
+  // shell-run/classify.ts (the agent re-classifies independently).
+  shell?: { enabled: boolean; class: "read" | "write" | "deny"; reason?: string };
   // v0.2 marketing-ops — only relevant (and only required) for ads.budget.update.
   // Absent for every v0.1 Windows tool call, and for every other marketing tool.
   budgetChange?: {
@@ -83,6 +87,8 @@ export function evaluate(toolName: string, ctx: PolicyContext): PolicyDecision {
     return { outcome: "rejected", reason: "tenant's AI data policy (no_screenshots) blocks computer-use tools" };
   }
 
+  if (toolName === "shell.run") return evaluateShell(ctx);
+
   if (tool.risk === "read") {
     return { outcome: "auto_execute" };
   }
@@ -114,6 +120,21 @@ export function evaluate(toolName: string, ctx: PolicyContext): PolicyDecision {
     return { outcome: "auto_execute" };
   }
 
+  return { outcome: "requires_approval" };
+}
+
+/**
+ * shell.run (docs/v0.3-linux-shell-addendum.md): the per-command class decides.
+ * read auto-executes (like any read tool it ignores the pause flag), write
+ * always needs a human — tenant autonomy never promotes it — and deny is
+ * rejected outright. Disabled tenant/device means nothing runs at all.
+ */
+function evaluateShell(ctx: PolicyContext): PolicyDecision {
+  if (!ctx.shell) return { outcome: "rejected", reason: "shell.run context missing" };
+  if (!ctx.shell.enabled) return { outcome: "rejected", reason: "shell.run is not enabled for this tenant and device" };
+  if (ctx.shell.class === "deny") return { outcome: "rejected", reason: ctx.shell.reason ?? "this command is never allowed" };
+  if (ctx.shell.class === "read") return { outcome: "auto_execute" };
+  if (ctx.deviceActionsPaused) return { outcome: "rejected", reason: "device actions are paused" };
   return { outcome: "requires_approval" };
 }
 

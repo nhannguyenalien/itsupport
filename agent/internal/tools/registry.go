@@ -8,8 +8,12 @@ package tools
 // two registries in sync by hand for v0.1; consider codegen from registry.json
 // once both sides stabilize.
 var KnownTools = map[string]Risk{
-	"package.status":     RiskRead,
-	"package.install":    RiskHigh,
+	"package.status":  RiskRead,
+	"package.install": RiskHigh,
+	// Linux free-form commands (docs/v0.3-linux-shell-addendum.md). The static
+	// risk is high so it can never auto-run by default; shellrun classifies
+	// each argv and the backend only auto-runs the read class.
+	"shell.run":          RiskHigh,
 	"system.temperature": RiskRead,
 	"service.status":     RiskRead,
 	"process.list":       RiskRead,
