@@ -152,9 +152,14 @@ fi
 import json, re, subprocess, sys, time
 config = json.load(open(sys.argv[1]))
 binary = '/usr/local/mesh_services/meshagent/meshagent/meshagent'
-node = subprocess.check_output(['/usr/bin/sudo', binary, '-nodeid'], timeout=30, text=True).strip()
-if not re.fullmatch(r'(?:[a-fA-F0-9]{96}|[A-Za-z0-9@$]{64})', node):
-    raise RuntimeError('Could not identify the installed remote agent')
+# The agent may need a few seconds after its first start before it has a node id.
+for attempt in range(10):
+    node = subprocess.run(['/usr/bin/sudo', binary, '-nodeid'], timeout=30, text=True, capture_output=True).stdout.strip()
+    if re.fullmatch(r'(?:[a-fA-F0-9]{96}|[A-Za-z0-9@$]{64})', node):
+        break
+    if attempt == 9:
+        raise RuntimeError('Could not identify the installed remote agent')
+    time.sleep(3)
 url = config['backendUrl'].rstrip('/') + '/devices/' + config['deviceId'] + '/remote-register'
 for attempt in range(6):
     result = subprocess.run(['/usr/bin/curl', '--fail', '--silent', '--proto', '=https', '--max-time', '20',

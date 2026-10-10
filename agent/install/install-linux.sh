@@ -101,9 +101,14 @@ else:
         pathlib.Path(tmp, 'meshagent.msh').write_bytes(request(remote['settingsUrl']))
         subprocess.run([str(downloaded), '-fullinstall', '--copy-msh=1'], cwd=tmp, check=True, timeout=120)
 subprocess.run(['systemctl', 'is-active', '--quiet', 'meshagent.service'], check=True)
-node = subprocess.check_output([str(binary), '-nodeid'], cwd=meshdir, timeout=30, text=True).strip()
-if not re.fullmatch(r'(?:[a-fA-F0-9]{96}|[A-Za-z0-9@$]{64})', node):
-    raise ValueError('Cannot identify remote agent')
+# The agent may need a few seconds after its first start before it has a node id.
+for attempt in range(10):
+    node = subprocess.run([str(binary), '-nodeid'], cwd=meshdir, timeout=30, text=True, capture_output=True).stdout.strip()
+    if re.fullmatch(r'(?:[a-fA-F0-9]{96}|[A-Za-z0-9@$]{64})', node):
+        break
+    if attempt == 9:
+        raise ValueError('Cannot identify remote agent')
+    time.sleep(3)
 for attempt in range(10):
     try:
         request(base + '/remote-register', {'nodeId': node}, True)

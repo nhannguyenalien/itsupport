@@ -17,7 +17,7 @@ GROUP = 'A' * 64
 NODE = 'a' * 96
 
 class RemoteInstallerTests(unittest.TestCase):
-    def run_flow(self, existing=False, wrong_group=False):
+    def run_flow(self, existing=False, wrong_group=False, empty_nodeids=0):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
             mesh = root / 'mesh'
@@ -28,7 +28,7 @@ class RemoteInstallerTests(unittest.TestCase):
                 mesh.mkdir()
                 (mesh / 'meshagent').touch()
                 (mesh / 'meshagent.msh').write_bytes(b'MeshID=other\n' if wrong_group else settings)
-            requests, installs, registrations = [], [], []
+            requests, installs, registrations, nodeid_calls = [], [], [], []
             def urlopen(req, timeout):
                 requests.append(req.full_url)
                 self.assertEqual(req.get_header('User-agent'), 'ITSupport-Agent/1.0')
@@ -50,9 +50,12 @@ class RemoteInstallerTests(unittest.TestCase):
                     mesh.mkdir()
                     (mesh / 'meshagent').touch()
                     (mesh / 'meshagent.msh').write_bytes(settings)
+                if '-nodeid' in args:
+                    out = '' if nodeid_calls.append(1) is None and len(nodeid_calls) <= empty_nodeids else NODE
+                    return subprocess.CompletedProcess(args, 0, stdout=out)
                 return subprocess.CompletedProcess(args, 0)
             source = CODE.replace("pathlib.Path('/usr/local/mesh_services/meshagent')", 'pathlib.Path(' + repr(str(mesh)) + ')')
-            with patch.object(sys, 'argv', ['installer', str(config), 'arm64']), patch.object(urllib.request, 'urlopen', side_effect=urlopen), patch.object(subprocess, 'run', side_effect=run), patch.object(subprocess, 'check_output', return_value=NODE), contextlib.redirect_stdout(io.StringIO()):
+            with patch.object(sys, 'argv', ['installer', str(config), 'arm64']), patch.object(urllib.request, 'urlopen', side_effect=urlopen), patch.object(subprocess, 'run', side_effect=run), patch('time.sleep'), contextlib.redirect_stdout(io.StringIO()):
                 exec(compile(source, str(SOURCE), 'exec'), {})
             self.assertEqual(len(installs), 0 if existing else 1)
             self.assertEqual(registrations, [{'nodeId': NODE}])
@@ -63,6 +66,13 @@ class RemoteInstallerTests(unittest.TestCase):
 
     def test_rerun_keeps_existing_mesh_identity(self):
         self.run_flow(existing=True)
+
+    def test_waits_for_node_id_after_first_start(self):
+        self.run_flow(empty_nodeids=3)
+
+    def test_gives_up_when_node_id_never_appears(self):
+        with self.assertRaisesRegex(ValueError, 'Cannot identify remote agent'):
+            self.run_flow(empty_nodeids=99)
 
     def test_foreign_mesh_is_not_overwritten(self):
         with self.assertRaisesRegex(ValueError, 'another server/group'):
